@@ -8,27 +8,13 @@ package main
 */
 
 import (
-	"database/sql"
-	"log"
-	"os"
+	"fmt"
+	"job/internal/db"
 )
 
 func main() {
 	// connect to Railway PostgreSQL
-	dbURL := os.Getenv("DB_URL")
-	if dbURL == "" {
-		log.Fatal("DB_URL not set")
-	}
-
-	db, err := sql.Open("postgres", dbURL)
-	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
-	}
-
-	err = db.Ping()
-	if err != nil {
-		log.Fatal("Database connection failed:", err)
-	}
-
-	log.Print("Successfully connected to PostgreSQL")
+	db, err := db.Connect()
+	defer db.Close()
+	fmt.Println(db, err)
 }
