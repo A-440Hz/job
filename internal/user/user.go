@@ -1,7 +1,11 @@
 package user
 
-type User interface {
+type baseUser interface {
 	getUserId() string
+}
+
+type User interface {
+	baseUser
 }
 
 type UnregisteredUser struct {
