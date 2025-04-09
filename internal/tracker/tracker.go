@@ -21,7 +21,7 @@ type Tracker interface {
 }
 
 type JobAppTracker struct {
-	TrackerId         string
+	TrackerId         string `gorm:"primaryKey"`
 	GoalDeadline      time.Time
 	GoalFrequency     Frequency
 	GoalQuantity      int
