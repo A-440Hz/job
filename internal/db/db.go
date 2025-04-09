@@ -14,21 +14,28 @@ import (
 
 const dbEnvKey = "DATABASE_URL"
 
-func Connect() (*sql.DB, error) {
-	dockerStr, ok := os.LookupEnv(dbEnvKey)
+func getDSN() (string, error) {
+	dsn, ok := os.LookupEnv(dbEnvKey)
 	if !ok {
 		log.Printf("%q not found; attempting to load env vars", dbEnvKey)
 		if err := godotenv.Load(); err != nil {
-			return nil, fmt.Errorf("failed to load .env file in db.go init(): %w", err)
+			return "", fmt.Errorf("failed to load .env file in db.go init(): %w", err)
 		}
 
-		dockerStr, ok = os.LookupEnv(dbEnvKey)
+		dsn, ok = os.LookupEnv(dbEnvKey)
 		if !ok {
-			return nil, fmt.Errorf("env var %q not found after reloading .env file", dbEnvKey)
+			return "", fmt.Errorf("env var %q not found after reloading .env file", dbEnvKey)
 		}
 	}
+	return dsn, nil
+}
 
-	db, err := sql.Open("postgres", dockerStr)
+func Connect() (*sql.DB, error) {
+	dsn, err := getDSN()
+	if err != nil {
+		return nil, err
+	}
+	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("unable to open DB connection with %q: %w", dbEnvKey, err)
 	}
@@ -36,20 +43,11 @@ func Connect() (*sql.DB, error) {
 }
 
 func InitGormDB() (*gorm.DB, error) {
-	dockerStr, ok := os.LookupEnv(dbEnvKey)
-	if !ok {
-		log.Printf("%q not found; attempting to load env vars", dbEnvKey)
-		if err := godotenv.Load(); err != nil {
-			return nil, fmt.Errorf("failed to load .env file in db.go init(): %w", err)
-		}
-
-		dockerStr, ok = os.LookupEnv(dbEnvKey)
-		if !ok {
-			return nil, fmt.Errorf("env var %q not found after reloading .env file", dbEnvKey)
-		}
+	dsn, err := getDSN()
+	if err != nil {
+		return nil, err
 	}
-
-	db, err := gorm.Open(postgres.Open(dockerStr), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to open DB connection with %q: %w", dbEnvKey, err)
 	}

@@ -1,4 +1,4 @@
-package handler
+package user
 
 import (
 	"job/internal/db"
@@ -22,7 +22,7 @@ func getUserCookie(w http.ResponseWriter, r *http.Request) (string, error) {
 
 func setUserCookie(w http.ResponseWriter, r *http.Request) error {
 	// probably separate this logic to better handle unregistered users
-	uuid := db.NewID(db.UserIdPrefix)
+	uuid := db.NewPublicID(db.UserIdPrefix)
 	cookie := http.Cookie{
 		Name:     userCookie,
 		Value:    uuid,

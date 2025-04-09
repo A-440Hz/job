@@ -8,8 +8,8 @@ import (
 )
 
 func TestNewId(t *testing.T) {
-	nid := NewID(UserIdPrefix)
-	nid2 := NewID(UserIdPrefix)
+	nid := NewPublicID(UserIdPrefix)
+	nid2 := NewPublicID(UserIdPrefix)
 	require.NotEqual(t, nid, nid2)
 	require.Equal(t, len(nid), len(nid2))
 	fmt.Println(nid, nid2)

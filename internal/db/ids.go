@@ -26,6 +26,6 @@ func makeIdSuffix(ln int) string {
 	return string(byteSlice)
 }
 
-func NewID(prefix IdPrefix) string {
+func NewPublicID(prefix IdPrefix) string {
 	return string(prefix) + "_" + makeIdSuffix(DefaultSuffixLen)
 }
