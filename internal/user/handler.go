@@ -1,7 +1,6 @@
 package user
 
 import (
-	"job/internal/db"
 	"net/http"
 )
 
@@ -20,9 +19,8 @@ func getUserCookie(w http.ResponseWriter, r *http.Request) (string, error) {
 	return cookie.Value, nil
 }
 
-func setUserCookie(w http.ResponseWriter, r *http.Request) error {
-	// probably separate this logic to better handle unregistered users
-	uuid := db.NewPublicID(db.UserIdPrefix)
+// if uuid is encrypted it definitely shouldn't be the same method as user credentials
+func setUserCookie(w http.ResponseWriter, uuid string) error {
 	cookie := http.Cookie{
 		Name:     userCookie,
 		Value:    uuid,

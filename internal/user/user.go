@@ -5,14 +5,15 @@ import "gorm.io/gorm"
 // baseUser exists so I can allow users to plug and play without having to register an account
 // this design assumes I will have to clean up expired user entries in the database
 // and I will be able to transition UnregisteredUsers into RegisteredUsers
-type baseUser interface {
-	getUserId() string
-	isRegistered() bool
-}
+// type baseUser interface {
+// 	getUserId() string
+// 	isRegistered() bool
+// }
 
-type BUser struct {
+type BaseUser struct {
 	gorm.Model
-	UserId     string `gorm:"uniqueIndex"` // DB will use gorm ID for PK. this is good for logs a
+	// DB will use gorm ID for PK. UserId is good for logs and urls and future friend reqs?
+	UserId     string `gorm:"uniqueIndex"`
 	registered bool   `gorm:"default:false"`
 }
 
@@ -23,16 +24,16 @@ type UserCredentials struct {
 }
 
 type RegisteredUser struct {
-	BUser
+	BaseUser
 	UserCredentials
 	Username string
 }
 
-func (u *BUser) getUserId() string {
+func (u *BaseUser) getUserId() string {
 	return u.UserId
 }
 
 // register associates an unregistered user with a username and password and updates the
-func (u *BUser) isRegistered() bool {
+func (u *BaseUser) isRegistered() bool {
 	return u.registered
 }
