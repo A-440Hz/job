@@ -12,6 +12,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// set this in a .env file for local testing.
+// DATABASE_URL=postgres://my-postgres:my_password@localhost:5432/postgres
+// corresponds to
+// docker run --name my-postgres -e POSTGRES_PASSWORD=my_password -d -p 5432:5432 postgres
 const dbEnvKey = "DATABASE_URL"
 
 func getDSN() (string, error) {
