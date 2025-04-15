@@ -1,17 +1,11 @@
 package user
 
 import (
+	"errors"
 	"job/internal/db"
 
 	"gorm.io/gorm"
 )
-
-type UserRepository interface {
-	Create(*User) error
-	GetByID(uint) (*User, error)
-	GetByPublicID(string) (*User, error)
-	Update(*User) error
-}
 
 type Repository struct {
 	db *gorm.DB
@@ -28,7 +22,7 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-func (r *Repository) CreateBaseUser(u *User) (*User, error) {
+func (r *Repository) CreateUser(u *User) (*User, error) {
 	// maybe some validation here
 	r.db.Create(u)
 	if r.db.Error != nil {
@@ -37,7 +31,7 @@ func (r *Repository) CreateBaseUser(u *User) (*User, error) {
 	return u, nil
 }
 
-func (r *Repository) LookupBaseUser(id string) (*User, error) {
+func (r *Repository) LookupUser(id string) (*User, error) {
 	u := &User{ID: id}
 	if err := r.db.First(u); err.Error != nil {
 		return nil, err.Error
@@ -45,14 +39,21 @@ func (r *Repository) LookupBaseUser(id string) (*User, error) {
 	return u, nil
 }
 
-func (r *Repository) UpdateBaseUser(u *User) (*User, error) {
+func (r *Repository) UpdateUser(u *User) (*User, error) {
 	// needs validation here? dunno
 	r.db.Save(u)
 	return u, nil
 }
 
 // as is this does a soft delete https://gorm.io/docs/delete.html#Soft-Delete
-func (r *Repository) DeleteBaseUser(u *User) error {
-	r.db.Delete(u)
+func (r *Repository) DeleteUser(u *User) error {
+	// no lookups here because i dont need to log the user struct
+	result := r.db.Delete(u)
+	if result.RowsAffected == 0 {
+		return errors.New("user not found")
+	}
+	if result.Error != nil {
+		return result.Error
+	}
 	return nil
 }

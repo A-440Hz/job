@@ -17,7 +17,7 @@ func NewService(r *Repository) *Service {
 
 func (s *Service) CreateNewUser() (*User, error) {
 	u := &User{}
-	u, err := s.repo.CreateBaseUser(u)
+	u, err := s.repo.CreateUser(u)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (s *Service) validateRegisterBaseUser(username string, email string) error 
 }
 
 func (s *Service) RegisterBaseUser(id string, username string, password string, email string) error {
-	u, err := s.repo.LookupBaseUser(id)
+	u, err := s.repo.LookupUser(id)
 	if err != nil {
 		return err
 	}
@@ -68,6 +68,32 @@ func (s *Service) RegisterBaseUser(id string, username string, password string, 
 	u.Password = &passwordHash
 	u.registered = true
 
-	s.repo.UpdateBaseUser(u)
+	s.repo.UpdateUser(u)
+	return nil
+}
+
+// needs a path to change username/email/password after entering the correct password
+// not sure how to lay out the function if it's a multiple step process
+func (s *Service) updateUser(u *User) (*User, error) {
+	u, err := s.repo.UpdateUser(u)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+func (s *Service) LookupUser(id string) (*User, error) {
+	u, err := s.repo.LookupUser(id)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+func (s *Service) DeleteUser(id string) error {
+	u := &User{ID: id}
+	if err := s.repo.DeleteUser(u); err != nil {
+		return err
+	}
 	return nil
 }

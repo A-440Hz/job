@@ -82,3 +82,37 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 		})
 	}
 }
+
+func Test_DeleteUser(t *testing.T) {
+	db.SetEnvForTesting()
+	db, err := db.InitGormDB()
+	require.NoError(t, err)
+	db.AutoMigrate(&User{})
+	db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+
+	repo := NewRepository(db)
+	svc := NewService(repo)
+
+	u1, err := svc.CreateNewUser()
+	u2, err := svc.CreateNewUser()
+	u3, err := svc.CreateNewUser()
+	require.NoError(t, err)
+	require.NotNil(t, u1, u2, u3)
+
+	// delete once
+	id3 := u3.getID()
+	err = svc.DeleteUser(id3)
+	assert.NoError(t, err)
+	err = svc.DeleteUser(u2.getID())
+	assert.NoError(t, err)
+	err = svc.DeleteUser(u1.getID())
+	assert.NoError(t, err)
+
+	// delete again
+	err = svc.DeleteUser(id3)
+	assert.Error(t, err)
+	u, err := svc.LookupUser(id3)
+	assert.ErrorContains(t, err, "record not found")
+	assert.Nil(t, u)
+	db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+}
