@@ -52,6 +52,6 @@ func (t *JobAppTracker) getNextDeadline() (time.Time, error) {
 	case FreqWeekly:
 		return cd.Add(24 * time.Hour * 7), nil
 	default:
-		return cd, errors.New(fmt.Sprintf("Invalid goal frequency:", t.GoalFrequency))
+		return cd, errors.New(fmt.Sprintf("Invalid goal frequency: %q", t.GoalFrequency))
 	}
 }

@@ -13,7 +13,7 @@ import (
 )
 
 func main() {
-	// connect to Railway PostgreSQL
+	// connect to PostgreSQL
 	db, err := db.Connect()
 	defer db.Close()
 	fmt.Println(db, err)

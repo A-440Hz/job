@@ -28,28 +28,27 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-func NewRepo(conn *gorm.DB) *Repository {
-	return &Repository{db: conn}
-}
-
-func (r *Repository) CreateBaseUser(u *User) error {
+func (r *Repository) CreateBaseUser(u *User) (*User, error) {
 	// maybe some validation here
 	r.db.Create(u)
-	return nil
+	if r.db.Error != nil {
+		return nil, r.db.Error
+	}
+	return u, nil
 }
 
 func (r *Repository) LookupBaseUser(id string) (*User, error) {
 	u := &User{ID: id}
-	if err := r.db.First(u); err != nil {
+	if err := r.db.First(u); err.Error != nil {
 		return nil, err.Error
 	}
 	return u, nil
 }
 
-func (r *Repository) UpdateBaseUser(u *User) error {
+func (r *Repository) UpdateBaseUser(u *User) (*User, error) {
 	// needs validation here? dunno
 	r.db.Save(u)
-	return nil
+	return u, nil
 }
 
 // as is this does a soft delete https://gorm.io/docs/delete.html#Soft-Delete

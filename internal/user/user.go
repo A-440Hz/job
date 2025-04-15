@@ -18,7 +18,7 @@ type User struct {
 	// Fields for registered users (pointers allow null values)
 	Username *string `gorm:"uniqueIndex"`
 	Email    *string `gorm:"uniqueIndex"`
-	Password *string
+	Password *[]byte `gorm:"size:60"` // bcrypt hash is 60 bytes]
 }
 
 func (u *User) getID() string {
