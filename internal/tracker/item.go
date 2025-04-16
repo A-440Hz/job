@@ -19,17 +19,19 @@ type Item interface {
 }
 
 type JobAppItem struct {
-	ID         string `gorm:"primaryKey"`
-	TrackerID  string `gorm:"foreignKey:ID"`
-	Title      string
+	ID         string  `gorm:"primaryKey"`
+	TrackerID  string  `gorm:"index"`
+	Tracker    Tracker `gorm:"foreignKey:TrackerID;references:ID"`
+	Title      string  // maybe separate this into Company and Position
 	Body       string
 	status     ItemStatus
 	attributed bool // this flips when a tracker progress is assigned from this item
 	// probably sync shenanigans to iron out? attempt sync on each item creation?
 	// also i can refactor this later to award more lootboxes when the status (rejected, etc) changes
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
+	AttributionTime *time.Time // might be useful for solving sync issues/debugging later
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	DeletedAt       gorm.DeletedAt `gorm:"index"`
 }
 
 func (i *JobAppItem) IsComplete() bool {

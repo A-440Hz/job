@@ -3,6 +3,7 @@ package tracker
 import (
 	"errors"
 	"job/internal/db"
+	"job/internal/scheduler"
 	"time"
 
 	"gorm.io/gorm"
@@ -16,9 +17,17 @@ func NewRepository(d *gorm.DB) *Repository {
 	return &Repository{db: d}
 }
 
+func (t *UnderlyingTracker) BeforeCreate(tx *gorm.DB) error {
+	t.ID = db.NewPublicID(db.TrackerIdPrefix)
+	return nil
+}
+
+func getDefaultGoalDeadline() time.Time {
+	return scheduler.GetDefaultGoalDeadline()
+}
+
 func (t *JobAppTracker) BeforeCreate(tx *gorm.DB) error {
 	t.ID = db.NewPublicID(db.TrackerIdPrefix)
-	t.GoalDeadline = time.Time{}
 	return nil
 }
 
