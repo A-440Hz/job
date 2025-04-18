@@ -1,8 +1,8 @@
 package tracker
 
 import (
-	"errors"
 	"fmt"
+	"job/internal/user"
 	"time"
 )
 
@@ -14,9 +14,21 @@ func NewService(r *Repository) *Service {
 	return &Service{repo: r}
 }
 
-func (s *Service) CreateNewJobAppTracker() (*JobAppTracker, error) {
-	t := &JobAppTracker{}
-	t, err := s.repo.CreateJobAppTracker(t)
+func (s *Service) createNewUnderlyingTracker(u *user.User) (*UnderlyingTracker, error) {
+	ut, err := s.repo.CreateUnderlyingTracker(u)
+	if err != nil {
+		return nil, err
+	}
+	return ut, nil
+}
+
+func (s *Service) CreateNewJobAppTracker(u *user.User) (*JobAppTracker, error) {
+	ut, err := s.repo.CreateUnderlyingTracker(u)
+	if err != nil {
+		return nil, err
+	}
+	t := &JobAppTracker{Tracker: *ut}
+	t, err = s.repo.CreateJobAppTracker(t)
 	if err != nil {
 		return nil, err
 	}
@@ -61,22 +73,22 @@ func (t *JobAppTracker) ResetProgress() {
 }
 
 func (t *JobAppTracker) GetNextDeadline() (time.Time, error) {
-	cd := t.GoalDeadline
-	switch t.GoalFrequency {
+	cd := t.Tracker.GoalDeadline
+	switch t.Tracker.GoalFrequency {
 	case FreqDaily:
 		return cd.Add(24 * time.Hour), nil
 	case FreqWeekly:
 		return cd.Add(24 * time.Hour * 7), nil
 	default:
-		return cd, errors.New(fmt.Sprintf("invalid goal frequency: %q", t.GoalFrequency))
+		return cd, fmt.Errorf("invalid goal frequency: %q", t.Tracker.GoalFrequency)
 	}
 }
 
 func (t *JobAppTracker) EditFrequency(f Frequency) error {
-	if f == t.GoalFrequency {
+	if f == t.Tracker.GoalFrequency {
 		return nil
 	}
-	t.GoalFrequency = f
+	t.Tracker.GoalFrequency = f
 	// db logic here
 	// scheduler logic here
 	return nil

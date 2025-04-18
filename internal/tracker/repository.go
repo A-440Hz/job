@@ -4,7 +4,7 @@ import (
 	"errors"
 	"job/internal/db"
 	"job/internal/scheduler"
-	"time"
+	"job/internal/user"
 
 	"gorm.io/gorm"
 )
@@ -17,13 +17,16 @@ func NewRepository(d *gorm.DB) *Repository {
 	return &Repository{db: d}
 }
 
-func (t *UnderlyingTracker) BeforeCreate(tx *gorm.DB) error {
-	t.ID = db.NewPublicID(db.TrackerIdPrefix)
-	return nil
-}
-
-func getDefaultGoalDeadline() time.Time {
-	return scheduler.GetDefaultGoalDeadline()
+// user is validated in the service layer
+func (r *Repository) CreateUnderlyingTracker(u *user.User) (*UnderlyingTracker, error) {
+	t := &UnderlyingTracker{
+		UserID:       u.GetID(),
+		GoalDeadline: scheduler.GetDefaultGoalDeadline(u.Timezone.Location),
+	}
+	if err := r.db.Create(t).Error; err != nil {
+		return nil, err
+	}
+	return t, nil
 }
 
 func (t *JobAppTracker) BeforeCreate(tx *gorm.DB) error {
@@ -49,6 +52,9 @@ func (r *Repository) LookupJobAppTracker(id string) (*JobAppTracker, error) {
 
 func (r *Repository) UpdateJobAppTracker(t *JobAppTracker) (*JobAppTracker, error) {
 	r.db.Save(t)
+	if r.db.Error != nil {
+		return nil, r.db.Error
+	}
 	return t, nil
 }
 
@@ -91,7 +97,7 @@ func (r *Repository) CreateJobAppTrackerItem(t *JobAppTracker, title, body strin
 
 func (r *Repository) LookupJobAppTrackerItem(t *JobAppTracker, id string) (*JobAppItem, error) {
 	i := &JobAppItem{ID: id}
-	if err := r.db.Where("tracker_id = ?", t.ID).First(i).Error; err != nil {
+	if err := r.db.First(i).Error; err != nil {
 		return nil, err
 	}
 	return i, nil

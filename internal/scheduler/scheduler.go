@@ -1,18 +1,23 @@
 package scheduler
 
-import "time"
+import (
+	"time"
+)
 
-var defaultTimeZone = time.FixedZone("PST", 0)
+// https://www.iana.org/time-zones
+var DefaultTimezone *time.Location
 
-func pollUserTimeZone() (*time.Location, error) {
-	// do some handler stuff to request X-user-timezone from the client
-	// probably relocate this function
-	return nil, nil
+// this is a bad design and I should use dependency injection in production code
+func init() {
+	var err error
+	DefaultTimezone, err = time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		DefaultTimezone = time.UTC
+	}
 }
 
-// attempt to return 1am user local time zone, otherwise default to UTC+8
-func GetDefaultGoalDeadline() time.Time {
+// GetDefaultGoalDeadline attempts to return 1am at the user's local timezone, otherwise defaulting to DefaultTimezone
+func GetDefaultGoalDeadline(l *time.Location) time.Time {
 	now := time.Now()
-	//pollUserTimeZone()
-	return time.Date(now.Year(), now.Month(), now.Day()+1, 1, 0, 0, 0, defaultTimeZone) // UTC+8
+	return time.Date(now.Year(), now.Month(), now.Day()+1, 1, 0, 0, 0, l)
 }

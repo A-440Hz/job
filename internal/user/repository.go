@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"job/internal/db"
+	"job/internal/scheduler"
 
 	"gorm.io/gorm"
 )
@@ -19,6 +20,9 @@ func NewRepository(d *gorm.DB) *Repository {
 // do i do it like this or have a default tag?
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	u.ID = db.NewPublicID(db.UserIdPrefix)
+	if u.Timezone.Location == nil {
+		u.Timezone = Timezone{scheduler.DefaultTimezone}
+	}
 	return nil
 }
 
@@ -40,8 +44,10 @@ func (r *Repository) LookupUser(id string) (*User, error) {
 }
 
 func (r *Repository) UpdateUser(u *User) (*User, error) {
-	// needs validation here? dunno
 	r.db.Save(u)
+	if r.db.Error != nil {
+		return nil, r.db.Error
+	}
 	return u, nil
 }
 

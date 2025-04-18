@@ -3,8 +3,6 @@ package tracker
 import (
 	"time"
 
-	"job/internal/user"
-
 	"gorm.io/gorm"
 )
 
@@ -33,9 +31,9 @@ type TrackerInterface interface {
 }
 
 type UnderlyingTracker struct {
-	ID            string    `gorm:"primaryKey"`
-	UserID        string    `gorm:"index"`
-	User          user.User `gorm:"foreignKey:UserID;references:ID"`
+	// I shouldn't need to embed a User. A foreign key is sufficient.
+	ID            uint   `gorm:"primaryKey"`
+	UserID        string `gorm:"index"` // the index tag improves query performance for common lookup fields
 	GoalDeadline  time.Time
 	GoalFrequency Frequency `gorm:"default:weekly"`
 	GoalQuantity  int       `gorm:"default:5"`
@@ -54,14 +52,13 @@ type UnderlyingTracker struct {
 
 // essentially this is a item factory? it creates JobAppItems and assigns them to the UnderlyingTracker
 type JobAppTracker struct {
-	ID                string            `gorm:"primaryKey"`
-	TrackerID         string            `gorm:"index"` // the index tag improves query performance for common lookup fields
-	Tracker           UnderlyingTracker `gorm:"foreignKey:TrackerID;references:ID"`
-	numBoxesAwarded   int               `gorm:"default:0"`
-	numItemsCompleted int               `gorm:"default:0"`
+	ID                string `gorm:"primaryKey"`
+	Tracker           UnderlyingTracker
+	numBoxesAwarded   int `gorm:"default:0"`
+	numItemsCompleted int `gorm:"default:0"`
 }
 
-// this is a stats tracker for the UnderlyingTracker to return
+// TrackerStats is a json object for UnderlyingTracker to return
 type TrackerStats struct {
 	GoalStreak          int     `json:"goalStreak"`
 	MaxGoalStreak       int     `json:"maxGoalStreak"`

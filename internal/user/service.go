@@ -4,6 +4,9 @@ import (
 	"errors"
 	"job/internal/db"
 	"strings"
+	"time"
+
+	"gorm.io/gorm"
 )
 
 // business logic goes here
@@ -15,8 +18,8 @@ func NewService(r *Repository) *Service {
 	return &Service{repo: r}
 }
 
-func (s *Service) CreateNewUser() (*User, error) {
-	u := &User{}
+func (s *Service) CreateNewUser(l *time.Location) (*User, error) {
+	u := &User{Timezone: Timezone{Location: l}}
 	u, err := s.repo.CreateUser(u)
 	if err != nil {
 		return nil, err
@@ -29,10 +32,14 @@ func (s *Service) validateRegisterBaseUser(username string, email string) error 
 	res := s.repo.db.Where("username = ?", username).First(&User{})
 	if res.Error == nil {
 		badFields["username"] = "username already registered"
+	} else if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
+		badFields["username_query"] = res.Error.Error()
 	}
 	res = s.repo.db.Where("email = ?", email).First(&User{})
 	if res.Error == nil {
 		badFields["email"] = "email already registered"
+	} else if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
+		badFields["email_query"] = res.Error.Error()
 	}
 	if len(badFields) > 0 {
 		err := errors.New("validation error:")

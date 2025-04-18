@@ -12,10 +12,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// set this in a .env file for local testing.
-// DATABASE_URL=postgres://my-postgres:my_password@localhost:5432/postgres
-// corresponds to
-// docker run --name my-postgres -e POSTGRES_PASSWORD=my_password -d -p 5432:5432 postgres
+// these vars coorespond to docker-compose and internal/db/testing.go to connect to the db
+// firebase has its own "DATABASE_URL" so I need to remember not to mess it up when deploying
 const sqlDSN = "DATABASE_URL"
 const gormDSN = "DATABASE_URL_GORM"
 
@@ -47,6 +45,11 @@ func Connect() (*sql.DB, error) {
 	return db, nil
 }
 
+// Why gorm?
+// syncs structs with db schema
+// connections pooling and can group multiple db operations into single atomic operation
+// manages migrations so I don't have to
+// summarize and rejustify this later
 func InitGormDB() (*gorm.DB, error) {
 	dsn, err := getDSN(gormDSN)
 	if err != nil {
