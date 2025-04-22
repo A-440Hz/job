@@ -62,14 +62,14 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 			// a constant user to test against
 			u1, err := svc.CreateNewUser(nil)
 			require.NoError(t, err)
-			err = svc.RegisterBaseUser(u1.GetID(), "u1", "p1", "e1@mail.com")
+			u1, err = svc.RegisterBaseUser(u1.GetID(), "u1", "p1", "e1@mail.com")
 			require.NoError(t, err)
 			assert.NotNil(t, u1)
 
 			// a new user to test against
 			u2, err := svc.CreateNewUser(nil)
 			assert.NoError(t, err)
-			err = svc.RegisterBaseUser(u2.GetID(), tt.username, tt.password, tt.email)
+			u2, err = svc.RegisterBaseUser(u2.GetID(), tt.username, tt.password, tt.email)
 			for _, msg := range tt.wantErrMsg {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), msg)
@@ -85,10 +85,33 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 
 func Test_RegisterBaseUser(t *testing.T) {
 	db.SetEnvForTesting()
-	db, err := db.InitGormDB()
+	dbase, err := db.InitGormDB()
 	require.NoError(t, err)
-	db.AutoMigrate(&User{})
-	db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+	dbase.AutoMigrate(&User{})
+	dbase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+	repo := NewRepository(dbase)
+	svc := NewService(repo)
+
+	u1, err := svc.CreateNewUser(nil)
+	require.NoError(t, err)
+	u1, err = svc.RegisterBaseUser(u1.GetID(), "u1", "p1", "e1@mail.com")
+	require.NoError(t, err)
+	assert.NotNil(t, u1)
+
+	lookupU1, err := svc.LookupUser(u1.GetID())
+	require.NoError(t, err)
+	assert.NotNil(t, lookupU1)
+	assert.Equal(t, u1.GetID(), lookupU1.GetID())
+	assert.Equal(t, u1.Username, lookupU1.Username)
+	assert.Equal(t, u1.Email, lookupU1.Email)
+	assert.True(t, db.CheckPasswordHash("p1", *lookupU1.Password))
+	assert.True(t, lookupU1.Registered)
+	assert.NotNil(t, lookupU1.Timezone)
+
+	_, err = svc.RegisterBaseUser(u1.GetID(), "u1", "p1", "e1@mail.com")
+	assert.ErrorContains(t, err, "current user id already registered")
+
+	dbase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 
 }
 

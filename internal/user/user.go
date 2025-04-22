@@ -7,15 +7,23 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	usernameField   = "Username"
+	emailField      = "Email"
+	passwordField   = "Password"
+	registeredField = "Registered"
+	timezoneField   = "Timezone"
+)
+
 type User struct {
 	// gorm.Model
 	// DB will use gorm ID for PK. PulbicId is good for logs and urls and future friend reqs?
 	ID         string `gorm:"primaryKey"`
-	registered bool   `gorm:"default:false"` // i think this is redundant https://gorm.io/docs/create.html#Default-Values
+	Registered bool   `gorm:"default:false"`
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
 	DeletedAt  gorm.DeletedAt `gorm:"index"`
-	Timezone   scheduler.Timezone
+	Timezone   *scheduler.Timezone
 	// Fields for registered users (pointers allow null values)
 	Username *string `gorm:"uniqueIndex"`
 	Email    *string `gorm:"uniqueIndex"`
@@ -27,6 +35,6 @@ func (u *User) GetID() string {
 }
 
 // register associates an unregistered user with a username and password and updates the
-func (u *User) isRegistered() bool {
-	return u.registered
+func (u *User) IsRegistered() bool {
+	return u.Registered
 }

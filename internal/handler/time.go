@@ -18,6 +18,7 @@ func PollUserTimezone(r *http.Request) *scheduler.Timezone {
 	if err != nil {
 		return scheduler.GetDefaultTimezone()
 	}
-	// convert to seconds
-	return scheduler.NewTimezone(io * 60)
+	// convert to seconds: if X-user-timezone is -60, the user timezone is 60 minutes ahead of UTC,
+	// so we need to invert it and convert to seconds, to get seconds east of UTC for time.FixedZone input
+	return scheduler.NewTimezone(int64(io * -60))
 }

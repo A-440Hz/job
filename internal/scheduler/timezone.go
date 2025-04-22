@@ -3,6 +3,7 @@ package scheduler
 import (
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -11,12 +12,12 @@ import (
 // offset represents seconds east of UTC. UTC-7 is -7 * 60 * 60 = -25200
 type Timezone struct {
 	Location *time.Location
-	offset   int
+	offset   int64
 }
 
-func NewTimezone(o int) *Timezone {
+func NewTimezone(o int64) *Timezone {
 	return &Timezone{
-		Location: time.FixedZone("", o),
+		Location: time.FixedZone("", int(o)),
 		offset:   o,
 	}
 }
@@ -27,13 +28,22 @@ func (t *Timezone) Value() (driver.Value, error) {
 
 func (t *Timezone) Scan(value any) error {
 	if value == nil {
-		t.Location = nil
-		return nil
+		return errors.New("cannot scan nil timezone value")
 	}
-	offset, ok := value.(int)
+	offset, ok := value.(int64)
 	if !ok {
-		return errors.New("invalid timezone value")
+		return fmt.Errorf("invalid timezone type scanned: %T", value)
 	}
-	t.Location = time.FixedZone("", offset)
+	t.Location = time.FixedZone("", int(offset))
 	return nil
+}
+
+func (t *Timezone) Equal(other *Timezone) bool {
+	if t == nil && other == nil {
+		return true
+	}
+	if t == nil || other == nil {
+		return false
+	}
+	return t.offset == other.offset
 }

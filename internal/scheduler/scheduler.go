@@ -7,8 +7,9 @@ import (
 // https://www.iana.org/time-zones
 // yeah I can't find anything from that link.
 // see /usr/share/zoneinfo on linux
-const defaultTimezoneOffset = -7 * 60 * 60 // UTC-7
+
 // DefaultTimezone is the default timezone for the app. It is set to UTC-7 (PST) by default.
+const defaultTimezoneOffset = -7 * 60 * 60 // UTC-7
 
 // GetDefaultTimezone returns a Timezone object corresponding to UTC-7 (PST)
 func GetDefaultTimezone() *Timezone {

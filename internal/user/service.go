@@ -3,8 +3,9 @@ package user
 import (
 	"errors"
 	"job/internal/db"
+	"job/internal/scheduler"
+	"strconv"
 	"strings"
-	"time"
 
 	"gorm.io/gorm"
 )
@@ -18,8 +19,9 @@ func NewService(r *Repository) *Service {
 	return &Service{repo: r}
 }
 
-func (s *Service) CreateNewUser(l *time.Location) (*User, error) {
-	u := &User{Timezone: Timezone{Location: l}}
+// CreateNewUser creates a new user with the given timezone and returns it. Nil input defaults to the default timezone.
+func (s *Service) CreateNewUser(t *scheduler.Timezone) (*User, error) {
+	u := &User{Timezone: t}
 	u, err := s.repo.CreateUser(u)
 	if err != nil {
 		return nil, err
@@ -51,38 +53,78 @@ func (s *Service) validateRegisterBaseUser(username string, email string) error 
 	return nil
 }
 
-func (s *Service) RegisterBaseUser(id string, username string, password string, email string) error {
+func (s *Service) RegisterBaseUser(id string, username string, password string, email string) (*User, error) {
 	u, err := s.repo.LookupUser(id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if u.isRegistered() {
-		return errors.New("current user id already registered")
+	if u.IsRegistered() {
+		return nil, errors.New("current user id already registered")
 	}
 
 	email = strings.ToLower(strings.TrimSpace(email))
 	if err = s.validateRegisterBaseUser(username, email); err != nil {
-		return err
+		return nil, err
 	}
 	passwordHash, err := db.HashPassword(password)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	u.Username = &username
 	u.Email = &email
 	u.Password = &passwordHash
-	u.registered = true
+	u.Registered = true
 
-	s.repo.UpdateUser(u)
-	return nil
+	fields := []string{usernameField, emailField, passwordField, registeredField}
+
+	u, err = s.repo.UpdateUserFields(u, fields)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
 }
 
-// needs a path to change username/email/password after entering the correct password
-// not sure how to lay out the function if it's a multiple step process
-func (s *Service) updateUser(u *User) (*User, error) {
-	u, err := s.repo.UpdateUser(u)
+// UpdateUserFields updates the valid user fields specified in the fields map.
+func (s *Service) UpdateUserFields(id string, fields map[string]string) (*User, error) {
+	u, err := s.repo.LookupUser(id)
+	if err != nil {
+		return nil, err
+	}
+	updateFields := []string{}
+	for k, v := range fields {
+		switch {
+		case usernameField == k && u.Username == nil || *u.Username != v:
+			u.Username = &v
+			updateFields = append(updateFields, usernameField)
+		case emailField == k && u.Email == nil || *u.Email != v:
+			v = strings.ToLower(strings.TrimSpace(v))
+			u.Email = &v
+			updateFields = append(updateFields, emailField)
+		case passwordField == k && u.Password == nil || db.CheckPasswordHash(v, *u.Password) == false:
+			hash, err := db.HashPassword(v)
+			if err != nil {
+				return nil, err
+			}
+			u.Password = &hash
+			updateFields = append(updateFields, passwordField)
+		case registeredField == k && u.Registered == false:
+			u.Registered = true
+			updateFields = append(updateFields, registeredField)
+		case timezoneField == k:
+			v, err := strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			tz := scheduler.NewTimezone(v)
+			if u.Timezone == nil || u.Timezone != tz {
+				u.Timezone = tz
+				updateFields = append(updateFields, timezoneField)
+			}
+		}
+	}
+	u, err = s.repo.UpdateUserFields(u, updateFields)
 	if err != nil {
 		return nil, err
 	}
