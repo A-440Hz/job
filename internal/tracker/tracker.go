@@ -11,6 +11,16 @@ type Frequency string
 const (
 	FreqDaily  Frequency = "daily"
 	FreqWeekly Frequency = "weekly"
+
+	goalDeadlineField           = "GoalDeadline"
+	goalFrequencyField          = "GoalFrequency"
+	goalQuantityField           = "GoalQuantity"
+	curGoalStreakField          = "CurGoalStreak"
+	maxGoalStreakField          = "MaxGoalStreak"
+	maxItemsCompletedDailyField = "MaxItemsCompletedDaily"
+	totalItemsCompletedField    = "TotalItemsCompleted"
+	totalBoxesAwardedField      = "TotalBoxesAwarded"
+	firstCompletedField         = "FirstCompleted"
 )
 
 // chatgpt says:

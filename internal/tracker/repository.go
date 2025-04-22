@@ -35,9 +35,9 @@ func (t *JobAppTracker) BeforeCreate(tx *gorm.DB) error {
 }
 
 func (r *Repository) CreateJobAppTracker(t *JobAppTracker) (*JobAppTracker, error) {
-	r.db.Create(t)
-	if r.db.Error != nil {
-		return nil, r.db.Error
+	res := r.db.Create(t)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 	return t, nil
 }
@@ -50,15 +50,16 @@ func (r *Repository) LookupJobAppTracker(id string) (*JobAppTracker, error) {
 	return t, nil
 }
 
+// TODO: change this to update mask later
 func (r *Repository) UpdateJobAppTracker(t *JobAppTracker) (*JobAppTracker, error) {
-	r.db.Save(t)
-	if r.db.Error != nil {
-		return nil, r.db.Error
+	res := r.db.Save(t)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 	return t, nil
 }
 
-// as is this does a soft delete https://gorm.io/docs/delete.html#Soft-Delete
+// DeleteJobAppTracker soft deletes tracker t https://gorm.io/docs/delete.html#Soft-Delete
 func (r *Repository) DeleteJobAppTracker(t *JobAppTracker) error {
 	res := r.db.Delete(t)
 	if res.RowsAffected == 0 {
@@ -89,10 +90,25 @@ func (r *Repository) CreateJobAppTrackerItem(t *JobAppTracker, title, body strin
 
 func (r *Repository) LookupJobAppTrackerItems(trackerID string) ([]*JobAppItem, error) {
 	var items []*JobAppItem
-	if err := r.db.Where("tracker_id = ?", trackerID).Find(&items).Error; err != nil {
-		return nil, err
+	res := r.db.Where("tracker_id = ?", trackerID).
+		Order("created_at ASC"). // ordering options pattern? https://gorm.io/docs/query.html#Order
+		Find(&items)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 	return items, nil
+}
+
+func (r *Repository) UpdateJobAppTrackerItemField(trackerID string, itemID string, fields []string) (*JobAppItem, error) {
+	var item *JobAppItem
+	res := r.db.Model(item).Where("tracker_id = ? AND id = ?", trackerID, itemID).Select(fields).Updates(item)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil, errors.New("item not found")
+	}
+	return item, nil
 }
 
 func (r *Repository) UpdateJobAppTrackerItem(t *JobAppTracker, i *JobAppItem) (*JobAppItem, error) {

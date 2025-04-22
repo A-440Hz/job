@@ -29,6 +29,7 @@ func (s *Service) CreateNewUser(t *scheduler.Timezone) (*User, error) {
 	return u, nil
 }
 
+// TODO: I think this should be a validateUpdateUserFields function
 func (s *Service) validateRegisterBaseUser(username string, email string) error {
 	badFields := map[string]string{}
 	res := s.repo.db.Where("username = ?", username).First(&User{})
