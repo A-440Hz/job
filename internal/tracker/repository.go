@@ -70,14 +70,6 @@ func (r *Repository) DeleteJobAppTracker(t *JobAppTracker) error {
 	return nil
 }
 
-func (r *Repository) GetJobAppTrackerItems(trackerID string) ([]*JobAppItem, error) {
-	var items []*JobAppItem
-	if err := r.db.Where("tracker_id = ?", trackerID).Find(&items).Error; err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 func (i *JobAppItem) BeforeCreate(tx *gorm.DB) error {
 	i.ID = db.NewPublicID(db.ItemIdPrefix)
 	return nil
@@ -95,12 +87,12 @@ func (r *Repository) CreateJobAppTrackerItem(t *JobAppTracker, title, body strin
 	return i, nil
 }
 
-func (r *Repository) LookupJobAppTrackerItem(t *JobAppTracker, id string) (*JobAppItem, error) {
-	i := &JobAppItem{ID: id}
-	if err := r.db.First(i).Error; err != nil {
+func (r *Repository) LookupJobAppTrackerItems(trackerID string) ([]*JobAppItem, error) {
+	var items []*JobAppItem
+	if err := r.db.Where("tracker_id = ?", trackerID).Find(&items).Error; err != nil {
 		return nil, err
 	}
-	return i, nil
+	return items, nil
 }
 
 func (r *Repository) UpdateJobAppTrackerItem(t *JobAppTracker, i *JobAppItem) (*JobAppItem, error) {

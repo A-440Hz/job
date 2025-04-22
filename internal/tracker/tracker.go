@@ -66,3 +66,7 @@ type TrackerStats struct {
 	TotalBoxesAwarded   int     `json:"totalBoxesAwarded"`
 	AvgDailyCompleted   float64 `json:"avgDailyCompleted"`
 }
+
+func (t *JobAppTracker) GetID() string {
+	return t.ID
+}

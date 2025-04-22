@@ -59,8 +59,8 @@ func (s *Service) DeleteJobAppTracker(id string) error {
 	return nil
 }
 
-func (s *Service) GetJobAppTrackerItems(trackerID string) ([]*JobAppItem, error) {
-	items, err := s.repo.GetJobAppTrackerItems(trackerID)
+func (s *Service) LookupJobAppTrackerItems(trackerID string) ([]*JobAppItem, error) {
+	items, err := s.repo.LookupJobAppTrackerItems(trackerID)
 	if err != nil {
 		return nil, err
 	}

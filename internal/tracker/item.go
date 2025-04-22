@@ -19,10 +19,9 @@ type Item interface {
 }
 
 type JobAppItem struct {
-	ID         string        `gorm:"primaryKey"`
-	TrackerID  string        `gorm:"index"`
-	Tracker    JobAppTracker `gorm:"foreignKey:TrackerID;references:ID"`
-	Title      string        // maybe separate this into Company and Position
+	ID         string `gorm:"primaryKey"`
+	TrackerID  string `gorm:"index"`
+	Title      string // maybe separate this into Company and Position
 	Body       string
 	status     ItemStatus
 	attributed bool // this flips when a tracker progress is assigned from this item
