@@ -52,11 +52,7 @@ func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, erro
 		}
 		return nil, err
 	}
-	u, err = s.UpdateUserFields(id, uf)
-	if err != nil {
-		return nil, err
-	}
-	return u, nil
+	return s.UpdateUserFields(id, uf)
 }
 
 func (s *Service) validateUpdateUserFields(u User) error {
@@ -104,6 +100,8 @@ func (s *Service) UpdateUserFields(id string, fields *UserUpdateFields) (*User, 
 	if err := s.validateUpdateUserFields(*updateUser); err != nil {
 		return nil, err
 	}
+
+	// i could check for differences here but i don't think it's that important
 	updateUser.ID = id
 	_, err = s.repo.UpdateUserFields(updateUser, updateFields)
 	if err != nil {

@@ -3,8 +3,6 @@ package tracker
 import (
 	"errors"
 	"job/internal/db"
-	"job/internal/scheduler"
-	"job/internal/user"
 
 	"gorm.io/gorm"
 )
@@ -17,23 +15,28 @@ func NewRepository(d *gorm.DB) *Repository {
 	return &Repository{db: d}
 }
 
-func (t *UnderlyingTracker) BeforeCreate(tx *gorm.DB) error {
+// func (t *UnderlyingTracker) BeforeCreate(tx *gorm.DB) error {
+// 	t.ID = db.NewPublicID(db.TrackerIdPrefix)
+// 	return nil
+// }
+
+func (t *JobAppTracker) BeforeCreate(tx *gorm.DB) error {
 	t.ID = db.NewPublicID(db.TrackerIdPrefix)
 	return nil
 }
 
 // user is validated in the service layer
-func (r *Repository) CreateUnderlyingTracker(u *user.User) (*UnderlyingTracker, error) {
-	t := &UnderlyingTracker{
-		UserID:       u.GetID(),
-		GoalDeadline: scheduler.GetDefaultGoalDeadline(u.Timezone.Location),
-	}
-	res := r.db.Create(t)
-	if res.Error != nil {
-		return nil, res.Error
-	}
-	return t, nil
-}
+// func (r *Repository) CreateUnderlyingTracker(u *user.User) (*UnderlyingTracker, error) {
+// 	t := &UnderlyingTracker{
+// 		UserID:       u.GetID(),
+// 		GoalDeadline: scheduler.GetDefaultGoalDeadline(u.Timezone.Location),
+// 	}
+// 	res := r.db.Create(t)
+// 	if res.Error != nil {
+// 		return nil, res.Error
+// 	}
+// 	return t, nil
+// }
 
 func (r *Repository) CreateJobAppTracker(t *JobAppTracker) (*JobAppTracker, error) {
 	res := r.db.Create(t)

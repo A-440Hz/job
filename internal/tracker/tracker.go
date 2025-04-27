@@ -1,6 +1,7 @@
 package tracker
 
 import (
+	"reflect"
 	"time"
 
 	"gorm.io/gorm"
@@ -8,10 +9,14 @@ import (
 
 type Frequency string
 
-const (
-	FreqDaily  Frequency = "daily"
-	FreqWeekly Frequency = "weekly"
+var frequencies = []Frequency{FreqDaily, FreqWeekly}
 
+const (
+	FreqDaily   Frequency = "daily"
+	FreqWeekly  Frequency = "weekly"
+	DefaultFreq           = FreqWeekly
+
+	// underlying tracker fields
 	goalDeadlineField           = "GoalDeadline"
 	goalFrequencyField          = "GoalFrequency"
 	goalQuantityField           = "GoalQuantity"
@@ -21,6 +26,10 @@ const (
 	totalItemsCompletedField    = "TotalItemsCompleted"
 	totalBoxesAwardedField      = "TotalBoxesAwarded"
 	firstCompletedField         = "FirstCompleted"
+
+	// job app tracker fields
+	numBoxesAwardedField   = "NumBoxesAwarded"
+	numItemsCompletedField = "NumItemsCompleted"
 )
 
 // chatgpt says:
@@ -81,4 +90,89 @@ func (t *JobAppTracker) GetID() string {
 }
 
 type TrackerUpdateFields struct {
-	
+	GoalDeadline  *time.Time `json:"goalDeadline,omitempty"`
+	GoalFrequency *string    `json:"goalFrequency,omitempty"`
+	GoalQuantity  *int       `json:"goalQuantity,omitempty"`
+
+	//stats
+	CurGoalStreak          *int       `json:"curGoalStreak,omitempty"`
+	MaxGoalStreak          *int       `json:"maxGoalStreak,omitempty"`
+	MaxItemsCompletedDaily *int       `json:"maxItemsCompletedDaily,omitempty"`
+	TotalItemsCompleted    *int       `json:"totalItemsCompleted,omitempty"`
+	TotalBoxesAwarded      *int       `json:"totalBoxesAwarded,omitempty"`
+	FirstCompleted         *time.Time `json:"firstCompleted,omitempty"`
+}
+
+func (uf *TrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []string, error) {
+	t := &UnderlyingTracker{}
+	fields := []string{}
+	if uf.GoalDeadline != nil {
+		t.GoalDeadline = *uf.GoalDeadline
+		fields = append(fields, goalDeadlineField)
+	}
+	if uf.GoalFrequency != nil {
+		t.GoalFrequency = Frequency(*uf.GoalFrequency)
+		fields = append(fields, goalFrequencyField)
+	}
+	if uf.GoalQuantity != nil {
+		t.GoalQuantity = *uf.GoalQuantity
+		fields = append(fields, goalQuantityField)
+	}
+	if uf.CurGoalStreak != nil {
+		t.CurGoalStreak = *uf.CurGoalStreak
+		fields = append(fields, curGoalStreakField)
+	}
+	if uf.MaxGoalStreak != nil {
+		t.MaxGoalStreak = *uf.MaxGoalStreak
+		fields = append(fields, maxGoalStreakField)
+	}
+	if uf.MaxItemsCompletedDaily != nil {
+		t.MaxItemsCompletedDaily = *uf.MaxItemsCompletedDaily
+		fields = append(fields, maxItemsCompletedDailyField)
+	}
+	if uf.TotalItemsCompleted != nil {
+		t.TotalItemsCompleted = *uf.TotalItemsCompleted
+		fields = append(fields, totalItemsCompletedField)
+	}
+	if uf.TotalBoxesAwarded != nil {
+		t.TotalBoxesAwarded = *uf.TotalBoxesAwarded
+		fields = append(fields, totalBoxesAwardedField)
+	}
+	if uf.FirstCompleted != nil {
+		t.FirstCompleted = uf.FirstCompleted
+		fields = append(fields, firstCompletedField)
+	}
+	return t, fields, nil
+}
+
+func (uf *TrackerUpdateFields) IsNil() bool {
+	return uf == nil || reflect.DeepEqual(uf, &TrackerUpdateFields{})
+}
+
+type JobAppTrackerUpdateFields struct {
+	NumBoxesAwarded   *int `json:"numBoxesAwarded,omitempty"`
+	NumItemsCompleted *int `json:"numItemsCompleted,omitempty"`
+	TrackerUpdateFields
+}
+
+func (uf *JobAppTrackerUpdateFields) formatForRepo() (*JobAppTracker, []string, error) {
+	t := &JobAppTracker{}
+	fields := []string{}
+	if uf.NumBoxesAwarded != nil {
+		t.numBoxesAwarded = *uf.NumBoxesAwarded
+		fields = append(fields, "numBoxesAwarded")
+	}
+	if uf.NumItemsCompleted != nil {
+		t.numItemsCompleted = *uf.NumItemsCompleted
+		fields = append(fields, "numItemsCompleted")
+	}
+	if !uf.TrackerUpdateFields.IsNil() {
+		ut, f, err := uf.TrackerUpdateFields.formatForRepo()
+		if err != nil {
+			return nil, nil, err
+		}
+		t.UnderlyingTracker = *ut
+		fields = append(fields, f...)
+	}
+	return t, fields, nil
+}

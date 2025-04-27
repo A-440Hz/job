@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"log"
 	"time"
 )
 
@@ -17,7 +18,14 @@ func GetDefaultTimezone() *Timezone {
 }
 
 // GetDefaultGoalDeadline returns 1AM at location l, defaulting to DefaultTimezone
-func GetDefaultGoalDeadline(l *time.Location) time.Time {
+func GetDefaultGoalDeadline(z *Timezone) time.Time {
+	var l *time.Location
+	if z == nil {
+		log.Println("user timezone was nil -- mutating value to default timezone location")
+		l = GetDefaultTimezone().Location
+	} else {
+		l = z.Location
+	}
 	now := time.Now()
 	return time.Date(now.Year(), now.Month(), now.Day()+1, 1, 0, 0, 0, l)
 }
