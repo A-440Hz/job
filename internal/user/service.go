@@ -2,10 +2,7 @@ package user
 
 import (
 	"errors"
-	"job/internal/db"
 	"job/internal/scheduler"
-	"strconv"
-	"strings"
 
 	"gorm.io/gorm"
 )
@@ -29,20 +26,56 @@ func (s *Service) CreateNewUser(t *scheduler.Timezone) (*User, error) {
 	return u, nil
 }
 
-// TODO: I think this should be a validateUpdateUserFields function
-func (s *Service) validateRegisterBaseUser(username string, email string) error {
+// should this refactor to a updateUserFields function which is called in the handler layer?
+func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, error) {
 	badFields := map[string]string{}
-	res := s.repo.db.Where("username = ?", username).First(&User{})
-	if res.Error == nil {
-		badFields["username"] = "username already registered"
-	} else if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
-		badFields["username_query"] = res.Error.Error()
+	u, err := s.repo.LookupUser(id)
+	if err != nil {
+		badFields["lookup"] = err.Error()
 	}
-	res = s.repo.db.Where("email = ?", email).First(&User{})
-	if res.Error == nil {
-		badFields["email"] = "email already registered"
-	} else if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
-		badFields["email_query"] = res.Error.Error()
+	if u.IsRegistered() {
+		badFields["registered"] = "user already registered"
+	}
+	if uf.Username == nil {
+		badFields["username"] = "missing username for registration request"
+	}
+	if uf.Email == nil {
+		badFields["email"] = "missing email for registration request"
+	}
+	if uf.Password == nil {
+		badFields["password"] = "missing password for registration request"
+	}
+	if len(badFields) > 0 {
+		err := errors.New("validation error:")
+		for _, v := range badFields {
+			err = errors.Join(err, errors.New(v))
+		}
+		return nil, err
+	}
+	u, err = s.UpdateUserFields(id, uf)
+	if err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+func (s *Service) validateUpdateUserFields(u User) error {
+	badFields := map[string]string{}
+	if u.Username != nil {
+		res := s.repo.db.Where("username = ?", *u.Username).First(&User{})
+		if res.Error == nil {
+			badFields["username"] = "username already taken"
+		} else if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			badFields["username_query"] = res.Error.Error()
+		}
+	}
+	if u.Email != nil {
+		res := s.repo.db.Where("email = ?", *u.Email).First(&User{})
+		if res.Error == nil {
+			badFields["email"] = "email already registered"
+		} else if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
+			badFields["email_query"] = res.Error.Error()
+		}
 	}
 	if len(badFields) > 0 {
 		err := errors.New("validation error:")
@@ -54,82 +87,30 @@ func (s *Service) validateRegisterBaseUser(username string, email string) error 
 	return nil
 }
 
-func (s *Service) RegisterBaseUser(id string, username string, password string, email string) (*User, error) {
-	u, err := s.repo.LookupUser(id)
-	if err != nil {
-		return nil, err
-	}
-
-	if u.IsRegistered() {
-		return nil, errors.New("current user id already registered")
-	}
-
-	email = strings.ToLower(strings.TrimSpace(email))
-	if err = s.validateRegisterBaseUser(username, email); err != nil {
-		return nil, err
-	}
-	passwordHash, err := db.HashPassword(password)
-	if err != nil {
-		return nil, err
-	}
-
-	u.Username = &username
-	u.Email = &email
-	u.Password = &passwordHash
-	u.Registered = true
-
-	fields := []string{usernameField, emailField, passwordField, registeredField}
-
-	u, err = s.repo.UpdateUserFields(u, fields)
-	if err != nil {
-		return nil, err
-	}
-	return u, nil
-}
-
 // UpdateUserFields updates the valid user fields specified in the fields map.
-func (s *Service) UpdateUserFields(id string, fields map[string]string) (*User, error) {
-	u, err := s.repo.LookupUser(id)
+func (s *Service) UpdateUserFields(id string, fields *UserUpdateFields) (*User, error) {
+	_, err := s.repo.LookupUser(id)
 	if err != nil {
 		return nil, err
 	}
-	updateFields := []string{}
-	for k, v := range fields {
-		switch {
-		case usernameField == k && u.Username == nil || *u.Username != v:
-			u.Username = &v
-			updateFields = append(updateFields, usernameField)
-		case emailField == k && u.Email == nil || *u.Email != v:
-			v = strings.ToLower(strings.TrimSpace(v))
-			u.Email = &v
-			updateFields = append(updateFields, emailField)
-		case passwordField == k && u.Password == nil || db.CheckPasswordHash(v, *u.Password) == false:
-			hash, err := db.HashPassword(v)
-			if err != nil {
-				return nil, err
-			}
-			u.Password = &hash
-			updateFields = append(updateFields, passwordField)
-		case registeredField == k && u.Registered == false:
-			u.Registered = true
-			updateFields = append(updateFields, registeredField)
-		case timezoneField == k:
-			v, err := strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			tz := scheduler.NewTimezone(v)
-			if u.Timezone == nil || u.Timezone != tz {
-				u.Timezone = tz
-				updateFields = append(updateFields, timezoneField)
-			}
-		}
-	}
-	u, err = s.repo.UpdateUserFields(u, updateFields)
+	// updateUser has trimmed and hashed fields, so I validate it below
+	updateUser, updateFields, err := fields.formatForRepo()
 	if err != nil {
 		return nil, err
 	}
-	return u, nil
+	if len(updateFields) == 0 {
+		return nil, errors.New("no fields to update")
+	}
+	if err := s.validateUpdateUserFields(*updateUser); err != nil {
+		return nil, err
+	}
+	updateUser.ID = id
+	_, err = s.repo.UpdateUserFields(updateUser, updateFields)
+	if err != nil {
+		return nil, err
+	}
+	// it is best practice to return the updated user object
+	return s.LookupUser(id)
 }
 
 func (s *Service) LookupUser(id string) (*User, error) {

@@ -13,7 +13,7 @@ const defaultTimezoneOffset = -7 * 60 * 60 // UTC-7
 
 // GetDefaultTimezone returns a Timezone object corresponding to UTC-7 (PST)
 func GetDefaultTimezone() *Timezone {
-	return NewTimezone(defaultTimezoneOffset)
+	return NewTimezoneWithOffset(defaultTimezoneOffset)
 }
 
 // GetDefaultGoalDeadline returns 1AM at location l, defaulting to DefaultTimezone

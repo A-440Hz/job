@@ -12,8 +12,8 @@ type Handler struct {
 	TrackerService *tracker.Service
 }
 
-// HandleJobAppTracker handles main page of the webapp
-func (h *Handler) HandleJobAppTracker(w http.ResponseWriter, r *http.Request) {
+// HandleJobAppTrackerPage handles main page of the webapp
+func (h *Handler) HandleJobAppTrackerPage(w http.ResponseWriter, r *http.Request) {
 	// get user from cookie or create user
 	var user *user.User
 	uuid, err := getUserCookie(w, r)
@@ -32,7 +32,9 @@ func (h *Handler) HandleJobAppTracker(w http.ResponseWriter, r *http.Request) {
 	} else {
 		user, err = h.UserService.LookupUser(uuid)
 		if err != nil {
+			// should I clear the cookie if the user is not found? I don't see why not
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			clearUserCookie(w)
 			return
 		}
 	}

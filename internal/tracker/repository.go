@@ -17,21 +17,22 @@ func NewRepository(d *gorm.DB) *Repository {
 	return &Repository{db: d}
 }
 
+func (t *UnderlyingTracker) BeforeCreate(tx *gorm.DB) error {
+	t.ID = db.NewPublicID(db.TrackerIdPrefix)
+	return nil
+}
+
 // user is validated in the service layer
 func (r *Repository) CreateUnderlyingTracker(u *user.User) (*UnderlyingTracker, error) {
 	t := &UnderlyingTracker{
 		UserID:       u.GetID(),
 		GoalDeadline: scheduler.GetDefaultGoalDeadline(u.Timezone.Location),
 	}
-	if err := r.db.Create(t).Error; err != nil {
-		return nil, err
+	res := r.db.Create(t)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 	return t, nil
-}
-
-func (t *JobAppTracker) BeforeCreate(tx *gorm.DB) error {
-	t.ID = db.NewPublicID(db.TrackerIdPrefix)
-	return nil
 }
 
 func (r *Repository) CreateJobAppTracker(t *JobAppTracker) (*JobAppTracker, error) {
@@ -43,9 +44,10 @@ func (r *Repository) CreateJobAppTracker(t *JobAppTracker) (*JobAppTracker, erro
 }
 
 func (r *Repository) LookupJobAppTracker(id string) (*JobAppTracker, error) {
-	t := &JobAppTracker{ID: id}
-	if err := r.db.First(t); err.Error != nil {
-		return nil, err.Error
+	t := &JobAppTracker{UnderlyingTracker: UnderlyingTracker{ID: id}}
+	res := r.db.First(t)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 	return t, nil
 }
@@ -53,6 +55,14 @@ func (r *Repository) LookupJobAppTracker(id string) (*JobAppTracker, error) {
 // TODO: change this to update mask later
 func (r *Repository) UpdateJobAppTracker(t *JobAppTracker) (*JobAppTracker, error) {
 	res := r.db.Save(t)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return t, nil
+}
+
+func (r *Repository) UpdateJobAppTrackerFields(t *JobAppTracker, fields []string) (*JobAppTracker, error) {
+	res := r.db.Model(t).Select(fields).Updates(t)
 	if res.Error != nil {
 		return nil, res.Error
 	}

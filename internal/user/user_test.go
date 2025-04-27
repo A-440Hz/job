@@ -12,6 +12,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func strPtr(s string) *string {
+	return &s
+}
+
+func boolPtr(b bool) *bool {
+	return &b
+}
+
 func Test_validateRegisterBaseUser(t *testing.T) {
 	db.SetEnvForTesting()
 	db, err := db.InitGormDB()
@@ -40,7 +48,7 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 			username:   "u1",
 			password:   "p2",
 			email:      "e2@mail.com",
-			wantErrMsg: []string{"username already registered"},
+			wantErrMsg: []string{"username already taken"},
 		},
 		{
 			name:       "taken-email",
@@ -54,7 +62,7 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 			username:   "u1",
 			password:   "p2",
 			email:      "e1@mail.com",
-			wantErrMsg: []string{"username already registered", "email already registered"},
+			wantErrMsg: []string{"username already taken", "email already registered"},
 		},
 	}
 	for _, tt := range tests {
@@ -62,14 +70,24 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 			// a constant user to test against
 			u1, err := svc.CreateNewUser(nil)
 			require.NoError(t, err)
-			u1, err = svc.RegisterBaseUser(u1.GetID(), "u1", "p1", "e1@mail.com")
+			u1, err = svc.RegisterBaseUser(u1.GetID(), &UserUpdateFields{
+				Username:   strPtr("u1"),
+				Password:   strPtr("p1"),
+				Email:      strPtr("e1@mail.com"),
+				Registered: boolPtr(true),
+			})
 			require.NoError(t, err)
 			assert.NotNil(t, u1)
 
 			// a new user to test against
 			u2, err := svc.CreateNewUser(nil)
 			assert.NoError(t, err)
-			u2, err = svc.RegisterBaseUser(u2.GetID(), tt.username, tt.password, tt.email)
+			u2, err = svc.RegisterBaseUser(u2.GetID(), &UserUpdateFields{
+				Username:   strPtr(tt.username),
+				Password:   strPtr(tt.password),
+				Email:      strPtr(tt.email),
+				Registered: boolPtr(true),
+			})
 			for _, msg := range tt.wantErrMsg {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), msg)
@@ -94,7 +112,12 @@ func Test_RegisterBaseUser(t *testing.T) {
 
 	u1, err := svc.CreateNewUser(nil)
 	require.NoError(t, err)
-	u1, err = svc.RegisterBaseUser(u1.GetID(), "u1", "p1", "e1@mail.com")
+	u1, err = svc.RegisterBaseUser(u1.GetID(), &UserUpdateFields{
+		Username:   strPtr("u1"),
+		Password:   strPtr("p1"),
+		Email:      strPtr("e1@mail.com"),
+		Registered: boolPtr(true),
+	})
 	require.NoError(t, err)
 	assert.NotNil(t, u1)
 
@@ -104,12 +127,17 @@ func Test_RegisterBaseUser(t *testing.T) {
 	assert.Equal(t, u1.GetID(), lookupU1.GetID())
 	assert.Equal(t, u1.Username, lookupU1.Username)
 	assert.Equal(t, u1.Email, lookupU1.Email)
-	assert.True(t, db.CheckPasswordHash("p1", *lookupU1.Password))
+	assert.True(t, db.PasswordMatchesHash("p1", *lookupU1.Password))
 	assert.True(t, lookupU1.Registered)
 	assert.NotNil(t, lookupU1.Timezone)
 
-	_, err = svc.RegisterBaseUser(u1.GetID(), "u1", "p1", "e1@mail.com")
-	assert.ErrorContains(t, err, "current user id already registered")
+	_, err = svc.RegisterBaseUser(u1.GetID(), &UserUpdateFields{
+		Username:   strPtr("u1"),
+		Password:   strPtr("p1"),
+		Email:      strPtr("e1@mail.com"),
+		Registered: boolPtr(true),
+	})
+	assert.ErrorContains(t, err, "user already registered")
 
 	dbase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 

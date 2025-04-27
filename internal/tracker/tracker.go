@@ -42,7 +42,7 @@ type TrackerInterface interface {
 
 type UnderlyingTracker struct {
 	// I shouldn't need to embed a User. A foreign key is sufficient.
-	ID            uint   `gorm:"primaryKey"`
+	ID            string `gorm:"primaryKey"`
 	UserID        string `gorm:"index"` // the index tag improves query performance for common lookup fields
 	GoalDeadline  time.Time
 	GoalFrequency Frequency `gorm:"default:weekly"`
@@ -62,8 +62,7 @@ type UnderlyingTracker struct {
 
 // essentially this is a item factory? it creates JobAppItems and assigns them to the UnderlyingTracker
 type JobAppTracker struct {
-	ID                string `gorm:"primaryKey"`
-	Tracker           UnderlyingTracker
+	UnderlyingTracker
 	numBoxesAwarded   int `gorm:"default:0"`
 	numItemsCompleted int `gorm:"default:0"`
 }
@@ -80,3 +79,6 @@ type TrackerStats struct {
 func (t *JobAppTracker) GetID() string {
 	return t.ID
 }
+
+type TrackerUpdateFields struct {
+	

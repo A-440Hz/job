@@ -15,7 +15,7 @@ type Timezone struct {
 	offset   int64
 }
 
-func NewTimezone(o int64) *Timezone {
+func NewTimezoneWithOffset(o int64) *Timezone {
 	return &Timezone{
 		Location: time.FixedZone("", int(o)),
 		offset:   o,

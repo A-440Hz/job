@@ -41,6 +41,7 @@ func (r *Repository) LookupUser(id string) (*User, error) {
 	if res.Error != nil {
 		return nil, res.Error
 	}
+	// opportunity to return gorm.ErrRecordNotFound differently
 	return u, nil
 }
 

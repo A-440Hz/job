@@ -26,6 +26,21 @@ func setUserCookie(w http.ResponseWriter, uuid string) error {
 		Value:    uuid,
 		MaxAge:   userCookieExpiry,
 		Secure:   true,
+		HttpOnly: true, // prevents client-side JS from accessing the cookie
+		SameSite: http.SameSiteStrictMode,
+	}
+	http.SetCookie(w, &cookie)
+	return nil
+}
+
+// clearUserCookie clears the user cookie from the response
+func clearUserCookie(w http.ResponseWriter) error {
+	cookie := http.Cookie{
+		Name:     userCookieName,
+		Value:    "",
+		MaxAge:   -1,
+		Secure:   true,
+		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
 	}
 	http.SetCookie(w, &cookie)

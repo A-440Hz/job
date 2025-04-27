@@ -23,11 +23,11 @@ func (s *Service) createNewUnderlyingTracker(u *user.User) (*UnderlyingTracker, 
 }
 
 func (s *Service) CreateNewJobAppTracker(u *user.User) (*JobAppTracker, error) {
-	ut, err := s.repo.CreateUnderlyingTracker(u)
+	ut, err := s.createNewUnderlyingTracker(u)
 	if err != nil {
 		return nil, err
 	}
-	t := &JobAppTracker{Tracker: *ut}
+	t := &JobAppTracker{UnderlyingTracker: *ut}
 	t, err = s.repo.CreateJobAppTracker(t)
 	if err != nil {
 		return nil, err
@@ -49,6 +49,15 @@ func (s *Service) updateJobAppTracker(t *JobAppTracker) (*JobAppTracker, error) 
 		return nil, err
 	}
 	return t, nil
+}
+
+func (s *Service) UpdateJobAppTrackerFields(id string, fields *TrackerUpdateFields) (*JobAppTracker, error) {
+	t, err := s.repo.LookupJobAppTracker(id)
+	if err != nil {
+		return nil, err
+	}
+	updateFields := []string{}
+
 }
 
 func (s *Service) DeleteJobAppTracker(id string) error {
