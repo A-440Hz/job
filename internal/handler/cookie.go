@@ -11,7 +11,7 @@ const (
 
 // todo: probably incorporate encryption to get/set cookies
 // https://www.alexedwards.net/blog/working-with-cookies-in-go
-func getUserCookie(w http.ResponseWriter, r *http.Request) (string, error) {
+func getUserIdFromCookie(r *http.Request) (string, error) {
 	cookie, err := r.Cookie(userCookieName)
 	if err != nil {
 		return "", err

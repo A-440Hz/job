@@ -1,6 +1,7 @@
 package tracker
 
 import (
+	"reflect"
 	"time"
 
 	"gorm.io/gorm"
@@ -8,19 +9,27 @@ import (
 
 type Frequency string
 
-const (
-	FreqDaily  Frequency = "daily"
-	FreqWeekly Frequency = "weekly"
+var frequencies = []Frequency{FreqDaily, FreqWeekly}
 
-	goalDeadlineField           = "GoalDeadline"
-	goalFrequencyField          = "GoalFrequency"
-	goalQuantityField           = "GoalQuantity"
-	curGoalStreakField          = "CurGoalStreak"
-	maxGoalStreakField          = "MaxGoalStreak"
-	maxItemsCompletedDailyField = "MaxItemsCompletedDaily"
-	totalItemsCompletedField    = "TotalItemsCompleted"
-	totalBoxesAwardedField      = "TotalBoxesAwarded"
-	firstCompletedField         = "FirstCompleted"
+const (
+	FreqDaily   Frequency = "daily"
+	FreqWeekly  Frequency = "weekly"
+	DefaultFreq           = FreqWeekly
+
+	// underlying tracker fields
+	goalDeadlineField           = "goal_deadline"
+	goalFrequencyField          = "goal_frequency"
+	goalQuantityField           = "goal_quantity"
+	curGoalStreakField          = "cur_goal_streak"
+	maxGoalStreakField          = "max_goal_streak"
+	maxItemsCompletedDailyField = "max_items_completed_daily"
+	totalItemsCompletedField    = "total_items_completed"
+	totalBoxesAwardedField      = "total_boxes_awarded"
+	firstCompletedField         = "first_completed"
+
+	// job app tracker fields
+	numBoxesAwardedField   = "num_boxes_awarded"
+	numItemsCompletedField = "num_items_completed"
 )
 
 // chatgpt says:
@@ -80,5 +89,90 @@ func (t *JobAppTracker) GetID() string {
 	return t.ID
 }
 
-type TrackerUpdateFields struct {
-	
+type UnderlyingTrackerUpdateFields struct {
+	GoalDeadline  *time.Time `json:"goalDeadline,omitempty"`
+	GoalFrequency *string    `json:"goalFrequency,omitempty"`
+	GoalQuantity  *int       `json:"goalQuantity,omitempty"`
+
+	//stats
+	CurGoalStreak          *int       `json:"curGoalStreak,omitempty"`
+	MaxGoalStreak          *int       `json:"maxGoalStreak,omitempty"`
+	MaxItemsCompletedDaily *int       `json:"maxItemsCompletedDaily,omitempty"`
+	TotalItemsCompleted    *int       `json:"totalItemsCompleted,omitempty"`
+	TotalBoxesAwarded      *int       `json:"totalBoxesAwarded,omitempty"`
+	FirstCompleted         *time.Time `json:"firstCompleted,omitempty"`
+}
+
+func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []string, error) {
+	t := &UnderlyingTracker{}
+	fields := []string{}
+	if uf.GoalDeadline != nil {
+		t.GoalDeadline = *uf.GoalDeadline
+		fields = append(fields, goalDeadlineField)
+	}
+	if uf.GoalFrequency != nil {
+		t.GoalFrequency = Frequency(*uf.GoalFrequency)
+		fields = append(fields, goalFrequencyField)
+	}
+	if uf.GoalQuantity != nil {
+		t.GoalQuantity = *uf.GoalQuantity
+		fields = append(fields, goalQuantityField)
+	}
+	if uf.CurGoalStreak != nil {
+		t.CurGoalStreak = *uf.CurGoalStreak
+		fields = append(fields, curGoalStreakField)
+	}
+	if uf.MaxGoalStreak != nil {
+		t.MaxGoalStreak = *uf.MaxGoalStreak
+		fields = append(fields, maxGoalStreakField)
+	}
+	if uf.MaxItemsCompletedDaily != nil {
+		t.MaxItemsCompletedDaily = *uf.MaxItemsCompletedDaily
+		fields = append(fields, maxItemsCompletedDailyField)
+	}
+	if uf.TotalItemsCompleted != nil {
+		t.TotalItemsCompleted = *uf.TotalItemsCompleted
+		fields = append(fields, totalItemsCompletedField)
+	}
+	if uf.TotalBoxesAwarded != nil {
+		t.TotalBoxesAwarded = *uf.TotalBoxesAwarded
+		fields = append(fields, totalBoxesAwardedField)
+	}
+	if uf.FirstCompleted != nil {
+		t.FirstCompleted = uf.FirstCompleted
+		fields = append(fields, firstCompletedField)
+	}
+	return t, fields, nil
+}
+
+func (uf *UnderlyingTrackerUpdateFields) IsNil() bool {
+	return uf == nil || reflect.DeepEqual(uf, &UnderlyingTrackerUpdateFields{})
+}
+
+type JobAppTrackerUpdateFields struct {
+	NumBoxesAwarded   *int `json:"numBoxesAwarded,omitempty"`
+	NumItemsCompleted *int `json:"numItemsCompleted,omitempty"`
+	UnderlyingTrackerUpdateFields
+}
+
+func (uf *JobAppTrackerUpdateFields) formatForRepo() (*JobAppTracker, []string, error) {
+	t := &JobAppTracker{}
+	fields := []string{}
+	if uf.NumBoxesAwarded != nil {
+		t.numBoxesAwarded = *uf.NumBoxesAwarded
+		fields = append(fields, "numBoxesAwarded")
+	}
+	if uf.NumItemsCompleted != nil {
+		t.numItemsCompleted = *uf.NumItemsCompleted
+		fields = append(fields, "numItemsCompleted")
+	}
+	if !uf.UnderlyingTrackerUpdateFields.IsNil() {
+		ut, f, err := uf.UnderlyingTrackerUpdateFields.formatForRepo()
+		if err != nil {
+			return nil, nil, err
+		}
+		t.UnderlyingTracker = *ut
+		fields = append(fields, f...)
+	}
+	return t, fields, nil
+}

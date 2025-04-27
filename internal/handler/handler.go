@@ -16,7 +16,7 @@ type Handler struct {
 func (h *Handler) HandleJobAppTrackerPage(w http.ResponseWriter, r *http.Request) {
 	// get user from cookie or create user
 	var user *user.User
-	uuid, err := getUserCookie(w, r)
+	uuid, err := getUserIdFromCookie(r)
 	if err != nil {
 		// check error type(?); create and store new user in cookie and db if not found
 		user, err = h.UserService.CreateNewUser(PollUserTimezone(r))
@@ -38,7 +38,7 @@ func (h *Handler) HandleJobAppTrackerPage(w http.ResponseWriter, r *http.Request
 			return
 		}
 	}
-	tracker, err := h.TrackerService.LookupJobAppTracker(user.GetID())
+	tracker, err := h.TrackerService.GetJobAppTrackerFromUserID(user.GetID())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

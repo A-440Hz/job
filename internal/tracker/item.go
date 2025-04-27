@@ -14,11 +14,11 @@ const (
 	StatusComplete   ItemStatus = "complete"
 	StatusInProgress ItemStatus = "in progress"
 
-	titleField           = "Title"
-	bodyField            = "Body"
-	statusField          = "Status"
-	isAttributedField    = "IsAttributed"
-	attributionTimeField = "AttributionTime"
+	titleField           = "title"
+	bodyField            = "body"
+	statusField          = "status"
+	isAttributedField    = "is_attributed"
+	attributionTimeField = "attribution_time"
 )
 
 type Item interface {
@@ -62,9 +62,13 @@ func (s *ItemStatus) Scan(value any) error {
 	return nil
 }
 
-func (s ItemStatus) Value() (driver.Value, error) {
-	if s == "" {
+func (s *ItemStatus) Value() (driver.Value, error) {
+	if s == nil {
 		return nil, nil
 	}
-	return string(s), nil
+	return string(*s), nil
+}
+
+type JobAppItemUpdateFields struct {
+	Title *string `json:"title,omitempty"`
 }

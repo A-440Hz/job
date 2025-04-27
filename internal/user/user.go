@@ -9,12 +9,15 @@ import (
 	"gorm.io/gorm"
 )
 
+// can look into having gorm autofill json tags and read struct tags with reflection
+// (so i can replace this pattern later). as it is I just need to make sure everything is snake case
+// of the struct attributes
 const (
-	usernameField   = "Username"
-	emailField      = "Email"
-	passwordField   = "Password"
-	registeredField = "Registered"
-	timezoneField   = "Timezone"
+	usernameField   = "username"
+	emailField      = "email"
+	passwordField   = "password"
+	registeredField = "registered"
+	timezoneField   = "timezone"
 )
 
 type User struct {
@@ -22,8 +25,8 @@ type User struct {
 	Registered bool   `gorm:"default:false"`
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
-	DeletedAt  gorm.DeletedAt      `gorm:"index"`
-	Timezone   *scheduler.Timezone ``
+	DeletedAt  gorm.DeletedAt `gorm:"index"`
+	Timezone   *scheduler.Timezone
 	// Fields for registered users (pointers allow null values)
 	Username *string `gorm:"uniqueIndex" json:"username,omitempty"`
 	Email    *string `gorm:"uniqueIndex" json:"email,omitempty"`
