@@ -31,6 +31,9 @@ type User struct {
 	Username *string `gorm:"uniqueIndex" json:"username,omitempty"`
 	Email    *string `gorm:"uniqueIndex" json:"email,omitempty"`
 	Password *[]byte `gorm:"size:60" json:"-"` // bcrypt hash is 60 bytes
+
+	// potentially add every tracker type as foreign keys
+	// JobAppTracker tracker.JobAppTracker `gorm:"foreignKey:UserID"`
 }
 
 func (u *User) GetID() string {

@@ -17,7 +17,6 @@ func NewRepository(d *gorm.DB) *Repository {
 }
 
 // this is a gorm hook function https://gorm.io/docs/create.html#Create-Hooks
-// do i do it like this or have a default tag?
 func (u *User) BeforeCreate(tx *gorm.DB) error {
 	u.ID = db.NewPublicID(db.UserIdPrefix)
 	if u.Timezone == nil {
@@ -27,7 +26,6 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 }
 
 func (r *Repository) CreateUser(u *User) (*User, error) {
-	// maybe some validation here
 	res := r.db.Create(u)
 	if res.Error != nil {
 		return nil, res.Error
@@ -45,19 +43,9 @@ func (r *Repository) LookupUser(id string) (*User, error) {
 	return u, nil
 }
 
-func (r *Repository) UpdateUser(u *User) (*User, error) {
-	// might be better to have an update mask and user db.Update instead of Save
-	// https://www.codingexplorations.com/blog/gorm-save-vs-update-explained
-	// save updates all fields, which is okay for user registration, but not efficient for operations like changing username or password individually
-	res := r.db.Save(u)
-	if res.Error != nil {
-		return nil, res.Error
-	}
-	return u, nil
-}
-
 func (r *Repository) UpdateUserFields(u *User, fields []string) (*User, error) {
-	// potentially create a fields var
+	// https://www.codingexplorations.com/blog/gorm-save-vs-update-explained
+	// db.Save updates all fields, which is okay for user registration, but not efficient for operations like changing username or password individually
 	res := r.db.Model(u).Select(fields).Updates(u)
 	if res.Error != nil {
 		return nil, res.Error

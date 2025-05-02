@@ -3,6 +3,7 @@ package tracker
 import (
 	"database/sql/driver"
 	"fmt"
+	"slices"
 	"time"
 
 	"gorm.io/gorm"
@@ -10,9 +11,12 @@ import (
 
 type ItemStatus string
 
+var ValidJobAppItemStatus []ItemStatus = []ItemStatus{StatusComplete, StatusInProgress}
+
 const (
 	StatusComplete   ItemStatus = "complete"
 	StatusInProgress ItemStatus = "in progress"
+	StatusDefault    ItemStatus = StatusComplete
 
 	titleField           = "title"
 	bodyField            = "body"
@@ -29,8 +33,8 @@ type Item interface {
 type JobAppItem struct {
 	ID           string `gorm:"primaryKey"`
 	TrackerID    string `gorm:"index"`
-	Title        string // maybe separate this into Company and Position
-	Body         string
+	Title        string // Company: Role
+	Body         string // optional description
 	Status       ItemStatus
 	IsAttributed bool // this flips when a tracker progress is assigned from this item
 	// probably sync shenanigans to iron out? attempt sync on each item creation?
@@ -70,5 +74,39 @@ func (s *ItemStatus) Value() (driver.Value, error) {
 }
 
 type JobAppItemUpdateFields struct {
-	Title *string `json:"title,omitempty"`
+	Title           *string     `json:"title,omitempty"`
+	Body            *string     `json:"body,omitempty"`
+	Status          *ItemStatus `json:"status,omitempty"`
+	IsAttributed    *bool       `json:"isAttributed,omitempty"`
+	AttributionTime *time.Time  `json:"attributionTime,omitempty"`
+}
+
+// formatForRepo returns error when Status is not a ValidJobAppItemStatus
+func (uf *JobAppItemUpdateFields) formatForRepo() (*JobAppItem, []string, error) {
+	j := &JobAppItem{}
+	fields := []string{}
+	if uf.Title != nil {
+		j.Title = *uf.Title
+		fields = append(fields, titleField)
+	}
+	if uf.Body != nil {
+		j.Body = *uf.Body
+		fields = append(fields, bodyField)
+	}
+	if uf.Status != nil {
+		if !slices.Contains(ValidJobAppItemStatus, *uf.Status) {
+			return nil, nil, fmt.Errorf("invalid application status: %q", *uf.Status)
+		}
+		j.Status = *uf.Status
+		fields = append(fields, statusField)
+	}
+	if uf.IsAttributed != nil {
+		j.IsAttributed = *uf.IsAttributed
+		fields = append(fields, isAttributedField)
+	}
+	if uf.AttributionTime != nil {
+		j.AttributionTime = uf.AttributionTime
+		fields = append(fields, attributionTimeField)
+	}
+	return j, fields, nil
 }

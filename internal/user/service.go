@@ -28,11 +28,11 @@ func (s *Service) CreateNewUser(t *scheduler.Timezone) (*User, error) {
 
 // should this refactor to a updateUserFields function which is called in the handler layer?
 func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, error) {
-	badFields := map[string]string{}
 	u, err := s.repo.LookupUser(id)
 	if err != nil {
-		badFields["lookup"] = err.Error()
+		return nil, err
 	}
+	badFields := map[string]string{}
 	if u.IsRegistered() {
 		badFields["registered"] = "user already registered"
 	}

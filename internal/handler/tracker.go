@@ -22,6 +22,15 @@ func getJobAppTrackerUpdateFields(r *http.Request) (*tracker.JobAppTrackerUpdate
 	return &fields, nil
 }
 
+func getJobAppItemUpdateFields(r *http.Request) (*tracker.JobAppItemUpdateFields, error) {
+	var fields tracker.JobAppItemUpdateFields
+	d := json.NewDecoder(r.Body)
+	if err := d.Decode(&fields); err != nil {
+		return nil, err
+	}
+	return &fields, nil
+}
+
 func (h *Handler) UpdateJobAppTrackerFields(w http.ResponseWriter, r *http.Request) {
 	uuid, err := getUserIdFromCookie(r)
 	if err != nil {
@@ -36,6 +45,64 @@ func (h *Handler) UpdateJobAppTrackerFields(w http.ResponseWriter, r *http.Reque
 	}
 
 	t, err := h.TrackerService.UpdateJobAppTrackerFields(uuid, uf)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(t)
+}
+
+func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {
+	uuid, err := getUserIdFromCookie(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	t, err := h.TrackerService.LookupJobAppTrackerFromUserID(uuid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	uf, err := getJobAppItemUpdateFields(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	t, err = h.TrackerService.CreateJobAppItem(uuid, uf)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(t)
+}
+
+func (h *Handler) UpdateJobAppItem(w http.ResponseWriter, r *http.Request) {
+	uuid, err := getUserIdFromCookie(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	t, err := h.TrackerService.LookupJobAppTrackerFromUserID(uuid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	uf, err := getJobAppItemUpdateFields(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	t, err = h.TrackerService.CreateJobAppItem(t.GetID(), uf)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

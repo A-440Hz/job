@@ -46,7 +46,7 @@ func (r *Repository) CreateJobAppTracker(t *JobAppTracker) (*JobAppTracker, erro
 	return t, nil
 }
 
-func (r *Repository) LookupJobAppTracker(id string) (*JobAppTracker, error) {
+func (r *Repository) lookupJobAppTrackerFromTrackerID(id string) (*JobAppTracker, error) {
 	t := &JobAppTracker{UnderlyingTracker: UnderlyingTracker{ID: id}}
 	res := r.db.First(t)
 	if res.Error != nil {
@@ -55,18 +55,27 @@ func (r *Repository) LookupJobAppTracker(id string) (*JobAppTracker, error) {
 	return t, nil
 }
 
-func (r *Repository) GetJobAppTrackerFromUserID(uuid string) (*JobAppTracker, error) {
-	t := &JobAppTracker{}
-	res := r.db.Where("user_id = ?", uuid).First(t)
+func (r *Repository) LookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker, error) {
+	t := &JobAppTracker{UnderlyingTracker: UnderlyingTracker{UserID: uuid}}
+	res := r.db.First(t)
 	if res.Error != nil {
 		return nil, res.Error
 	}
 	return t, nil
 }
 
-// TODO: change this to update mask later
-func (r *Repository) UpdateJobAppTracker(t *JobAppTracker) (*JobAppTracker, error) {
-	res := r.db.Save(t)
+func (r *Repository) GetJobAppTrackerWithItemsFromTrackerID(id string) (*JobAppTracker, error) {
+	t := &JobAppTracker{UnderlyingTracker: UnderlyingTracker{ID: id}}
+	res := r.db.Preload("Items").First(t)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return t, nil
+}
+
+func (r *Repository) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTracker, error) {
+	t := &JobAppTracker{UnderlyingTracker: UnderlyingTracker{UserID: uuid}}
+	res := r.db.Preload("Items").First(t)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -93,24 +102,41 @@ func (r *Repository) DeleteJobAppTracker(t *JobAppTracker) error {
 	return nil
 }
 
+// GetScorableJobAppItems returns tracker items within the goal timeframe which are StatusComplete and not yet attributed
+// returning list instead of pointers because of small expected return size and faster field access
+// might need to switch because idk how well it will work with gorm
+func (r *Repository) GetScorableJobAppItems(t *JobAppTracker) ([]JobAppItem, error) {
+	items := []JobAppItem{}
+	// is there a case for validation or do i assume tracker timeframes are always set correctly?
+	begin, end := t.GetValidTimeframe()
+	if begin.IsZero() || end.IsZero() {
+		return nil, errors.New("invalid timeframe")
+	}
+	res := r.db.Where("tracker_id = ?", t.GetID()).
+		Where("created_at BETWEEN ? AND ?", begin, end).
+		Where("status = ? AND NOT is_attributed", StatusComplete).
+		Order("created_at ASC").
+		Find(&items)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return items, nil
+}
+
 func (i *JobAppItem) BeforeCreate(tx *gorm.DB) error {
 	i.ID = db.NewPublicID(db.ItemIdPrefix)
 	return nil
 }
 
-func (r *Repository) CreateJobAppTrackerItem(t *JobAppTracker, title, body string) (*JobAppItem, error) {
-	i := &JobAppItem{
-		TrackerID: t.ID,
-		Title:     title,
-		Body:      body,
-	}
-	if err := r.db.Create(i).Error; err != nil {
-		return nil, err
+func (r *Repository) CreateJobAppTrackerItem(i *JobAppItem) (*JobAppItem, error) {
+	res := r.db.Create(i)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 	return i, nil
 }
 
-func (r *Repository) LookupJobAppTrackerItems(trackerID string) ([]*JobAppItem, error) {
+func (r *Repository) LookupJobAppItems(trackerID string) ([]*JobAppItem, error) {
 	var items []*JobAppItem
 	res := r.db.Where("tracker_id = ?", trackerID).
 		Order("created_at ASC"). // ordering options pattern? https://gorm.io/docs/query.html#Order
@@ -121,21 +147,19 @@ func (r *Repository) LookupJobAppTrackerItems(trackerID string) ([]*JobAppItem, 
 	return items, nil
 }
 
-func (r *Repository) UpdateJobAppTrackerItemField(trackerID string, itemID string, fields []string) (*JobAppItem, error) {
-	var item *JobAppItem
-	res := r.db.Model(item).Where("tracker_id = ? AND id = ?", trackerID, itemID).Select(fields).Updates(item)
+func (r *Repository) LookupJobAppItem(trackerID, itemID string) (*JobAppItem, error) {
+	item := &JobAppItem{ID: itemID}
+	res := r.db.Where("tracker_id = ?", trackerID).First(&item)
 	if res.Error != nil {
 		return nil, res.Error
-	}
-	if res.RowsAffected == 0 {
-		return nil, errors.New("item not found")
 	}
 	return item, nil
 }
 
-func (r *Repository) UpdateJobAppTrackerItem(t *JobAppTracker, i *JobAppItem) (*JobAppItem, error) {
-	if err := r.db.Save(i).Error; err != nil {
-		return nil, err
+func (r *Repository) UpdateJobAppTrackerItemFields(i *JobAppItem, fields []string) (*JobAppItem, error) {
+	res := r.db.Model(i).Select(fields).Updates(i)
+	if res.Error != nil {
+		return nil, res.Error
 	}
 	return i, nil
 }

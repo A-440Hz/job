@@ -1,21 +1,15 @@
 package tracker
 
 import (
+	"errors"
+	"job/internal/scheduler"
 	"reflect"
 	"time"
 
 	"gorm.io/gorm"
 )
 
-type Frequency string
-
-var frequencies = []Frequency{FreqDaily, FreqWeekly}
-
 const (
-	FreqDaily   Frequency = "daily"
-	FreqWeekly  Frequency = "weekly"
-	DefaultFreq           = FreqWeekly
-
 	// underlying tracker fields
 	goalDeadlineField           = "goal_deadline"
 	goalFrequencyField          = "goal_frequency"
@@ -40,12 +34,14 @@ const (
 // move the stats mechanism into the UnderlyingTracker struct itself.
 // This is fine as long as different tracker types can share the same type of stats.
 
+// TODO: get rid of this later; there's no reason to complete the actual interface pattern in go
+// just remember to complete these functions at the service/handler layers
 type TrackerInterface interface {
 	AddItem(Item) error
 	RemoveItem(Item) error
 	RefreshStatus() error
 	ResetProgress() error
-	EditGoal(f Frequency, quantity int) error
+	EditGoal(f scheduler.Frequency, quantity int) error
 	GetStats() (*TrackerStats, error)
 }
 
@@ -54,8 +50,8 @@ type UnderlyingTracker struct {
 	ID            string `gorm:"primaryKey"`
 	UserID        string `gorm:"index"` // the index tag improves query performance for common lookup fields
 	GoalDeadline  time.Time
-	GoalFrequency Frequency `gorm:"default:weekly"`
-	GoalQuantity  int       `gorm:"default:5"`
+	GoalFrequency scheduler.Frequency `gorm:"default:weekly"`
+	GoalQuantity  int                 `gorm:"default:5"`
 
 	// stats
 	CurGoalStreak          int `gorm:"default:0"`
@@ -72,8 +68,10 @@ type UnderlyingTracker struct {
 // essentially this is a item factory? it creates JobAppItems and assigns them to the UnderlyingTracker
 type JobAppTracker struct {
 	UnderlyingTracker
-	numBoxesAwarded   int `gorm:"default:0"`
-	numItemsCompleted int `gorm:"default:0"`
+	NumBoxesAwarded   int `gorm:"default:0"`
+	NumItemsCompleted int `gorm:"default:0"`
+	// gorm does not automatically fetch foreign key fields unless explicitly Preloaded
+	Items []JobAppItem `gorm:"foreignKey:TrackerID;references:ID"`
 }
 
 // TrackerStats is a json object for UnderlyingTracker to return
@@ -87,6 +85,12 @@ type TrackerStats struct {
 
 func (t *JobAppTracker) GetID() string {
 	return t.ID
+}
+
+func (t *UnderlyingTracker) GetValidTimeframe() (time.Time, time.Time) {
+	days := -1 * t.GoalFrequency.NumDays()
+	begin := t.GoalDeadline.AddDate(0, 0, days)
+	return begin, t.GoalDeadline
 }
 
 type UnderlyingTrackerUpdateFields struct {
@@ -111,7 +115,11 @@ func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []
 		fields = append(fields, goalDeadlineField)
 	}
 	if uf.GoalFrequency != nil {
-		t.GoalFrequency = Frequency(*uf.GoalFrequency)
+		f := scheduler.Frequency(*uf.GoalFrequency)
+		if scheduler.IsValidFrequency(f) {
+			return nil, nil, errors.New("invalid goal frequency")
+		}
+		t.GoalFrequency = f
 		fields = append(fields, goalFrequencyField)
 	}
 	if uf.GoalQuantity != nil {
@@ -159,11 +167,11 @@ func (uf *JobAppTrackerUpdateFields) formatForRepo() (*JobAppTracker, []string, 
 	t := &JobAppTracker{}
 	fields := []string{}
 	if uf.NumBoxesAwarded != nil {
-		t.numBoxesAwarded = *uf.NumBoxesAwarded
+		t.NumBoxesAwarded = *uf.NumBoxesAwarded
 		fields = append(fields, "numBoxesAwarded")
 	}
 	if uf.NumItemsCompleted != nil {
-		t.numItemsCompleted = *uf.NumItemsCompleted
+		t.NumItemsCompleted = *uf.NumItemsCompleted
 		fields = append(fields, "numItemsCompleted")
 	}
 	if !uf.UnderlyingTrackerUpdateFields.IsNil() {

@@ -5,6 +5,8 @@ import (
 	"job/internal/tracker"
 	"job/internal/user"
 	"net/http"
+
+	"gorm.io/gorm"
 )
 
 type Handler struct {
@@ -38,13 +40,16 @@ func (h *Handler) HandleJobAppTrackerPage(w http.ResponseWriter, r *http.Request
 			return
 		}
 	}
-	tracker, err := h.TrackerService.GetJobAppTrackerFromUserID(user.GetID())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	items, err := h.TrackerService.LookupJobAppTrackerItems(tracker.GetID())
-	if err != nil {
+
+	// create new tracker if tracker not found
+	tracker, err := h.TrackerService.GetJobAppTrackerWithItemsFromUserID(user.GetID())
+	if err == gorm.ErrRecordNotFound {
+		tracker, err = h.TrackerService.CreateNewJobAppTracker(user)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	} else if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -53,6 +58,5 @@ func (h *Handler) HandleJobAppTrackerPage(w http.ResponseWriter, r *http.Request
 	json.NewEncoder(w).Encode(map[string]any{
 		"user":    user,
 		"tracker": tracker,
-		"items":   items,
 	})
 }
