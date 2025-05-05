@@ -4,14 +4,16 @@ import (
 	"errors"
 	"job/internal/scheduler"
 	"job/internal/user"
+	"slices"
 )
 
 type Service struct {
-	repo *Repository
+	repo      *Repository
+	scheduler *scheduler.Scheduler
 }
 
-func NewService(r *Repository) *Service {
-	return &Service{repo: r}
+func NewService(r *Repository, s *scheduler.Scheduler) *Service {
+	return &Service{repo: r, scheduler: s}
 }
 
 // The underlying tracker is a base struct that contains the common fields for all trackers.
@@ -65,10 +67,15 @@ func (s *Service) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTrack
 }
 
 func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUpdateFields) (*JobAppTracker, error) {
-	_, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
+	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
 	if err != nil {
 		return nil, err
 	}
+
+	// regarding the updateDeadline field: because it's a time.time value,
+	// I will assume the timezone is correctly accounted for from the front end
+	// and I can throw it straight into the scheduler
+
 	updateTracker, updateFields, err := fields.formatForRepo()
 	if err != nil {
 		return nil, err
@@ -77,12 +84,32 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 		return nil, errors.New("no fields to update")
 	}
 
+	beforeTg := t.ToTrackerGoal()
+	// TODO: try to prevent front end from sending update reqs for identical deadlines and frequencies
+	if t.GoalDeadline == updateTracker.GoalDeadline {
+		//
+		updateFields = slices.DeleteFunc(updateFields, func(f string) bool {
+			return f == goalDeadlineField
+		})
+	}
+	if t.GoalFrequency == updateTracker.GoalFrequency {
+		updateFields = slices.DeleteFunc(updateFields, func(f string) bool {
+			return f == goalFrequencyField
+		})
+	}
+
 	// validate?
 	updateTracker.UserID = uuid
 	_, err = s.repo.UpdateJobAppTrackerFields(updateTracker, updateFields)
 	if err != nil {
 		return nil, err
 	}
+
+	// communicate with scheduler if needed.. updateFields is correctly trimmed if no diffs are present
+	if slices.Contains(updateFields, goalDeadlineField) || slices.Contains(updateFields, goalFrequencyField) {
+		s.scheduler.Update(beforeTg, updateTracker.ToTrackerGoal())
+	}
+
 	return s.LookupJobAppTrackerFromUserID(uuid)
 }
 

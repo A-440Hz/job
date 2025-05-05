@@ -16,6 +16,7 @@ type Handler struct {
 
 // HandleJobAppTrackerPage handles main page of the webapp
 func (h *Handler) HandleJobAppTrackerPage(w http.ResponseWriter, r *http.Request) {
+
 	// get user from cookie or create user
 	var user *user.User
 	uuid, err := getUserIdFromCookie(r)
@@ -29,6 +30,7 @@ func (h *Handler) HandleJobAppTrackerPage(w http.ResponseWriter, r *http.Request
 		err = setUserCookie(w, user.GetID())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			clearUserCookie(w)
 			return
 		}
 	} else {
@@ -60,3 +62,8 @@ func (h *Handler) HandleJobAppTrackerPage(w http.ResponseWriter, r *http.Request
 		"tracker": tracker,
 	})
 }
+
+// HandleCollectionsPage
+
+// HandleUserPage
+// set options, see stats, set profile? potential friends profiles

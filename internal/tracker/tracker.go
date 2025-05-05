@@ -14,6 +14,7 @@ const (
 	goalDeadlineField           = "goal_deadline"
 	goalFrequencyField          = "goal_frequency"
 	goalQuantityField           = "goal_quantity"
+	curItemsCompletedField      = "cur_items_completed"
 	curGoalStreakField          = "cur_goal_streak"
 	maxGoalStreakField          = "max_goal_streak"
 	maxItemsCompletedDailyField = "max_items_completed_daily"
@@ -22,8 +23,7 @@ const (
 	firstCompletedField         = "first_completed"
 
 	// job app tracker fields
-	numBoxesAwardedField   = "num_boxes_awarded"
-	numItemsCompletedField = "num_items_completed"
+	numBoxesAwardedField = "num_boxes_awarded"
 )
 
 // chatgpt says:
@@ -47,11 +47,12 @@ type TrackerInterface interface {
 
 type UnderlyingTracker struct {
 	// I shouldn't need to embed a User. A foreign key is sufficient.
-	ID            string `gorm:"primaryKey"`
-	UserID        string `gorm:"index"` // the index tag improves query performance for common lookup fields
-	GoalDeadline  time.Time
-	GoalFrequency scheduler.Frequency `gorm:"default:weekly"`
-	GoalQuantity  int                 `gorm:"default:5"`
+	ID                string `gorm:"primaryKey"`
+	UserID            string `gorm:"index"` // the index tag improves query performance for common lookup fields
+	GoalDeadline      time.Time
+	GoalFrequency     scheduler.Frequency `gorm:"default:weekly"` // make sure to default this to daily as required for other types of trackers
+	GoalQuantity      int                 `gorm:"default:5"`
+	CurItemsCompleted int                 `gorm:"default:0"`
 
 	// stats
 	CurGoalStreak          int `gorm:"default:0"`
@@ -68,8 +69,7 @@ type UnderlyingTracker struct {
 // essentially this is a item factory? it creates JobAppItems and assigns them to the UnderlyingTracker
 type JobAppTracker struct {
 	UnderlyingTracker
-	NumBoxesAwarded   int `gorm:"default:0"`
-	NumItemsCompleted int `gorm:"default:0"`
+	NumBoxesAwarded int `gorm:"default:0"` // maybe store this counter in user/collection later
 	// gorm does not automatically fetch foreign key fields unless explicitly Preloaded
 	Items []JobAppItem `gorm:"foreignKey:TrackerID;references:ID"`
 }
@@ -93,10 +93,19 @@ func (t *UnderlyingTracker) GetValidTimeframe() (time.Time, time.Time) {
 	return begin, t.GoalDeadline
 }
 
+func (t *UnderlyingTracker) ToTrackerGoal() *scheduler.TrackerGoal {
+	return &scheduler.TrackerGoal{
+		TrackerID:     t.ID,
+		GoalDeadline:  t.GoalDeadline,
+		GoalFrequency: t.GoalFrequency,
+	}
+}
+
 type UnderlyingTrackerUpdateFields struct {
-	GoalDeadline  *time.Time `json:"goalDeadline,omitempty"`
-	GoalFrequency *string    `json:"goalFrequency,omitempty"`
-	GoalQuantity  *int       `json:"goalQuantity,omitempty"`
+	GoalDeadline      *time.Time `json:"goalDeadline,omitempty"`
+	GoalFrequency     *string    `json:"goalFrequency,omitempty"`
+	GoalQuantity      *int       `json:"goalQuantity,omitempty"`
+	CurItemsCompleted *int       `json:"curItemsCompleted,omitempty"`
 
 	//stats
 	CurGoalStreak          *int       `json:"curGoalStreak,omitempty"`
@@ -125,6 +134,10 @@ func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []
 	if uf.GoalQuantity != nil {
 		t.GoalQuantity = *uf.GoalQuantity
 		fields = append(fields, goalQuantityField)
+	}
+	if uf.CurItemsCompleted != nil {
+		t.CurItemsCompleted = *uf.CurItemsCompleted
+		fields = append(fields, curItemsCompletedField)
 	}
 	if uf.CurGoalStreak != nil {
 		t.CurGoalStreak = *uf.CurGoalStreak
@@ -158,8 +171,7 @@ func (uf *UnderlyingTrackerUpdateFields) IsNil() bool {
 }
 
 type JobAppTrackerUpdateFields struct {
-	NumBoxesAwarded   *int `json:"numBoxesAwarded,omitempty"`
-	NumItemsCompleted *int `json:"numItemsCompleted,omitempty"`
+	NumBoxesAwarded *int `json:"numBoxesAwarded,omitempty"`
 	UnderlyingTrackerUpdateFields
 }
 
@@ -169,10 +181,6 @@ func (uf *JobAppTrackerUpdateFields) formatForRepo() (*JobAppTracker, []string, 
 	if uf.NumBoxesAwarded != nil {
 		t.NumBoxesAwarded = *uf.NumBoxesAwarded
 		fields = append(fields, "numBoxesAwarded")
-	}
-	if uf.NumItemsCompleted != nil {
-		t.NumItemsCompleted = *uf.NumItemsCompleted
-		fields = append(fields, "numItemsCompleted")
 	}
 	if !uf.UnderlyingTrackerUpdateFields.IsNil() {
 		ut, f, err := uf.UnderlyingTrackerUpdateFields.formatForRepo()
