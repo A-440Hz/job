@@ -8,12 +8,21 @@ import (
 	"time"
 )
 
+// scaled to the amount of users I expect
+const startingHeapCapacity = 32
+
 // Scheduler always lives in memory and manages when to trigger and reset TrackerGoals
 type Scheduler struct {
-	goalHeap GoalHeap
+	g        *GoalHeap
 	mutex    sync.Mutex
-	ch       chan *GoalHeap
 	stopCh   chan bool
+	OutputCh chan *TrackerGoal
+}
+
+// GoalHeap implements heap.Interface and sort.Interface
+type GoalHeap struct {
+	heap   []*TrackerGoal
+	idxMap map[string]int
 }
 
 type TrackerGoal struct {
@@ -37,132 +46,112 @@ func (tg *TrackerGoal) getNext() {
 	tg.GoalDeadline = tg.GoalDeadline.Add(time.Hour * 24 * time.Duration(numDaysToNext))
 }
 
-// GoalHeap implements heap.Interface
-type GoalHeap []*TrackerGoal
+func NewScheduler() *Scheduler {
+	g := &GoalHeap{
+		heap:   make([]*TrackerGoal, 0, startingHeapCapacity),
+		idxMap: make(map[string]int),
+	}
+	heap.Init(g)
+	s := &Scheduler{
+		g:      g,
+		stopCh: make(chan bool),
+	}
+	return s
+}
 
-// sort.Interface methods
-func (g GoalHeap) Len() int           { return len(g) }
-func (g GoalHeap) Less(i, j int) bool { return g[i].GoalDeadline.Before(g[j].GoalDeadline) }
+func (g GoalHeap) Len() int           { return len(g.heap) }
+func (g GoalHeap) Less(i, j int) bool { return g.heap[i].GoalDeadline.Before(g.heap[j].GoalDeadline) }
 func (g GoalHeap) Swap(i, j int) {
-	g[i], g[j] = g[j], g[i]
-	g[i].index, g[j].index = i, j
+	g.heap[i], g.heap[j] = g.heap[j], g.heap[i]
+	g.heap[i].index, g.heap[j].index = i, j
+	g.idxMap[g.heap[i].TrackerID], g.idxMap[g.heap[j].TrackerID] = i, j
 }
 
 // add x as element Len()
 func (g *GoalHeap) Push(x any) {
-	n := len(*g)
+	n := (*g).Len()
 	item := x.(*TrackerGoal)
 	item.index = n
-	*g = append(*g, item)
+	(*g).idxMap[item.TrackerID] = n
+	(*g).heap = append((*g).heap, item)
 }
 
 // remove and return element Len() - 1
 func (g *GoalHeap) Pop() any {
-	old := *g
+	old := (*g).heap
 	n := len(old)
 	item := old[n-1]
 	old[n-1] = nil
 	item.index = -1
-	*g = old[0 : n-1]
+	delete(g.idxMap, item.TrackerID)
+	(*g).heap = old[0 : n-1]
 	return item
 }
 
-// PopTrackerGoal searches the heap for t.ID
-func (g *GoalHeap) PopTrackerGoal(t *TrackerGoal) (*TrackerGoal, error) {
-	j := g.findByID(t.TrackerID, 0, t.GoalDeadline)
-	if j == -1 {
-		log.Printf("attempt to find tracker unsuccessful: %v", t)
-		return nil, fmt.Errorf("attempt to find tracker unsuccessful: %v", t)
+// findByID returns the index or error if not found.
+// I originally wanted to break abstraction and have this be a binary search,
+// but keeping a tracker:idx map helps me validate the existence of trackerIds,
+// which I need to do anyway, which justifies this method over the cooler binary search
+func (g *GoalHeap) findByID(id string) (int, error) {
+	if i, exists := g.idxMap[id]; exists {
+		return i, nil
 	}
-	ret := heap.Remove(g, j).(*TrackerGoal)
-	return ret, nil
+	log.Printf("attempt to find tracker %q unsuccessful", id)
+	return 0, fmt.Errorf("attempt to find tracker %q unsuccessful", id)
+
 }
 
-func (g *GoalHeap) popIdx(i int) (*TrackerGoal, error) {
-	ret := heap.Remove(g, i).(*TrackerGoal)
-	return ret, nil
+// popTrackerGoal finds and pops tracker t
+// func (g *GoalHeap) popTrackerGoal(t *TrackerGoal) (*TrackerGoal, error) {
+// 	j, err := g.findByID(t.TrackerID)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	ret := heap.Remove(g, j).(*TrackerGoal)
+// 	return ret, nil
+// }
+
+// AddTrackerGoal adds a TrackerGoal into the scheduler
+func (s *Scheduler) AddTrackerGoal(tg *TrackerGoal) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	heap.Push(s.g, tg)
+	return nil
 }
 
-// findByID returns the index or -1 if not found. it is valid but it breaks abstraction
-// on the other hand the container/heap documentation describes invariants for index behavior:
-// https://cs.opensource.google/go/go/+/refs/tags/go1.24.2:src/container/heap/heap.go;drc=ade730a96cdb07c60fe932373c0b05f9d15a4ec5;l=26
-// I'd rather not linear search or keep a map of trackerIDs to index so I'll make a note here and keep it this way
-// bottom line it relies on the heap.Interface invariant that children of i are 2*i+1 and 2*i+2 which i think is reasonably safe to assume true
-func (g *GoalHeap) findByID(id string, curIdx int, deadline time.Time) int {
-	if curIdx >= g.Len() || (*g)[curIdx].GoalDeadline.After(deadline) {
-		return -1
+func (s *Scheduler) Update(oldTg, newTg *TrackerGoal) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	idx, err := s.g.findByID(oldTg.TrackerID)
+	if err != nil {
+		return err
 	}
-	if (*g)[curIdx].TrackerID == id {
-		return curIdx
-	}
-	if l := g.findByID(id, curIdx*2+1, deadline); l != -1 {
-		return l
-	}
-	return g.findByID(id, curIdx*2+2, deadline)
-}
 
-// Peek breaks abstraction to return item 0 in the queue
-func (g *GoalHeap) Peek() *TrackerGoal {
-	if g.Len() <= 0 {
+	// update in place if we only need to change GoalFrequency
+	if oldTg.GoalDeadline == newTg.GoalDeadline {
+		s.g.heap[idx].GoalFrequency = newTg.GoalFrequency
 		return nil
 	}
-	return (*g)[0]
+	// otherwise pop and replace old TrackerGoal
+	_ = heap.Remove(s.g, idx)
+	err = s.AddTrackerGoal(newTg)
+	if err != nil {
+		// try to push back oldTg... this is silly because this function doesnt even return an error
+		log.Printf("failed to push tracker %v.. putting back %v", newTg, oldTg)
+		restoreErr := s.AddTrackerGoal(oldTg) // and then what if this one errors again
+		if restoreErr != nil {
+			log.Printf("failed to push back previous tracker %v", oldTg)
+		}
+		return fmt.Errorf("failed to push tracker %v.. putting back %v", newTg, oldTg)
+	}
+	return nil
 }
 
-func NewScheduler() *Scheduler {
-	h := &GoalHeap{}
-	heap.Init(h)
-	return &Scheduler{
-		goalHeap: *h,
-		ch:       make(chan *GoalHeap),
-		stopCh:   make(chan bool),
-	}
+func (s *Scheduler) Start() {
+
 }
 
 // Load reads all the trackers in the repo and loads them into the scheduler
 func (s *Scheduler) Load() {
 	// do the description
-}
-
-// Push adds a TrackerGoal into the scheduler
-func (s *Scheduler) Push(tg *TrackerGoal) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-	s.goalHeap.Push(tg)
-	return nil
-}
-
-func (s *Scheduler) Update(beforeTg, toTg *TrackerGoal) error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
-
-	idx := s.goalHeap.findByID(beforeTg.TrackerID, 0, beforeTg.GoalDeadline)
-	if idx == -1 {
-		// we didnt find it
-		log.Println("could not locate tracker %v", beforeTg)
-		return fmt.Errorf("could not locate tracker %v", beforeTg)
-	}
-
-	if beforeTg.GoalDeadline == toTg.GoalDeadline {
-		s.goalHeap[idx].GoalFrequency = toTg.GoalFrequency
-		return nil
-	}
-
-	_, err := s.goalHeap.popIdx(idx)
-	if err != nil {
-		// we didn't find it
-		log.Println(err)
-		return err
-	}
-	err = s.Push(toTg)
-	if err != nil {
-		// maybe we should push back the previous one??
-		log.Printf("failed to push tracker %v.. putting back %v", toTg, beforeTg)
-		restoreErr := s.Push(beforeTg) // and then what if this one errors again
-		if restoreErr != nil {
-			log.Printf("failed to push back previous tracker %v", beforeTg)
-		}
-		return fmt.Errorf("failed to push tracker %v.. putting back %v", toTg, beforeTg)
-	}
-	return nil
 }

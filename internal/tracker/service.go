@@ -4,6 +4,7 @@ import (
 	"errors"
 	"job/internal/scheduler"
 	"job/internal/user"
+	"log"
 	"slices"
 )
 
@@ -194,29 +195,38 @@ func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *Job
 	return s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
 }
 
-// func (t *JobAppTracker) ResetProgress() {
-// 	t.numBoxesAwarded = 0
-// 	t.numItemsCompleted = 0
-// }
+// ResetTrackersGoroutine is run as a goroutine to reset trackers as specified by the scheduler
+func (s *Service) ResetTrackersGoroutine() {
+	for tg := range s.scheduler.OutputCh {
+		s.updateUnderlyingTrackerFields(tg)
+	}
+}
 
-// func (t *JobAppTracker) GetNextDeadline() (time.Time, error) {
-// 	cd := t.GoalDeadline
-// 	switch t.GoalFrequency {
-// 	case FreqDaily:
-// 		return cd.Add(24 * time.Hour), nil
-// 	case FreqWeekly:
-// 		return cd.Add(24 * time.Hour * 7), nil
-// 	default:
-// 		return cd, fmt.Errorf("invalid goal frequency: %q", t.GoalFrequency)
-// 	}
-// }
+func (s *Service) updateUnderlyingTrackerFields(tg *scheduler.TrackerGoal) {
+	t, fields, err := toUpdateFields(tg).formatForRepo()
+	if err != nil {
+		// try fail gracefully
+		log.Print(err)
+		// TODO: better to not assume without a check
+		t.GoalFrequency = scheduler.DefaultFreq
+	}
+	t.ResetCurrentProgress()
+	fields = append(fields, curItemsCompletedField)
+	// s.repo.updateUnderlyingTrackerFields(t, fields) <-- ideally one size fits all here
 
-// func (t *JobAppTracker) EditFrequency(f Frequency) error {
-// 	if f == t.GoalFrequency {
-// 		return nil
-// 	}
-// 	t.GoalFrequency = f
-// 	// db logic here
-// 	// scheduler logic here
-// 	return nil
-// }
+}
+
+func toUpdateFields(tg *scheduler.TrackerGoal) *UnderlyingTrackerUpdateFields {
+	return &UnderlyingTrackerUpdateFields{
+		GoalDeadline:  &tg.GoalDeadline,
+		GoalFrequency: (*string)(&tg.GoalFrequency),
+	}
+}
+
+// ResetCurrentProgress is a general tracker reset function that may or may not need to be refactored
+// I might need to expand to typed functions if different tracker types have different reset needs
+func (t *UnderlyingTracker) ResetCurrentProgress() {
+	t.CurItemsCompleted = 0
+
+	// also update stats as needed
+}
