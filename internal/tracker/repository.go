@@ -65,6 +65,14 @@ func (r *Repository) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTr
 	return t, nil
 }
 
+func (r *Repository) updateUnderlyingTrackerFields(t *UnderlyingTracker, fields []string) (*UnderlyingTracker, error) {
+	res := r.db.Model(t).Select(fields).Updates(t)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return t, nil
+}
+
 func (r *Repository) UpdateJobAppTrackerFields(t *JobAppTracker, fields []string) (*JobAppTracker, error) {
 	res := r.db.Model(t).Select(fields).Updates(t)
 	if res.Error != nil {

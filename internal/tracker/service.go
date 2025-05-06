@@ -210,10 +210,10 @@ func (s *Service) updateUnderlyingTrackerFields(tg *scheduler.TrackerGoal) {
 		// TODO: better to not assume without a check
 		t.GoalFrequency = scheduler.DefaultFreq
 	}
-	t.ResetCurrentProgress()
-	fields = append(fields, curItemsCompletedField)
-	// s.repo.updateUnderlyingTrackerFields(t, fields) <-- ideally one size fits all here
-
+	progressFields := t.ResetCurrentProgress()
+	fields = append(fields, progressFields...)
+	t.ID = tg.TrackerID
+	s.repo.updateUnderlyingTrackerFields(t, fields) // <-- ideally one size fits all tracker types
 }
 
 func toUpdateFields(tg *scheduler.TrackerGoal) *UnderlyingTrackerUpdateFields {
@@ -225,8 +225,9 @@ func toUpdateFields(tg *scheduler.TrackerGoal) *UnderlyingTrackerUpdateFields {
 
 // ResetCurrentProgress is a general tracker reset function that may or may not need to be refactored
 // I might need to expand to typed functions if different tracker types have different reset needs
-func (t *UnderlyingTracker) ResetCurrentProgress() {
+func (t *UnderlyingTracker) ResetCurrentProgress() []string {
 	t.CurItemsCompleted = 0
-
+	t.CurBoxesAwarded = 0
+	return []string{curItemsCompletedField, curBoxesAwardedField}
 	// also update stats as needed
 }

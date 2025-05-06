@@ -8,14 +8,20 @@ import (
 	"time"
 )
 
-// scaled to the amount of users I expect
+// startingHeapCapacity scaled to the amount of users I expect
 const startingHeapCapacity = 32
+
+// if there are more than 50 trackers with the same deadline, maybe this channel will break
+// one solution is to have more output channels
+// other is to keep increasing the size
+const outputChannelSize = 50
 
 // Scheduler always lives in memory and manages when to trigger and reset TrackerGoals
 type Scheduler struct {
 	g        *GoalHeap
 	mutex    sync.Mutex
 	stopCh   chan bool
+	nextTick chan *time.Time //
 	OutputCh chan *TrackerGoal
 }
 
@@ -32,7 +38,7 @@ type TrackerGoal struct {
 	index         int
 }
 
-func (tg *TrackerGoal) getNext() {
+func (tg *TrackerGoal) resetDeadline() {
 	now := time.Now()
 	// a loop should be fine as long as front end prevents setting a deadline a million years back
 	// for tg.GoalDeadline.Before(now) {
@@ -53,8 +59,9 @@ func NewScheduler() *Scheduler {
 	}
 	heap.Init(g)
 	s := &Scheduler{
-		g:      g,
-		stopCh: make(chan bool),
+		g:        g,
+		stopCh:   make(chan bool, outputChannelSize),
+		nextTick: make(chan *time.Time), // unbuffered; remove if not
 	}
 	return s
 }
@@ -98,7 +105,14 @@ func (g *GoalHeap) findByID(id string) (int, error) {
 	}
 	log.Printf("attempt to find tracker %q unsuccessful", id)
 	return 0, fmt.Errorf("attempt to find tracker %q unsuccessful", id)
+}
 
+// peek breaks abstraction and returns item 0 in the heap. Be careful not to modify it
+func (g *GoalHeap) peek() *TrackerGoal {
+	if g.Len() <= 0 {
+		return nil
+	}
+	return g.heap[0]
 }
 
 // popTrackerGoal finds and pops tracker t
@@ -111,11 +125,20 @@ func (g *GoalHeap) findByID(id string) (int, error) {
 // 	return ret, nil
 // }
 
+func (s *Scheduler) updateNextTick() {
+	// make sure nextTick is the closest deadline
+	if d := s.g.peek(); d != nil {
+		<-s.nextTick
+		s.nextTick <- &d.GoalDeadline
+	}
+}
+
 // AddTrackerGoal adds a TrackerGoal into the scheduler
 func (s *Scheduler) AddTrackerGoal(tg *TrackerGoal) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	heap.Push(s.g, tg)
+	s.updateNextTick()
 	return nil
 }
 
@@ -144,11 +167,28 @@ func (s *Scheduler) Update(oldTg, newTg *TrackerGoal) error {
 		}
 		return fmt.Errorf("failed to push tracker %v.. putting back %v", newTg, oldTg)
 	}
+	s.updateNextTick()
 	return nil
 }
 
 func (s *Scheduler) Start() {
-
+	go func() {
+		select {
+		case <-s.stopCh:
+			// gracefully shut down
+			// accept errors and close to prevent deadlocks? idk how i want to implement this
+			// maybe have super errors that send me an email when the scheduler breaks
+		case <-time.After(time.Until(*<-s.nextTick)): // fix this mechanism if needed
+			// what happens when the first index in the heap changes?
+			// I probably need a holding var in the scheduler to hold 1 TrackerGoal outside of the heap
+			tg := heap.Pop(s.g).(*TrackerGoal)
+			tg.resetDeadline()
+			s.OutputCh <- tg
+			s.AddTrackerGoal(tg)
+			s.updateNextTick()
+		default:
+		}
+	}()
 }
 
 // Load reads all the trackers in the repo and loads them into the scheduler
