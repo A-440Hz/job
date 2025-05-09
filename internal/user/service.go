@@ -7,7 +7,8 @@ import (
 	"gorm.io/gorm"
 )
 
-// business logic goes here
+// TODO: figure out the business logic for updating password/changing email; should require verification
+
 type Service struct {
 	repo *Repository
 }
@@ -52,6 +53,8 @@ func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, erro
 		}
 		return nil, err
 	}
+	t := true
+	uf.Registered = &t
 	return s.UpdateUserFields(id, uf)
 }
 
@@ -84,6 +87,7 @@ func (s *Service) validateUpdateUserFields(u User) error {
 }
 
 // UpdateUserFields updates the valid user fields specified in the fields map.
+// TODO: rethink business logic for changing email/username and enable changing password
 func (s *Service) UpdateUserFields(id string, fields *UserUpdateFields) (*User, error) {
 	_, err := s.repo.LookupUser(id)
 	if err != nil {

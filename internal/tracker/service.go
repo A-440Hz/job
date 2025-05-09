@@ -2,6 +2,7 @@ package tracker
 
 import (
 	"errors"
+	"fmt"
 	"job/internal/scheduler"
 	"job/internal/user"
 	"log"
@@ -35,6 +36,13 @@ func (s *Service) CreateNewJobAppTracker(u *user.User) (*JobAppTracker, error) {
 	t := &JobAppTracker{UnderlyingTracker: *ut}
 	t, err := s.repo.CreateJobAppTracker(t)
 	if err != nil {
+		return nil, err
+	}
+	tg := t.ToTrackerGoal()
+	err = s.scheduler.AddTrackerGoal(tg)
+	if err != nil {
+		// TODO: decide on correct error response in scheduler
+		log.Print(err)
 		return nil, err
 	}
 	return t, nil
@@ -73,16 +81,40 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 		return nil, err
 	}
 
-	// regarding the updateDeadline field: because it's a time.time value,
+	// regarding the updateDeadline field: because it's a time.Time value,
 	// I will assume the timezone is correctly accounted for from the front end
 	// and I can throw it straight into the scheduler
-
+	badFields := map[string]string{}
 	updateTracker, updateFields, err := fields.formatForRepo()
 	if err != nil {
-		return nil, err
+		badFields["format"] = err.Error()
 	}
 	if len(updateFields) == 0 {
-		return nil, errors.New("no fields to update")
+		badFields["fields"] = "no fields to update"
+	}
+
+	// stats invariants
+	if slices.Contains(updateFields, maxGoalStreakField) && updateTracker.MaxGoalStreak < t.MaxGoalStreak {
+		badFields[maxGoalStreakField] = fmt.Sprintf("cannot decrease %q", maxGoalStreakField)
+	}
+	if slices.Contains(updateFields, maxItemsCompletedDailyField) && updateTracker.MaxItemsCompletedDaily < t.MaxItemsCompletedDaily {
+		badFields[maxItemsCompletedDailyField] = fmt.Sprintf("cannot decrease %q", maxItemsCompletedDailyField)
+	}
+	if slices.Contains(updateFields, totalItemsCompletedField) && updateTracker.TotalItemsCompleted < t.TotalItemsCompleted {
+		badFields[totalItemsCompletedField] = fmt.Sprintf("cannot decrease %q", totalItemsCompletedField)
+	}
+	if slices.Contains(updateFields, totalBoxesAwardedField) && updateTracker.TotalBoxesAwarded < t.TotalBoxesAwarded {
+		badFields[totalBoxesAwardedField] = fmt.Sprintf("cannot decrease %q", totalBoxesAwardedField)
+	}
+	if slices.Contains(updateFields, firstCompletedField) && t.FirstCompleted != nil && updateTracker.FirstCompleted.After(*t.FirstCompleted) {
+		badFields[firstCompletedField] = fmt.Sprintf("cannot increment %q", firstCompletedField)
+	}
+	if len(badFields) > 0 {
+		err := errors.New("validation error:")
+		for _, v := range badFields {
+			err = errors.Join(err, errors.New(v))
+		}
+		return nil, err
 	}
 
 	beforeTg := t.ToTrackerGoal()
@@ -100,7 +132,7 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 	}
 
 	// validate?
-	updateTracker.UserID = uuid
+	updateTracker.ID = t.GetID()
 	_, err = s.repo.UpdateJobAppTrackerFields(updateTracker, updateFields)
 	if err != nil {
 		return nil, err
@@ -108,7 +140,10 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 
 	// communicate with scheduler if needed.. updateFields is correctly trimmed if no diffs are present
 	if slices.Contains(updateFields, goalDeadlineField) || slices.Contains(updateFields, goalFrequencyField) {
-		s.scheduler.Update(beforeTg, updateTracker.ToTrackerGoal())
+		// fail scheduler gracefully?
+		if err = s.scheduler.Update(beforeTg, updateTracker.ToTrackerGoal()); err != nil {
+			log.Print(err)
+		}
 	}
 
 	return s.LookupJobAppTrackerFromUserID(uuid)
@@ -134,13 +169,13 @@ func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields
 	}
 	badFields := map[string]string{}
 	if fields.Title == nil {
-		badFields["title"] = "missing item name"
+		badFields[titleField] = "missing item name"
 	}
 	if fields.Status == nil {
-		badFields["status"] = "missing item status"
+		badFields[statusField] = "missing item status"
 	}
 	if fields.IsAttributed == nil {
-		badFields["is_attributed"] = "missing isAttributed"
+		badFields[isAttributedField] = "missing isAttributed"
 	}
 	i, _, err := fields.formatForRepo()
 	if err != nil {

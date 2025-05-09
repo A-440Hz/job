@@ -12,6 +12,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// these are a reprecusion of using pointer attibutes in gorm
+func int64Ptr(i int64) *int64 {
+	return &i
+}
+
 func strPtr(s string) *string {
 	return &s
 }
@@ -32,37 +37,59 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		username   string
-		password   string
-		email      string
+		Username   *string
+		Password   *string
+		Email      *string
 		wantErrMsg []string
 	}{
 		{
 			name:     "valid-fields",
-			username: "u2",
-			password: "p2",
-			email:    "e2@mail.com",
+			Username: strPtr("u2"),
+			Password: strPtr("p2"),
+			Email:    strPtr("e2@mail.com"),
 		},
 		{
 			name:       "taken-username",
-			username:   "u1",
-			password:   "p2",
-			email:      "e2@mail.com",
+			Username:   strPtr("u1"),
+			Password:   strPtr("p2"),
+			Email:      strPtr("e2@mail.com"),
 			wantErrMsg: []string{"username already taken"},
 		},
 		{
 			name:       "taken-email",
-			username:   "u2",
-			password:   "p2",
-			email:      "e1@mail.com",
+			Username:   strPtr("u2"),
+			Password:   strPtr("p2"),
+			Email:      strPtr("e1@mail.com"),
 			wantErrMsg: []string{"email already registered"},
 		},
 		{
 			name:       "taken-email-password",
-			username:   "u1",
-			password:   "p2",
-			email:      "e1@mail.com",
+			Username:   strPtr("u1"),
+			Password:   strPtr("p2"),
+			Email:      strPtr("e1@mail.com"),
 			wantErrMsg: []string{"username already taken", "email already registered"},
+		},
+		{
+			name:       "missing-username",
+			Password:   strPtr("p2"),
+			Email:      strPtr("e2@mail.com"),
+			wantErrMsg: []string{"missing username"},
+		},
+		{
+			name:       "missing-email",
+			Username:   strPtr("u2"),
+			Password:   strPtr("p2"),
+			wantErrMsg: []string{"missing email"},
+		},
+		{
+			name:       "missing-password",
+			Username:   strPtr("u2"),
+			Email:      strPtr("e2@mail.com"),
+			wantErrMsg: []string{"missing password"},
+		},
+		{
+			name:       "missing-all",
+			wantErrMsg: []string{"missing username", "missing email", "missing password"},
 		},
 	}
 	for _, tt := range tests {
@@ -83,13 +110,12 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 			u2, err := svc.CreateNewUser(nil)
 			assert.NoError(t, err)
 			u2, err = svc.RegisterBaseUser(u2.GetID(), &UserUpdateFields{
-				Username:   strPtr(tt.username),
-				Password:   strPtr(tt.password),
-				Email:      strPtr(tt.email),
+				Username:   tt.Username,
+				Password:   tt.Password,
+				Email:      tt.Email,
 				Registered: boolPtr(true),
 			})
 			for _, msg := range tt.wantErrMsg {
-				require.Error(t, err)
 				assert.Contains(t, err.Error(), msg)
 			}
 			if len(tt.wantErrMsg) == 0 {
@@ -138,9 +164,102 @@ func Test_RegisterBaseUser(t *testing.T) {
 		Registered: boolPtr(true),
 	})
 	assert.ErrorContains(t, err, "user already registered")
-
 	dbase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 
+}
+
+func Test_UpdateUserFields(t *testing.T) {
+	db.SetEnvForTesting()
+	dBase, err := db.InitGormDB()
+	require.NoError(t, err)
+	dBase.AutoMigrate(&User{})
+	dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+	repo := NewRepository(dBase)
+	svc := NewService(repo)
+
+	tests := []struct {
+		name       string
+		Registered *bool
+		Username   *string
+		Email      *string
+		Timezone   *int64
+		wantErrMsg []string
+	}{
+		{
+			name:       "valid-fields",
+			Registered: boolPtr(true),
+			Username:   strPtr("u2"),
+			Email:      strPtr("e2@mail.com"),
+			Timezone:   int64Ptr(-1 * 3600),
+		},
+		{
+			name:       "no-fields",
+			wantErrMsg: []string{"no fields to update"},
+		},
+		{
+			name:       "username-taken",
+			Registered: boolPtr(true),
+			Username:   strPtr("u1"),
+			Email:      strPtr("e2@mail.com"),
+			Timezone:   int64Ptr(-1 * 3600),
+			wantErrMsg: []string{"username already taken"},
+		},
+		{
+			name:       "email-taken-&-trim-space",
+			Registered: boolPtr(true),
+			Username:   strPtr("  u2  "),
+			Email:      strPtr("    E1@Mail.cOm   "),
+			Timezone:   int64Ptr(-1 * 3600),
+			wantErrMsg: []string{"email already registered"},
+		},
+		{
+			name:     "maxint-timezone",
+			Timezone: int64Ptr(int64(^uint64(0) >> 1)),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// a constant user to claim some fields
+			u1, err := svc.CreateNewUser(nil)
+			require.NoError(t, err)
+			u1, err = svc.RegisterBaseUser(u1.GetID(), &UserUpdateFields{
+				Username:   strPtr("u1"),
+				Password:   strPtr("p1"),
+				Email:      strPtr("e1@mail.com"),
+				Registered: boolPtr(true),
+			})
+			require.NoError(t, err)
+			assert.NotNil(t, u1)
+
+			u2, err := svc.CreateNewUser(nil)
+			require.NoError(t, err)
+			require.NotNil(t, u2)
+			uf := &UserUpdateFields{
+				Registered: tt.Registered,
+				Username:   tt.Username,
+				Email:      tt.Email,
+				Timezone:   tt.Timezone,
+			}
+			updateU2, err := svc.UpdateUserFields(u2.GetID(), uf)
+			if len(tt.wantErrMsg) > 0 {
+				for _, msg := range tt.wantErrMsg {
+					assert.Contains(t, err.Error(), msg)
+				}
+				assert.Empty(t, updateU2)
+				dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotEqual(t, u2, updateU2)
+			if tt.Registered != nil {
+				assert.Equal(t, updateU2.Registered, *tt.Registered)
+			}
+			assert.Equal(t, updateU2.Username, tt.Username)
+			assert.Equal(t, updateU2.Email, tt.Email)
+			assert.Equal(t, updateU2.Timezone.GetOffset(), *tt.Timezone)
+			dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+		})
+	}
 }
 
 func Test_DeleteUser(t *testing.T) {
@@ -179,6 +298,11 @@ func Test_DeleteUser(t *testing.T) {
 	err = svc.DeleteUser(id3)
 	assert.Error(t, err)
 	u, err = svc.LookupUser(id3)
+	assert.ErrorContains(t, err, "record not found")
+	assert.Nil(t, u)
+
+	// update fails on lookup
+	u, err = svc.UpdateUserFields(id3, &UserUpdateFields{Username: strPtr("test")})
 	assert.ErrorContains(t, err, "record not found")
 	assert.Nil(t, u)
 	db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")

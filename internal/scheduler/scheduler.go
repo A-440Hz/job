@@ -61,7 +61,7 @@ func NewScheduler() *Scheduler {
 	s := &Scheduler{
 		g:        g,
 		stopCh:   make(chan bool, outputChannelSize),
-		nextTick: make(chan *time.Time), // unbuffered; remove if not
+		nextTick: make(chan *time.Time, 1), // channel needs to be buffered to store values without a ready receiver
 	}
 	return s
 }
@@ -128,7 +128,13 @@ func (g *GoalHeap) peek() *TrackerGoal {
 func (s *Scheduler) updateNextTick() {
 	// make sure nextTick is the closest deadline
 	if d := s.g.peek(); d != nil {
-		<-s.nextTick
+		// non-blocking select drains the channel safely
+		select {
+		case d := <-s.nextTick:
+			log.Print(d)
+		default:
+			log.Print("nextTick channel already empty")
+		}
 		s.nextTick <- &d.GoalDeadline
 	}
 }
@@ -157,38 +163,44 @@ func (s *Scheduler) Update(oldTg, newTg *TrackerGoal) error {
 	}
 	// otherwise pop and replace old TrackerGoal
 	_ = heap.Remove(s.g, idx)
-	err = s.AddTrackerGoal(newTg)
-	if err != nil {
-		// try to push back oldTg... this is silly because this function doesnt even return an error
-		log.Printf("failed to push tracker %v.. putting back %v", newTg, oldTg)
-		restoreErr := s.AddTrackerGoal(oldTg) // and then what if this one errors again
-		if restoreErr != nil {
-			log.Printf("failed to push back previous tracker %v", oldTg)
-		}
-		return fmt.Errorf("failed to push tracker %v.. putting back %v", newTg, oldTg)
-	}
+	heap.Push(s.g, newTg)
 	s.updateNextTick()
+
+	// if err != nil {
+	// 	// try to push back oldTg... this is silly because this function doesnt even return an error
+	// 	log.Printf("failed to push tracker %v.. putting back %v", newTg, oldTg)
+	// 	restoreErr := s.AddTrackerGoal(oldTg) // and then what if this one errors again
+	// 	if restoreErr != nil {
+	// 		log.Printf("failed to push back previous tracker %v", oldTg)
+	// 	}
+	// 	return fmt.Errorf("failed to push tracker %v.. putting back %v", newTg, oldTg)
+	// }
+	// s.updateNextTick()
 	return nil
 }
 
+// Start needs to be called as a goroutine
 func (s *Scheduler) Start() {
-	go func() {
+	for {
 		select {
 		case <-s.stopCh:
 			// gracefully shut down
 			// accept errors and close to prevent deadlocks? idk how i want to implement this
 			// maybe have super errors that send me an email when the scheduler breaks
+			log.Print("Scheduler stopped")
+			return
 		case <-time.After(time.Until(*<-s.nextTick)): // fix this mechanism if needed
 			// what happens when the first index in the heap changes?
 			// I probably need a holding var in the scheduler to hold 1 TrackerGoal outside of the heap
+			s.mutex.Lock()
 			tg := heap.Pop(s.g).(*TrackerGoal)
 			tg.resetDeadline()
 			s.OutputCh <- tg
-			s.AddTrackerGoal(tg)
+			heap.Push(s.g, tg)
 			s.updateNextTick()
-		default:
+			s.mutex.Unlock()
 		}
-	}()
+	}
 }
 
 // Load reads all the trackers in the repo and loads them into the scheduler

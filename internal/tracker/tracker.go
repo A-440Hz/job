@@ -1,7 +1,7 @@
 package tracker
 
 import (
-	"errors"
+	"fmt"
 	"job/internal/scheduler"
 	"reflect"
 	"time"
@@ -24,7 +24,7 @@ const (
 	firstCompletedField         = "first_completed"
 
 	// job app tracker fields
-	numBoxesAwardedField = "num_boxes_awarded"
+	// numBoxesAwardedField = "num_boxes_awarded"
 )
 
 // chatgpt says:
@@ -127,8 +127,8 @@ func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []
 	}
 	if uf.GoalFrequency != nil {
 		f := scheduler.Frequency(*uf.GoalFrequency)
-		if scheduler.IsValidFrequency(f) {
-			return nil, nil, errors.New("invalid goal frequency")
+		if !scheduler.IsValidFrequency(f) {
+			return nil, nil, fmt.Errorf("invalid goal frequency: %q", f)
 		}
 		t.GoalFrequency = f
 		fields = append(fields, goalFrequencyField)
