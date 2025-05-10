@@ -248,6 +248,81 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 	}
 }
 
+func Test_CreateJobAppItem(t *testing.T) {
+	db.SetEnvForTesting()
+	dBase, err := db.InitGormDB()
+	require.NoError(t, err)
+	dBase.AutoMigrate(&JobAppTracker{})
+	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+	repo := NewRepository(dBase)
+	svc := NewService(repo, scheduler.NewScheduler())
+
+	defaultStatus := StatusComplete
+	n := time.Now().Round(time.Hour)
+	tests := []struct {
+		name            string
+		Title           *string
+		Body            *string
+		Status          *ItemStatus
+		IsAttributed    *bool
+		AttributionTime *time.Time
+		wantErrMsg      []string
+	}{
+		{
+			name:         "valid-fields",
+			Title:        strPtr("Title"),
+			Body:         strPtr("Body"),
+			Status:       &defaultStatus,
+			IsAttributed: boolPtr(false),
+		},
+		{
+			name:       "missing-fields",
+			wantErrMsg: []string{"missing item name", "missing item status", "missing isAttributed"},
+		},
+		{
+			name:            "with-attr-time",
+			Title:           strPtr("Title"),
+			Body:            strPtr("Body"),
+			Status:          &defaultStatus,
+			IsAttributed:    boolPtr(true),
+			AttributionTime: &n,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dummyUser := user.User{ID: "user_12345678"}
+			t1, err := svc.CreateNewJobAppTracker(&dummyUser)
+			require.NoError(t, err)
+			assert.NotNil(t, t1)
+
+			t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+				Title:        tt.Title,
+				Body:         tt.Body,
+				Status:       tt.Status,
+				IsAttributed: tt.IsAttributed,
+			})
+
+			if len(tt.wantErrMsg) > 0 {
+				for _, msg := range tt.wantErrMsg {
+					assert.ErrorContains(t, err, msg)
+				}
+				assert.Nil(t, t1)
+				return
+			}
+			assert.NoError(t, err)
+			assert.NotNil(t, t1)
+
+			assert.Equal(t, *tt.Title, t1.Items[0].Title)
+			assert.Equal(t, *tt.Body, t1.Items[0].Body)
+			assert.Equal(t, *tt.Status, t1.Items[0].Status)
+			assert.Equal(t, *tt.IsAttributed, t1.Items[0].IsAttributed)
+			assert.Equal(t, tt.AttributionTime, t1.Items[0].AttributionTime)
+		})
+	}
+
+}
+
 func Test_Scheduler(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormDB()
