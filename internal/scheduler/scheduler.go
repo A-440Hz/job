@@ -45,11 +45,14 @@ func (tg *TrackerGoal) resetDeadline() {
 	// 	tg.GoalDeadline = tg.GoalDeadline.Add(time.Duration(tg.GoalFrequency.NumDays()))
 	// }
 	if now.Before(tg.GoalDeadline) {
+		log.Printf("reset deadline passthrough on %v", tg.GoalDeadline)
 		return
 	}
-	numDaysBetween := int(now.Sub(tg.GoalDeadline).Hours()) / 24
+	prev := tg.GoalDeadline
+	numDaysBetween := int(now.Sub(tg.GoalDeadline).Round(time.Hour)) / 24
 	numDaysToNext := (numDaysBetween/tg.GoalFrequency.NumDays() + 1) * tg.GoalFrequency.NumDays()
 	tg.GoalDeadline = tg.GoalDeadline.Add(time.Hour * 24 * time.Duration(numDaysToNext))
+	log.Printf("reset %v to %v", prev, tg.GoalDeadline)
 }
 
 func NewScheduler() *Scheduler {
@@ -115,16 +118,6 @@ func (g *GoalHeap) peek() *TrackerGoal {
 	return g.heap[0]
 }
 
-// popTrackerGoal finds and pops tracker t
-// func (g *GoalHeap) popTrackerGoal(t *TrackerGoal) (*TrackerGoal, error) {
-// 	j, err := g.findByID(t.TrackerID)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	ret := heap.Remove(g, j).(*TrackerGoal)
-// 	return ret, nil
-// }
-
 func (s *Scheduler) updateNextTick() {
 	// make sure nextTick is the closest deadline
 	if d := s.g.peek(); d != nil {
@@ -155,7 +148,6 @@ func (s *Scheduler) Update(oldTg, newTg *TrackerGoal) error {
 	if err != nil {
 		return err
 	}
-
 	// update in place if we only need to change GoalFrequency
 	if oldTg.GoalDeadline == newTg.GoalDeadline {
 		s.g.heap[idx].GoalFrequency = newTg.GoalFrequency
@@ -165,17 +157,6 @@ func (s *Scheduler) Update(oldTg, newTg *TrackerGoal) error {
 	_ = heap.Remove(s.g, idx)
 	heap.Push(s.g, newTg)
 	s.updateNextTick()
-
-	// if err != nil {
-	// 	// try to push back oldTg... this is silly because this function doesnt even return an error
-	// 	log.Printf("failed to push tracker %v.. putting back %v", newTg, oldTg)
-	// 	restoreErr := s.AddTrackerGoal(oldTg) // and then what if this one errors again
-	// 	if restoreErr != nil {
-	// 		log.Printf("failed to push back previous tracker %v", oldTg)
-	// 	}
-	// 	return fmt.Errorf("failed to push tracker %v.. putting back %v", newTg, oldTg)
-	// }
-	// s.updateNextTick()
 	return nil
 }
 
@@ -187,13 +168,19 @@ func (s *Scheduler) Start() {
 			// gracefully shut down
 			// accept errors and close to prevent deadlocks? idk how i want to implement this
 			// maybe have super errors that send me an email when the scheduler breaks
+			close(s.nextTick)
+			close(s.stopCh)
 			log.Print("Scheduler stopped")
+			for _, tg := range s.g.heap {
+				log.Print(tg.GoalDeadline, tg.GoalFrequency)
+			}
 			return
 		case <-time.After(time.Until(*<-s.nextTick)): // fix this mechanism if needed
 			// what happens when the first index in the heap changes?
 			// I probably need a holding var in the scheduler to hold 1 TrackerGoal outside of the heap
 			s.mutex.Lock()
 			tg := heap.Pop(s.g).(*TrackerGoal)
+			log.Printf("popped %v", tg.GoalDeadline)
 			tg.resetDeadline()
 			s.OutputCh <- tg
 			heap.Push(s.g, tg)
@@ -201,6 +188,10 @@ func (s *Scheduler) Start() {
 			s.mutex.Unlock()
 		}
 	}
+}
+
+func (s *Scheduler) Stop() {
+	s.stopCh <- true
 }
 
 // Load reads all the trackers in the repo and loads them into the scheduler

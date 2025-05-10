@@ -4,6 +4,7 @@ import (
 	"job/internal/db"
 	"job/internal/scheduler"
 	"job/internal/user"
+	"log"
 	"testing"
 	"time"
 
@@ -255,4 +256,76 @@ func Test_Scheduler(t *testing.T) {
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler())
+
+	t0 := time.Now().Round(time.Minute)
+	t1 := t0.Add(time.Second * 5)
+	t2 := t1.Add(time.Second * 5)
+	t3 := t2.Add(time.Second * 5)
+
+	u0 := user.User{ID: "user_00000000"}
+	u1 := user.User{ID: "user_11111111"}
+	u2 := user.User{ID: "user_22222222"}
+	u3 := user.User{ID: "user_33333333"}
+
+	// start scheduler
+	go svc.scheduler.Start()
+	go svc.ResetTrackersGoroutine()
+
+	jt0, err := svc.CreateNewJobAppTracker(&u0)
+	require.NoError(t, err)
+	jt1, err := svc.CreateNewJobAppTracker(&u1)
+	require.NoError(t, err)
+	jt2, err := svc.CreateNewJobAppTracker(&u2)
+	require.NoError(t, err)
+	jt3, err := svc.CreateNewJobAppTracker(&u3)
+	require.NoError(t, err)
+	jt00, err := svc.UpdateJobAppTrackerFields(u0.GetID(), &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+			GoalDeadline:  &t0,
+			GoalFrequency: strPtr("daily"),
+		},
+	})
+	require.NoError(t, err)
+	jt11, err := svc.UpdateJobAppTrackerFields(u1.GetID(), &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+			GoalDeadline:  &t1,
+			GoalFrequency: strPtr("daily"),
+		},
+	})
+	require.NoError(t, err)
+	jt22, err := svc.UpdateJobAppTrackerFields(u2.GetID(), &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+			GoalDeadline:  &t2,
+			GoalFrequency: strPtr("daily"),
+		},
+	})
+	require.NoError(t, err)
+	jt33, err := svc.UpdateJobAppTrackerFields(u3.GetID(), &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+			GoalDeadline:  &t3,
+			GoalFrequency: strPtr("daily"),
+		},
+	})
+	require.NoError(t, err)
+	time.Sleep(time.Second * 30)
+
+	jt000, err := svc.LookupJobAppTrackerFromTrackerID(jt0.GetID())
+	require.NoError(t, err)
+	jt111, err := svc.LookupJobAppTrackerFromTrackerID(jt1.GetID())
+	require.NoError(t, err)
+	jt222, err := svc.LookupJobAppTrackerFromTrackerID(jt2.GetID())
+	require.NoError(t, err)
+	jt333, err := svc.LookupJobAppTrackerFromTrackerID(jt3.GetID())
+	require.NoError(t, err)
+	assert.NotEqual(t, jt000.GoalDeadline, jt00.GoalDeadline)
+	assert.NotEqual(t, jt111.GoalDeadline, jt11.GoalDeadline)
+	assert.NotEqual(t, jt222.GoalDeadline, jt22.GoalDeadline)
+	assert.NotEqual(t, jt333.GoalDeadline, jt33.GoalDeadline)
+	log.Printf("after: %v, before: %v", jt000.GoalDeadline, jt00.GoalDeadline)
+	log.Printf("after: %v, before: %v", jt111.GoalDeadline, jt11.GoalDeadline)
+	log.Printf("after: %v, before: %v", jt222.GoalDeadline, jt22.GoalDeadline)
+	log.Printf("after: %v, before: %v", jt333.GoalDeadline, jt33.GoalDeadline)
+	svc.scheduler.Stop()
+	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+
 }

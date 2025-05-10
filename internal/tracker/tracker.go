@@ -84,6 +84,7 @@ type TrackerStats struct {
 	AvgDailyCompleted   float64 `json:"avgDailyCompleted"`
 }
 
+// GetID returns the "TrackerID" primary key of the UnderlyingTracker
 func (t *JobAppTracker) GetID() string {
 	return t.ID
 }
