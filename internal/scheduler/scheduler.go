@@ -63,7 +63,8 @@ func NewScheduler() *Scheduler {
 	heap.Init(g)
 	s := &Scheduler{
 		g:        g,
-		stopCh:   make(chan bool, outputChannelSize),
+		OutputCh: make(chan *TrackerGoal, outputChannelSize),
+		stopCh:   make(chan bool, 1),
 		nextTick: make(chan *time.Time, 1), // channel needs to be buffered to store values without a ready receiver
 	}
 	return s
@@ -170,6 +171,7 @@ func (s *Scheduler) Start() {
 			// maybe have super errors that send me an email when the scheduler breaks
 			close(s.nextTick)
 			close(s.stopCh)
+			close(s.OutputCh)
 			log.Print("Scheduler stopped")
 			for _, tg := range s.g.heap {
 				log.Print(tg.GoalDeadline, tg.GoalFrequency)
