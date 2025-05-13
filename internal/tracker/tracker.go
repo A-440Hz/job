@@ -35,17 +35,15 @@ const (
 // move the stats mechanism into the UnderlyingTracker struct itself.
 // This is fine as long as different tracker types can share the same type of stats.
 
-// TODO: get rid of this later; there's no reason to complete the actual interface pattern in go
-// just remember to complete these functions at the service/handler layers
-type TrackerInterface interface {
-	AddItem(Item) error
-	RemoveItem(Item) error
-	RefreshStatus() error
-	ResetProgress() error
-	EditGoal(f scheduler.Frequency, quantity int) error
-	GetStats() (*TrackerStats, error)
-}
+type TrackerType string
 
+const (
+	JobAppTrackerType TrackerType = "job_app_tracker"
+)
+
+// The underlying tracker is a base struct that contains the common fields for all trackers.
+// There is no good reason for it to be a separate entity in the database, so I will create it in memory and store the two trackers together in gorm.
+// The separation is primarily to fulfill the composite pattern and hold specific types of Items.
 type UnderlyingTracker struct {
 	// I shouldn't need to embed a User. A foreign key is sufficient.
 	ID                string `gorm:"primaryKey"`
@@ -55,6 +53,7 @@ type UnderlyingTracker struct {
 	GoalQuantity      int                 `gorm:"default:5"`
 	CurItemsCompleted int                 `gorm:"default:0"`
 	CurBoxesAwarded   int                 `gorm:"default:0"`
+	TrackerType       TrackerType
 
 	// stats
 	CurGoalStreak          int `gorm:"default:0"`
@@ -77,11 +76,12 @@ type JobAppTracker struct {
 
 // TrackerStats is a json object for UnderlyingTracker to return
 type TrackerStats struct {
-	GoalStreak          int     `json:"goalStreak"`
-	MaxGoalStreak       int     `json:"maxGoalStreak"`
-	TotalItemsCompleted int     `json:"totalItemsCompleted"`
-	TotalBoxesAwarded   int     `json:"totalBoxesAwarded"`
-	AvgDailyCompleted   float64 `json:"avgDailyCompleted"`
+	CurGoalStreak          int     `json:"curGoalStreak"`
+	MaxGoalStreak          int     `json:"maxGoalStreak"`
+	MaxItemsCompletedDaily int     `json:"maxItemsCompletedDaily"`
+	TotalItemsCompleted    int     `json:"totalItemsCompleted"`
+	TotalBoxesAwarded      int     `json:"totalBoxesAwarded"`
+	AvgDailyCompleted      float64 `json:"avgDailyCompleted"`
 }
 
 // GetID returns the "TrackerID" primary key of the UnderlyingTracker
@@ -89,6 +89,9 @@ func (t *JobAppTracker) GetID() string {
 	return t.ID
 }
 
+func (t *JobAppTracker) GetUserID() string {
+	return t.UserID
+}
 func (t *UnderlyingTracker) GetValidTimeframe() (time.Time, time.Time) {
 	days := -1 * t.GoalFrequency.NumDays()
 	begin := t.GoalDeadline.AddDate(0, 0, days)

@@ -18,11 +18,12 @@ const outputChannelSize = 50
 
 // Scheduler always lives in memory and manages when to trigger and reset TrackerGoals
 type Scheduler struct {
-	g        *GoalHeap
-	mutex    sync.Mutex
-	stopCh   chan bool
-	nextTick chan *time.Time //
+	g      *GoalHeap
+	mutex  sync.Mutex
+	stopCh chan bool
+	// nextTick chan *time.Time //
 	OutputCh chan *TrackerGoal
+	timer    *time.Timer
 }
 
 // GoalHeap implements heap.Interface and sort.Interface
@@ -36,6 +37,7 @@ type TrackerGoal struct {
 	GoalDeadline  time.Time
 	GoalFrequency Frequency
 	index         int
+	TrackerType   string
 }
 
 func (tg *TrackerGoal) resetDeadline() {
@@ -65,7 +67,8 @@ func NewScheduler() *Scheduler {
 		g:        g,
 		OutputCh: make(chan *TrackerGoal, outputChannelSize),
 		stopCh:   make(chan bool, 1),
-		nextTick: make(chan *time.Time, 1), // channel needs to be buffered to store values without a ready receiver
+		// nextTick: make(chan *time.Time, 1), // channel needs to be buffered to store values without a ready receiver
+		timer: time.NewTimer(time.Hour * 24 * 365), // set it 1 year in the future
 	}
 	return s
 }
@@ -119,18 +122,14 @@ func (g *GoalHeap) peek() *TrackerGoal {
 	return g.heap[0]
 }
 
-func (s *Scheduler) updateNextTick() {
+func (s *Scheduler) updateTimer() {
 	// make sure nextTick is the closest deadline
 	if d := s.g.peek(); d != nil {
-		// non-blocking select drains the channel safely
-		select {
-		case d := <-s.nextTick:
-			log.Print(d)
-		default:
-			log.Print("nextTick channel already empty")
-		}
-		s.nextTick <- &d.GoalDeadline
+		log.Print("reset timer to ", d.GoalDeadline)
+		s.timer.Reset(time.Until(d.GoalDeadline))
 	}
+	log.Print("updateTimer -> nil; heap is nil")
+
 }
 
 // AddTrackerGoal adds a TrackerGoal into the scheduler
@@ -138,7 +137,7 @@ func (s *Scheduler) AddTrackerGoal(tg *TrackerGoal) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	heap.Push(s.g, tg)
-	s.updateNextTick()
+	s.updateTimer()
 	return nil
 }
 
@@ -157,7 +156,7 @@ func (s *Scheduler) Update(oldTg, newTg *TrackerGoal) error {
 	// otherwise pop and replace old TrackerGoal
 	_ = heap.Remove(s.g, idx)
 	heap.Push(s.g, newTg)
-	s.updateNextTick()
+	s.updateTimer()
 	return nil
 }
 
@@ -169,25 +168,36 @@ func (s *Scheduler) Start() {
 			// gracefully shut down
 			// accept errors and close to prevent deadlocks? idk how i want to implement this
 			// maybe have super errors that send me an email when the scheduler breaks
-			close(s.nextTick)
+			// close(s.nextTick)
+			s.timer.Stop()
 			close(s.stopCh)
 			close(s.OutputCh)
 			log.Print("Scheduler stopped")
 			for _, tg := range s.g.heap {
-				log.Print(tg.GoalDeadline, tg.GoalFrequency)
+				log.Print("heap: ", tg.GoalDeadline, tg.GoalFrequency)
 			}
 			return
-		case <-time.After(time.Until(*<-s.nextTick)): // fix this mechanism if needed
-			// what happens when the first index in the heap changes?
-			// I probably need a holding var in the scheduler to hold 1 TrackerGoal outside of the heap
+		case t := <-s.timer.C:
 			s.mutex.Lock()
+			log.Printf("timer tick at %v", t)
 			tg := heap.Pop(s.g).(*TrackerGoal)
 			log.Printf("popped %v", tg.GoalDeadline)
 			tg.resetDeadline()
 			s.OutputCh <- tg
 			heap.Push(s.g, tg)
-			s.updateNextTick()
+			s.updateTimer()
 			s.mutex.Unlock()
+			// case <-time.After(time.Until(*<-s.nextTick)): // fix this mechanism if needed
+			// 	// what happens when the first index in the heap changes?
+			// 	// I probably need a holding var in the scheduler to hold 1 TrackerGoal outside of the heap
+			// 	s.mutex.Lock()
+			// 	tg := heap.Pop(s.g).(*TrackerGoal)
+			// 	log.Printf("popped %v", tg.GoalDeadline)
+			// 	tg.resetDeadline()
+			// 	s.OutputCh <- tg
+			// 	heap.Push(s.g, tg)
+			// 	s.updateTimer()
+			// 	s.mutex.Unlock()
 		}
 	}
 }

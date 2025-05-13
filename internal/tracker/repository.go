@@ -39,8 +39,8 @@ func (r *Repository) lookupJobAppTrackerFromTrackerID(id string) (*JobAppTracker
 }
 
 func (r *Repository) LookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker, error) {
-	t := &JobAppTracker{UnderlyingTracker: UnderlyingTracker{UserID: uuid}}
-	res := r.db.First(t)
+	t := &JobAppTracker{}
+	res := r.db.Where("user_id = ?", uuid).First(t)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -65,12 +65,16 @@ func (r *Repository) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTr
 	return t, nil
 }
 
-func (r *Repository) updateUnderlyingTrackerFields(t *UnderlyingTracker, fields []string) (*UnderlyingTracker, error) {
-	res := r.db.Model(t).Select(fields).Updates(t)
-	if res.Error != nil {
-		return nil, res.Error
+func (r *Repository) updateUnderlyingTrackerFields(t *UnderlyingTracker, fields []string) error {
+	var err error
+	switch t.TrackerType {
+	case JobAppTrackerType:
+		t := &JobAppTracker{UnderlyingTracker: *t}
+		_, err = r.UpdateJobAppTrackerFields(t, fields)
+	default:
+		return errors.New("invalid tracker type")
 	}
-	return t, nil
+	return err
 }
 
 func (r *Repository) UpdateJobAppTrackerFields(t *JobAppTracker, fields []string) (*JobAppTracker, error) {

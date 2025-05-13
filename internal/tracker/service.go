@@ -18,22 +18,19 @@ func NewService(r *Repository, s *scheduler.Scheduler) *Service {
 	return &Service{repo: r, scheduler: s}
 }
 
-// The underlying tracker is a base struct that contains the common fields for all trackers.
-// There is no good reason for it to be a separate entity in the database, so I will create it in memory and store the two trackers together in gorm.
-// The separation is primarily to fulfill the factory pattern and create specific types of Items.
-// This method functions like a create hook
-func newUnderlyingTracker(u *user.User) *UnderlyingTracker {
-	ut := &UnderlyingTracker{
+// This method functions like a create hook for UnderlyingTracker.
+func (t *JobAppTracker) createUnderlyingTracker(u *user.User) {
+	t.UnderlyingTracker = UnderlyingTracker{
 		UserID:        u.GetID(),
 		GoalDeadline:  scheduler.GetDefaultGoalDeadline(u.Timezone),
 		GoalFrequency: scheduler.GetDefaultGoalFrequency(),
+		TrackerType:   JobAppTrackerType,
 	}
-	return ut
 }
 
 func (s *Service) CreateNewJobAppTracker(u *user.User) (*JobAppTracker, error) {
-	ut := newUnderlyingTracker(u)
-	t := &JobAppTracker{UnderlyingTracker: *ut}
+	t := &JobAppTracker{}
+	t.createUnderlyingTracker(u)
 	t, err := s.repo.CreateJobAppTracker(t)
 	if err != nil {
 		return nil, err
@@ -230,8 +227,8 @@ func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *Job
 	return s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
 }
 
-// ResetTrackersGoroutine is run as a goroutine to reset trackers as specified by the scheduler
-func (s *Service) ResetTrackersGoroutine() {
+// StartTrackerUpdateListener is run as a goroutine to reset trackers as specified by the scheduler
+func (s *Service) StartTrackerUpdateListener() {
 	for tg := range s.scheduler.OutputCh {
 		s.updateUnderlyingTrackerFields(tg)
 	}
@@ -245,10 +242,21 @@ func (s *Service) updateUnderlyingTrackerFields(tg *scheduler.TrackerGoal) {
 		// TODO: better to not assume without a check
 		t.GoalFrequency = scheduler.DefaultFreq
 	}
+	// find tracker type
+	tt, err := s.LookupJobAppTrackerFromTrackerID(tg.TrackerID)
+	if err != nil {
+		log.Print(err)
+		return
+	}
 	progressFields := t.ResetCurrentProgress()
 	fields = append(fields, progressFields...)
 	t.ID = tg.TrackerID
-	s.repo.updateUnderlyingTrackerFields(t, fields) // <-- ideally one size fits all tracker types
+	t.TrackerType = tt.TrackerType
+	err = s.repo.updateUnderlyingTrackerFields(t, fields) // <-- ideally one size fits all tracker types
+	if err != nil {
+		log.Print(err)
+		return
+	}
 }
 
 func toUpdateFields(tg *scheduler.TrackerGoal) *UnderlyingTrackerUpdateFields {

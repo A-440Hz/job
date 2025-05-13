@@ -160,7 +160,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// a constant tracker to test against
-			dummyUser := user.User{ID: "user_12345678"}
+			dummyUser := user.User{ID: "usr_12345678"}
 			t1, err := svc.CreateNewJobAppTracker(&dummyUser)
 			require.NoError(t, err)
 			assert.NotNil(t, t1)
@@ -178,7 +178,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 				TotalBoxesAwarded:      tt.TotalBoxesAwarded,
 				FirstCompleted:         tt.FirstCompleted,
 			}}
-			updateTracker, err := svc.UpdateJobAppTrackerFields(t1.GetID(), updateFields)
+			updateTracker, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(), updateFields)
 			if len(tt.wantErrMsg) > 0 {
 				for _, msg := range tt.wantErrMsg {
 					assert.Contains(t, err.Error(), msg)
@@ -203,7 +203,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 
 			// test subsequent update -- happy path
 			newQuantity := *tt.GoalQuantity + 5
-			updateTracker2, err := svc.UpdateJobAppTrackerFields(t1.GetID(),
+			updateTracker2, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(),
 				&JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
 					GoalQuantity:  &newQuantity,
 					GoalFrequency: strPtr("daily"),
@@ -216,7 +216,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			// test scheduler reassignment
 			newDeadline := tt.GoalDeadline.Add(time.Hour)
 			moreItems := *tt.CurItemsCompleted + 10
-			updateTracker2_5, err := svc.UpdateJobAppTrackerFields(t1.GetID(),
+			updateTracker2_5, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(),
 				&JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
 					GoalDeadline:      &newDeadline,
 					GoalFrequency:     strPtr("weekly"),
@@ -231,7 +231,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			// expect validation errors
 			wantErr := []string{maxGoalStreakField, maxItemsCompletedDailyField, totalItemsCompletedField, totalBoxesAwardedField, firstCompletedField}
 			newFirstCompleted := tt.FirstCompleted.Add(100 * time.Hour)
-			updateTracker3, err := svc.UpdateJobAppTrackerFields(t1.GetID(),
+			updateTracker3, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(),
 				&JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
 					MaxGoalStreak:          intPtr(*tt.MaxGoalStreak - 1),
 					MaxItemsCompletedDaily: intPtr(*tt.MaxItemsCompletedDaily - 1),
@@ -252,8 +252,9 @@ func Test_CreateJobAppItem(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormDB()
 	require.NoError(t, err)
-	dBase.AutoMigrate(&JobAppTracker{})
+	dBase.AutoMigrate(&JobAppTracker{}, &JobAppItem{})
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler())
 
@@ -297,10 +298,11 @@ func Test_CreateJobAppItem(t *testing.T) {
 			assert.NotNil(t, t1)
 
 			t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
-				Title:        tt.Title,
-				Body:         tt.Body,
-				Status:       tt.Status,
-				IsAttributed: tt.IsAttributed,
+				Title:           tt.Title,
+				Body:            tt.Body,
+				Status:          tt.Status,
+				IsAttributed:    tt.IsAttributed,
+				AttributionTime: tt.AttributionTime,
 			})
 
 			if len(tt.wantErrMsg) > 0 {
@@ -318,6 +320,8 @@ func Test_CreateJobAppItem(t *testing.T) {
 			assert.Equal(t, *tt.Status, t1.Items[0].Status)
 			assert.Equal(t, *tt.IsAttributed, t1.Items[0].IsAttributed)
 			assert.Equal(t, tt.AttributionTime, t1.Items[0].AttributionTime)
+			dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+			dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
 		})
 	}
 
@@ -332,19 +336,19 @@ func Test_Scheduler(t *testing.T) {
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler())
 
-	t0 := time.Now().Round(time.Minute)
-	t1 := t0.Add(time.Second * 5)
-	t2 := t1.Add(time.Second * 5)
-	t3 := t2.Add(time.Second * 5)
+	t0 := time.Now().Round(time.Second)
+	t1 := t0.Add(time.Second * 4)
+	t2 := t1.Add(time.Second * 4)
+	t3 := t2.Add(time.Second * 4)
 
-	u0 := user.User{ID: "user_00000000"}
-	u1 := user.User{ID: "user_11111111"}
-	u2 := user.User{ID: "user_22222222"}
-	u3 := user.User{ID: "user_33333333"}
+	u0 := user.User{ID: "usr_00000000"}
+	u1 := user.User{ID: "usr_11111111"}
+	u2 := user.User{ID: "usr_22222222"}
+	u3 := user.User{ID: "usr_33333333"}
 
 	// start scheduler
 	go svc.scheduler.Start()
-	go svc.ResetTrackersGoroutine()
+	go svc.StartTrackerUpdateListener()
 
 	jt0, err := svc.CreateNewJobAppTracker(&u0)
 	require.NoError(t, err)
@@ -382,7 +386,7 @@ func Test_Scheduler(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
-	time.Sleep(time.Second * 30)
+	time.Sleep(time.Second * 28)
 
 	jt000, err := svc.LookupJobAppTrackerFromTrackerID(jt0.GetID())
 	require.NoError(t, err)
@@ -392,10 +396,14 @@ func Test_Scheduler(t *testing.T) {
 	require.NoError(t, err)
 	jt333, err := svc.LookupJobAppTrackerFromTrackerID(jt3.GetID())
 	require.NoError(t, err)
-	assert.NotEqual(t, jt000.GoalDeadline, jt00.GoalDeadline)
-	assert.NotEqual(t, jt111.GoalDeadline, jt11.GoalDeadline)
-	assert.NotEqual(t, jt222.GoalDeadline, jt22.GoalDeadline)
-	assert.NotEqual(t, jt333.GoalDeadline, jt33.GoalDeadline)
+	assert.Equal(t, t0.AddDate(0, 0, 1), jt000.GoalDeadline)
+	assert.Equal(t, t1.AddDate(0, 0, 1), jt111.GoalDeadline)
+	assert.Equal(t, t2.AddDate(0, 0, 1), jt222.GoalDeadline)
+	assert.Equal(t, t3.AddDate(0, 0, 1), jt333.GoalDeadline)
+	// assert.NotEqual(t, jt000.GoalDeadline, jt00.GoalDeadline)
+	// assert.NotEqual(t, jt111.GoalDeadline, jt11.GoalDeadline)
+	// assert.NotEqual(t, jt222.GoalDeadline, jt22.GoalDeadline)
+	// assert.NotEqual(t, jt333.GoalDeadline, jt33.GoalDeadline)
 	log.Printf("after: %v, before: %v", jt000.GoalDeadline, jt00.GoalDeadline)
 	log.Printf("after: %v, before: %v", jt111.GoalDeadline, jt11.GoalDeadline)
 	log.Printf("after: %v, before: %v", jt222.GoalDeadline, jt22.GoalDeadline)
