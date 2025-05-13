@@ -67,7 +67,7 @@ type UnderlyingTracker struct {
 	DeletedAt              gorm.DeletedAt `gorm:"index"`
 }
 
-// essentially this is a item factory? it creates JobAppItems and assigns them to the UnderlyingTracker
+// this is a composite which holds JobAppItems and associates them to the UnderlyingTracker
 type JobAppTracker struct {
 	UnderlyingTracker
 	// gorm does not automatically fetch foreign key fields unless explicitly Preloaded

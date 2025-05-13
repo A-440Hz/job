@@ -7,6 +7,7 @@ import (
 	"job/internal/user"
 	"log"
 	"slices"
+	"time"
 )
 
 type Service struct {
@@ -154,8 +155,63 @@ func (s *Service) DeleteJobAppTracker(id string) error {
 	return nil
 }
 
+// GetScorableJobAppItems returns a list of job app items with create time within the tracker's goal timeframe
+// and are StatusComplete and not yet attributed
 func (s *Service) GetScorableJobAppItems(t *JobAppTracker) ([]JobAppItem, error) {
 	return s.repo.GetScorableJobAppItems(t)
+}
+
+// ScoreTracker updates the tracker items and tracker fields if the goal quantity is reached,
+// otherwise it returns the tracker as is
+func (s *Service) ScoreTracker(t *JobAppTracker) (*JobAppTracker, error) {
+	if t.CurItemsCompleted < t.GoalQuantity {
+		return t, nil
+	}
+	n := time.Now()
+	items, err := s.GetScorableJobAppItems(t)
+	if err != nil {
+		return nil, err
+	}
+	if len(items) < t.GoalQuantity {
+		return nil, errors.New("db query returned not enough items to score: " + fmt.Sprintf("%d < %d", len(items), t.GoalQuantity))
+	}
+	badFields := map[string]string{}
+	updateItems := []string{}
+	numToAward := t.CurItemsCompleted % t.GoalQuantity
+	// score n items. They should be already sorted by create time
+	for i := range t.GoalQuantity * numToAward {
+		updateItems = append(updateItems, items[i].GetID())
+	}
+
+	tr := true
+	st := StatusComplete
+	for _, id := range updateItems {
+		_, err := s.UpdateJobAppItemFields(t.GetID(), id, &JobAppItemUpdateFields{
+			Status:          &st,
+			AttributionTime: &n,
+			IsAttributed:    &tr,
+		})
+		if err != nil {
+			badFields[id] = err.Error()
+		}
+	}
+	if len(badFields) > 0 {
+		err := errors.New("update error:")
+		for id, v := range badFields {
+			err = errors.Join(err, errors.New(fmt.Sprintf("%q: %q, ", id, v)))
+		}
+		return nil, err
+	}
+	curCompleted := t.CurItemsCompleted - t.GoalQuantity
+	curAwarded := t.CurBoxesAwarded + numToAward
+	// TODO: fix curStreak and maxStreak
+	// curStreak := time.Since(*t.FirstCompleted).Hours() / 24
+	// update tracker fields
+	return s.UpdateJobAppTrackerFields(t.GetUserID(), &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+			CurItemsCompleted: &curCompleted,
+			CurBoxesAwarded:   &curAwarded,
+		}})
 }
 
 func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
@@ -191,9 +247,13 @@ func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.GetJobAppTrackerWithItemsFromUserID(userID)
+	num := t.CurItemsCompleted + 1
+	return s.UpdateJobAppTrackerFields(userID, &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+			CurItemsCompleted: &num}})
 }
 
+// TODO: remove this method if not needed
 func (s *Service) LookupJobAppItems(trackerID string) ([]*JobAppItem, error) {
 	items, err := s.repo.LookupJobAppItems(trackerID)
 	if err != nil {
@@ -202,9 +262,9 @@ func (s *Service) LookupJobAppItems(trackerID string) ([]*JobAppItem, error) {
 	return items, nil
 }
 
-func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
+func (s *Service) UpdateJobAppItemFields(tid string, itemID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
 	// validate tracker
-	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
+	t, err := s.repo.lookupJobAppTrackerFromTrackerID(tid)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +284,24 @@ func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *Job
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
+	return s.repo.GetJobAppTrackerWithItemsFromUserID(tid)
+}
+
+func (s *Service) ReceiveNewJobAppItem(userId string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
+	tracker, err := s.CreateJobAppItem(userId, fields)
+	if err != nil {
+		return nil, err
+	}
+	// increment CurItemsCompleted
+	numItems := tracker.CurItemsCompleted + 1
+	tracker, err = s.UpdateJobAppTrackerFields(userId, &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+			CurItemsCompleted: &numItems,
+		}})
+	if err != nil {
+		return nil, err
+	}
+	return s.ScoreTracker(tracker)
 }
 
 // StartTrackerUpdateListener is run as a goroutine to reset trackers as specified by the scheduler
@@ -246,6 +323,10 @@ func (s *Service) updateUnderlyingTrackerFields(tg *scheduler.TrackerGoal) {
 	tt, err := s.LookupJobAppTrackerFromTrackerID(tg.TrackerID)
 	if err != nil {
 		log.Print(err)
+		return
+	}
+	if tt.TrackerType == "" {
+		log.Print("tracker type not found")
 		return
 	}
 	progressFields := t.ResetCurrentProgress()

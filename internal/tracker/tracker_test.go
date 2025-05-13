@@ -24,7 +24,6 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
-// heres some tests
 func Test_formatForRepo(t *testing.T) {
 	n := time.Now()
 	tests := []struct {
@@ -411,4 +410,51 @@ func Test_Scheduler(t *testing.T) {
 	svc.scheduler.Stop()
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
 
+}
+
+func Test_RecieveNewJobAppItem(t *testing.T) {
+	db.SetEnvForTesting()
+	dBase, err := db.InitGormDB()
+	require.NoError(t, err)
+	dBase.AutoMigrate(&JobAppTracker{})
+	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
+	repo := NewRepository(dBase)
+	svc := NewService(repo, scheduler.NewScheduler())
+
+	dummyUser := user.User{ID: "usr_12345678"}
+	t1, err := svc.CreateNewJobAppTracker(&dummyUser)
+	require.NoError(t, err)
+
+	t1, err = svc.UpdateJobAppTrackerFields(dummyUser.GetID(), &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields{GoalQuantity: intPtr(1)}})
+
+	statusComplete := StatusComplete
+	t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("Title"),
+		Body:         strPtr("Body"),
+		Status:       &statusComplete,
+		IsAttributed: boolPtr(false),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, t1.CurItemsCompleted)
+	assert.Equal(t, 0, t1.CurBoxesAwarded)
+	// assert.Equal(t, 1, t1.MaxGoalStreak)
+
+	t1, err = svc.ScoreTracker(t1)
+	require.NoError(t, err)
+	assert.Equal(t, 0, t1.CurItemsCompleted)
+	assert.Equal(t, 1, t1.CurBoxesAwarded)
+
+	t1, err = svc.ReceiveNewJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+		Title:  strPtr("Title"),
+		Body:   strPtr("Body"),
+		Status: &statusComplete,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, t1.CurItemsCompleted, 2)
+	assert.Equal(t, t1.CurBoxesAwarded, 2)
+
+	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
 }

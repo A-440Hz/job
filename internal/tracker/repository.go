@@ -65,6 +65,7 @@ func (r *Repository) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTr
 	return t, nil
 }
 
+// updateUnderlyingTrackerFields is a switch statement that queries the tracker type and calls the appropriate update method
 func (r *Repository) updateUnderlyingTrackerFields(t *UnderlyingTracker, fields []string) error {
 	var err error
 	switch t.TrackerType {
@@ -72,7 +73,7 @@ func (r *Repository) updateUnderlyingTrackerFields(t *UnderlyingTracker, fields 
 		t := &JobAppTracker{UnderlyingTracker: *t}
 		_, err = r.UpdateJobAppTrackerFields(t, fields)
 	default:
-		return errors.New("invalid tracker type")
+		err = errors.New("invalid tracker type")
 	}
 	return err
 }
@@ -99,7 +100,6 @@ func (r *Repository) DeleteJobAppTracker(t *JobAppTracker) error {
 
 // GetScorableJobAppItems returns tracker items within the goal timeframe which are StatusComplete and not yet attributed
 // returning list instead of pointers because of small expected return size and faster field access
-// might need to switch because idk how well it will work with gorm
 func (r *Repository) GetScorableJobAppItems(t *JobAppTracker) ([]JobAppItem, error) {
 	items := []JobAppItem{}
 	// is there a case for validation or do i assume tracker timeframes are always set correctly?

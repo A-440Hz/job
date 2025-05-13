@@ -45,6 +45,10 @@ type JobAppItem struct {
 	DeletedAt       gorm.DeletedAt `gorm:"index"`
 }
 
+func (i *JobAppItem) GetID() string {
+	return i.ID
+}
+
 func (i *JobAppItem) IsComplete() bool {
 	return i.Status == StatusComplete
 }
