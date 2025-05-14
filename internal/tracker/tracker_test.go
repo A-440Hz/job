@@ -314,6 +314,9 @@ func Test_CreateJobAppItem(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, t1)
 
+			t1, err = svc.GetJobAppTrackerWithItemsFromUserID(dummyUser.GetID())
+			require.NoError(t, err)
+
 			assert.Equal(t, *tt.Title, t1.Items[0].Title)
 			assert.Equal(t, *tt.Body, t1.Items[0].Body)
 			assert.Equal(t, *tt.Status, t1.Items[0].Status)
@@ -425,9 +428,12 @@ func Test_RecieveNewJobAppItem(t *testing.T) {
 	dummyUser := user.User{ID: "usr_12345678"}
 	t1, err := svc.CreateNewJobAppTracker(&dummyUser)
 	require.NoError(t, err)
+	require.NotNil(t, t1)
 
 	t1, err = svc.UpdateJobAppTrackerFields(dummyUser.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields{GoalQuantity: intPtr(1)}})
+	require.NoError(t, err)
+	require.Equal(t, 1, t1.GoalQuantity)
 
 	statusComplete := StatusComplete
 	t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
@@ -447,13 +453,79 @@ func Test_RecieveNewJobAppItem(t *testing.T) {
 	assert.Equal(t, 1, t1.CurBoxesAwarded)
 
 	t1, err = svc.ReceiveNewJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
-		Title:  strPtr("Title"),
-		Body:   strPtr("Body"),
-		Status: &statusComplete,
+		Title:        strPtr("Title"),
+		Body:         strPtr("Body"),
+		Status:       &statusComplete,
+		IsAttributed: boolPtr(false),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, t1.CurItemsCompleted, 2)
-	assert.Equal(t, t1.CurBoxesAwarded, 2)
+	assert.Equal(t, 0, t1.CurItemsCompleted)
+	assert.Equal(t, 2, t1.CurBoxesAwarded)
+
+	// change the GoalQuantity to 2 and add more items
+	t1, err = svc.UpdateJobAppTrackerFields(dummyUser.GetID(), &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields{GoalQuantity: intPtr(2)}})
+	require.NoError(t, err)
+	require.Equal(t, 2, t1.GoalQuantity)
+	t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("Title"),
+		Body:         strPtr("Body"),
+		Status:       &statusComplete,
+		IsAttributed: boolPtr(false),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, t1.CurItemsCompleted)
+	assert.Equal(t, 2, t1.CurBoxesAwarded)
+
+	t1, err = svc.ScoreTracker(t1)
+	require.NoError(t, err)
+	assert.Equal(t, 1, t1.CurItemsCompleted)
+	assert.Equal(t, 2, t1.CurBoxesAwarded)
+
+	t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("Title"),
+		Body:         strPtr("Body"),
+		Status:       &statusComplete,
+		IsAttributed: boolPtr(false),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 2, t1.CurItemsCompleted)
+	assert.Equal(t, 2, t1.CurBoxesAwarded)
+	t1, err = svc.ScoreTracker(t1)
+	require.NoError(t, err)
+	assert.Equal(t, 0, t1.CurItemsCompleted)
+	assert.Equal(t, 3, t1.CurBoxesAwarded)
+
+	// test behavior when decreasing GoalQuantity to a lower number than current items
+	dummyUser2 := user.User{ID: "usr_23456789"}
+	t2, err := svc.CreateNewJobAppTracker(&dummyUser2)
+	require.NoError(t, err)
+	require.NotNil(t, t2)
+	for i := 0; i < 4; i++ {
+		t2, err = svc.CreateJobAppItem(dummyUser2.GetID(), &JobAppItemUpdateFields{
+			Title:        strPtr("Title"),
+			Body:         strPtr("Body"),
+			Status:       &statusComplete,
+			IsAttributed: boolPtr(false),
+		})
+		require.NoError(t, err)
+	}
+	assert.Equal(t, 4, t2.CurItemsCompleted)
+	assert.Equal(t, 0, t2.CurBoxesAwarded)
+
+	t2, err = svc.ScoreTracker(t2)
+	require.NoError(t, err)
+	assert.Equal(t, 4, t2.CurItemsCompleted)
+	assert.Equal(t, 0, t2.CurBoxesAwarded)
+
+	t2, err = svc.UpdateJobAppTrackerFields(dummyUser2.GetID(), &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields{GoalQuantity: intPtr(2)}})
+	require.NoError(t, err)
+	require.Equal(t, 2, t2.GoalQuantity)
+	t2, err = svc.ScoreTracker(t2)
+	require.NoError(t, err)
+	assert.Equal(t, 0, t2.CurItemsCompleted)
+	assert.Equal(t, 2, t2.CurBoxesAwarded)
 
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
 	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")

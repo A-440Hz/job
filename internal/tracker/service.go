@@ -177,7 +177,7 @@ func (s *Service) ScoreTracker(t *JobAppTracker) (*JobAppTracker, error) {
 	}
 	badFields := map[string]string{}
 	updateItems := []string{}
-	numToAward := t.CurItemsCompleted % t.GoalQuantity
+	numToAward := t.CurItemsCompleted / t.GoalQuantity
 	// score n items. They should be already sorted by create time
 	for i := range t.GoalQuantity * numToAward {
 		updateItems = append(updateItems, items[i].GetID())
@@ -202,7 +202,7 @@ func (s *Service) ScoreTracker(t *JobAppTracker) (*JobAppTracker, error) {
 		}
 		return nil, err
 	}
-	curCompleted := t.CurItemsCompleted - t.GoalQuantity
+	curCompleted := t.CurItemsCompleted - t.GoalQuantity*numToAward
 	curAwarded := t.CurBoxesAwarded + numToAward
 	// TODO: fix curStreak and maxStreak
 	// curStreak := time.Since(*t.FirstCompleted).Hours() / 24
@@ -214,6 +214,7 @@ func (s *Service) ScoreTracker(t *JobAppTracker) (*JobAppTracker, error) {
 		}})
 }
 
+// CreateJobAppItem creates a new job app item and increments the tracker's CurItemsCompleted field by 1
 func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
 	// validate tracker; return immediately on invalid id
 	t, err := s.repo.LookupJobAppTrackerFromUserID(userID)
@@ -279,6 +280,7 @@ func (s *Service) UpdateJobAppItemFields(tid string, itemID string, fields *JobA
 	if err != nil {
 		return nil, err
 	}
+	updateItem.ID = itemID
 
 	_, err = s.repo.UpdateJobAppTrackerItemFields(updateItem, updateFields)
 	if err != nil {
@@ -289,15 +291,6 @@ func (s *Service) UpdateJobAppItemFields(tid string, itemID string, fields *JobA
 
 func (s *Service) ReceiveNewJobAppItem(userId string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
 	tracker, err := s.CreateJobAppItem(userId, fields)
-	if err != nil {
-		return nil, err
-	}
-	// increment CurItemsCompleted
-	numItems := tracker.CurItemsCompleted + 1
-	tracker, err = s.UpdateJobAppTrackerFields(userId, &JobAppTrackerUpdateFields{
-		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-			CurItemsCompleted: &numItems,
-		}})
 	if err != nil {
 		return nil, err
 	}
