@@ -19,8 +19,7 @@ func NewService(r *Repository) *Service {
 
 // CreateNewUser creates a new user with the given timezone and returns it. Nil input defaults to the default timezone.
 func (s *Service) CreateNewUser(t *scheduler.Timezone) (*User, error) {
-	u := &User{Timezone: t}
-	u, err := s.repo.CreateUser(u)
+	u, err := s.repo.CreateUser(&User{Timezone: t})
 	if err != nil {
 		return nil, err
 	}
@@ -116,17 +115,9 @@ func (s *Service) UpdateUserFields(id string, fields *UserUpdateFields) (*User, 
 }
 
 func (s *Service) LookupUser(id string) (*User, error) {
-	u, err := s.repo.LookupUser(id)
-	if err != nil {
-		return nil, err
-	}
-	return u, nil
+	return s.repo.LookupUser(id)
 }
 
 func (s *Service) DeleteUser(id string) error {
-	u := &User{ID: id}
-	if err := s.repo.DeleteUser(u); err != nil {
-		return err
-	}
-	return nil
+	return s.repo.DeleteUser(&User{ID: id})
 }

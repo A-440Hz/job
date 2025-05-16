@@ -49,32 +49,20 @@ func (s *Service) CreateNewJobAppTracker(u *user.User) (*JobAppTracker, error) {
 // LookupJobAppTrackerFromUserID (by uuid) is the default function used in the service layer to lookup trackers.
 // It relies on a db.Where call in gorm, which is efficient because user_id is specified as a gorm index.
 func (s *Service) LookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker, error) {
-	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
-	if err != nil {
-		return nil, err
-	}
-	return t, nil
+	return s.repo.LookupJobAppTrackerFromUserID(uuid)
 }
 
 // LookupJobAppTrackerFromTrackerID is probably needed for the scheduler to trigger tracker
 func (s *Service) LookupJobAppTrackerFromTrackerID(id string) (*JobAppTracker, error) {
-	t, err := s.repo.lookupJobAppTrackerFromTrackerID(id)
-	if err != nil {
-		return nil, err
-	}
-	return t, nil
+	return s.repo.lookupJobAppTrackerFromTrackerID(id)
 }
 
 func (s *Service) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTracker, error) {
-	t, err := s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
-	if err != nil {
-		return nil, err
-	}
-	return t, nil
+	return s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
 }
 
 func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUpdateFields) (*JobAppTracker, error) {
-	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
+	repoTracker, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
 	if err != nil {
 		return nil, err
 	}
@@ -91,20 +79,21 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 		badFields["fields"] = "no fields to update"
 	}
 
+	// TODO: probably move this out into a validate function
 	// stats invariants
-	if slices.Contains(updateFields, maxGoalStreakField) && updateTracker.MaxGoalStreak < t.MaxGoalStreak {
+	if slices.Contains(updateFields, maxGoalStreakField) && updateTracker.MaxGoalStreak < repoTracker.MaxGoalStreak {
 		badFields[maxGoalStreakField] = fmt.Sprintf("cannot decrease %q", maxGoalStreakField)
 	}
-	if slices.Contains(updateFields, maxItemsCompletedDailyField) && updateTracker.MaxItemsCompletedDaily < t.MaxItemsCompletedDaily {
+	if slices.Contains(updateFields, maxItemsCompletedDailyField) && updateTracker.MaxItemsCompletedDaily < repoTracker.MaxItemsCompletedDaily {
 		badFields[maxItemsCompletedDailyField] = fmt.Sprintf("cannot decrease %q", maxItemsCompletedDailyField)
 	}
-	if slices.Contains(updateFields, totalItemsCompletedField) && updateTracker.TotalItemsCompleted < t.TotalItemsCompleted {
+	if slices.Contains(updateFields, totalItemsCompletedField) && updateTracker.TotalItemsCompleted < repoTracker.TotalItemsCompleted {
 		badFields[totalItemsCompletedField] = fmt.Sprintf("cannot decrease %q", totalItemsCompletedField)
 	}
-	if slices.Contains(updateFields, totalBoxesAwardedField) && updateTracker.TotalBoxesAwarded < t.TotalBoxesAwarded {
+	if slices.Contains(updateFields, totalBoxesAwardedField) && updateTracker.TotalBoxesAwarded < repoTracker.TotalBoxesAwarded {
 		badFields[totalBoxesAwardedField] = fmt.Sprintf("cannot decrease %q", totalBoxesAwardedField)
 	}
-	if slices.Contains(updateFields, firstCompletedField) && t.FirstCompleted != nil && updateTracker.FirstCompleted.After(*t.FirstCompleted) {
+	if slices.Contains(updateFields, firstCompletedField) && repoTracker.FirstCompleted != nil && updateTracker.FirstCompleted.After(*repoTracker.FirstCompleted) {
 		badFields[firstCompletedField] = fmt.Sprintf("cannot increment %q", firstCompletedField)
 	}
 	if len(badFields) > 0 {
@@ -115,32 +104,50 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 		return nil, err
 	}
 
-	beforeTg := t.ToTrackerGoal()
-	// TODO: try to prevent front end from sending update reqs for identical deadlines and frequencies
-	if t.GoalDeadline == updateTracker.GoalDeadline {
+	// the front end should also avoid sending update reqs for identical deadlines and frequencies
+	if repoTracker.GoalDeadline == updateTracker.GoalDeadline {
 		//
 		updateFields = slices.DeleteFunc(updateFields, func(f string) bool {
 			return f == goalDeadlineField
 		})
 	}
-	if t.GoalFrequency == updateTracker.GoalFrequency {
+	if repoTracker.GoalFrequency == updateTracker.GoalFrequency {
 		updateFields = slices.DeleteFunc(updateFields, func(f string) bool {
 			return f == goalFrequencyField
 		})
 	}
 
-	// validate?
-	updateTracker.ID = t.GetID()
-	_, err = s.repo.UpdateJobAppTrackerFields(updateTracker, updateFields)
+	// push user updates to repo
+	updateTracker.ID = repoTracker.GetID()
+	updateTracker, err = s.repo.UpdateJobAppTrackerFields(updateTracker, updateFields)
 	if err != nil {
 		return nil, err
 	}
 
-	// communicate with scheduler if needed.. updateFields is correctly trimmed if no diffs are present
+	// communicate with scheduler if needed.. updateFields was trimmed earlier if this step is not needed
 	if slices.Contains(updateFields, goalDeadlineField) || slices.Contains(updateFields, goalFrequencyField) {
 		// fail scheduler gracefully?
-		if err = s.scheduler.Update(beforeTg, updateTracker.ToTrackerGoal()); err != nil {
+		err = s.scheduler.Update(repoTracker.ToTrackerGoal(), updateTracker.ToTrackerGoal())
+		if err != nil {
 			log.Print(err)
+		}
+	}
+
+	// validate counters and score tracker if needed
+	if slices.Contains(updateFields, goalQuantityField) || slices.Contains(updateFields, curItemsCompletedField) {
+		repoTracker, err = s.repo.LookupJobAppTrackerFromUserID(uuid)
+		if err != nil {
+			return nil, err
+		}
+		updateTracker, updateFields, err = s.ValidateCounters(repoTracker)
+		if err != nil {
+			return nil, err
+		}
+		if len(updateFields) > 0 {
+			_, err = s.repo.UpdateJobAppTrackerFields(updateTracker, updateFields)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -148,11 +155,7 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 }
 
 func (s *Service) DeleteJobAppTracker(id string) error {
-	t := &JobAppTracker{UnderlyingTracker: UnderlyingTracker{ID: id}}
-	if err := s.repo.DeleteJobAppTracker(t); err != nil {
-		return err
-	}
-	return nil
+	return s.repo.DeleteJobAppTracker(&JobAppTracker{UnderlyingTracker: UnderlyingTracker{ID: id}})
 }
 
 // GetScorableJobAppItems returns a list of job app items with create time within the tracker's goal timeframe
@@ -161,9 +164,63 @@ func (s *Service) GetScorableJobAppItems(t *JobAppTracker) ([]JobAppItem, error)
 	return s.repo.GetScorableJobAppItems(t)
 }
 
-// ScoreTracker updates the tracker items and tracker fields if the goal quantity is reached,
+// ValidateCounters is intended for use on a tracker queried from the repo with all required fields populated.
+// it checks for overflow of curItemsCompleted and goalQuantity, incrementing and resetting curBoxesAwarded and curItemsCompleted as needed, and returns the corresponding update fields.
+// It calls the service to score the tracker items if the goal quantity is reached.
+// The only user-updatable field that directly invokes this function is goalQuantity. Managed properly, this function should be fine to call on every update.
+func (s *Service) ValidateCounters(repoTracker *JobAppTracker) (*JobAppTracker, []string, error) {
+	fields := []string{}
+	if repoTracker.CurItemsCompleted < repoTracker.GoalQuantity {
+		return repoTracker, fields, nil
+	}
+	n := time.Now()
+	numToAward := repoTracker.CurItemsCompleted / repoTracker.GoalQuantity
+	items, err := s.GetScorableJobAppItems(repoTracker)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(items) < repoTracker.GoalQuantity*numToAward {
+		// TODO: this will just be broken forever. handle it gracefully or make some process to help avoid this state.
+		log.Print("mismatch between number of scorable items and tracker current items completed: " + fmt.Sprintf("%d < %d", len(items), repoTracker.CurItemsCompleted))
+		// is it good to set curItemsCompleted to len(items) here?
+		return nil, nil, errors.New("mismatch between number of scorable items and tracker current items completed: " + fmt.Sprintf("%d < %d", len(items), repoTracker.CurItemsCompleted))
+	}
+	badFields := map[string]string{}
+	updateItems := []string{}
+	// score n items. They should be already sorted by create time
+	for i := range repoTracker.GoalQuantity * numToAward {
+		updateItems = append(updateItems, items[i].GetID())
+	}
+
+	tr := true
+	for _, id := range updateItems {
+		err := s.updateJobAppItemFields(repoTracker, id, &JobAppItemUpdateFields{
+			AttributionTime: &n,
+			IsAttributed:    &tr,
+		})
+		if err != nil {
+			badFields[id] = err.Error()
+		}
+	}
+	if len(badFields) > 0 {
+		err := errors.New("update error:")
+		for id, v := range badFields {
+			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
+		}
+		return nil, nil, err
+	}
+	repoTracker.CurItemsCompleted = repoTracker.CurItemsCompleted - repoTracker.GoalQuantity*numToAward
+	repoTracker.CurBoxesAwarded = repoTracker.CurBoxesAwarded + numToAward
+	return repoTracker, []string{curItemsCompletedField, curBoxesAwardedField}, nil
+}
+
+// scoreTracker updates the tracker items and tracker fields if the goal quantity is reached,
 // otherwise it returns the tracker as is
-func (s *Service) ScoreTracker(t *JobAppTracker) (*JobAppTracker, error) {
+func (s *Service) scoreTracker(uuid string) (*JobAppTracker, error) {
+	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
+	if err != nil {
+		return nil, err
+	}
 	if t.CurItemsCompleted < t.GoalQuantity {
 		return t, nil
 	}
@@ -184,10 +241,8 @@ func (s *Service) ScoreTracker(t *JobAppTracker) (*JobAppTracker, error) {
 	}
 
 	tr := true
-	st := StatusComplete
 	for _, id := range updateItems {
-		_, err := s.UpdateJobAppItemFields(t.GetID(), id, &JobAppItemUpdateFields{
-			Status:          &st,
+		err := s.updateJobAppItemFields(t, id, &JobAppItemUpdateFields{
 			AttributionTime: &n,
 			IsAttributed:    &tr,
 		})
@@ -198,7 +253,7 @@ func (s *Service) ScoreTracker(t *JobAppTracker) (*JobAppTracker, error) {
 	if len(badFields) > 0 {
 		err := errors.New("update error:")
 		for id, v := range badFields {
-			err = errors.Join(err, errors.New(fmt.Sprintf("%q: %q, ", id, v)))
+			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
 		}
 		return nil, err
 	}
@@ -230,6 +285,11 @@ func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields
 	}
 	if fields.IsAttributed == nil {
 		badFields[isAttributedField] = "missing isAttributed"
+	} else if *fields.IsAttributed != false {
+		badFields[isAttributedField] = "cannot create an attributed item"
+	}
+	if fields.AttributionTime != nil {
+		badFields[attributionTimeField] = "cannot create an attributed item"
 	}
 	i, _, err := fields.formatForRepo()
 	if err != nil {
@@ -248,29 +308,56 @@ func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields
 	if err != nil {
 		return nil, err
 	}
-	num := t.CurItemsCompleted + 1
-	return s.UpdateJobAppTrackerFields(userID, &JobAppTrackerUpdateFields{
-		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-			CurItemsCompleted: &num}})
+
+	if *fields.Status == StatusComplete && *fields.IsAttributed == false {
+		t.CurItemsCompleted = t.CurItemsCompleted + 1
+		updateTracker, fields, err := s.ValidateCounters(t)
+		if err != nil {
+			return nil, err
+		}
+		_, err = s.repo.UpdateJobAppTrackerFields(updateTracker, fields)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return s.repo.GetJobAppTrackerWithItemsFromUserID(userID)
 }
 
 // TODO: remove this method if not needed
 func (s *Service) LookupJobAppItems(trackerID string) ([]*JobAppItem, error) {
-	items, err := s.repo.LookupJobAppItems(trackerID)
-	if err != nil {
-		return nil, err
-	}
-	return items, nil
+	return s.repo.LookupJobAppItems(trackerID)
 }
 
-func (s *Service) UpdateJobAppItemFields(tid string, itemID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
+func (s *Service) updateJobAppItemFields(t *JobAppTracker, itemID string, fields *JobAppItemUpdateFields) error {
+
+	// validate item belongs to tracker
+	_, err := s.repo.LookupJobAppItem(t.GetID(), itemID)
+	if err != nil {
+		return err
+	}
+
+	// I cant think of a reason to validate any fields
+	updateItem, updateFields, err := fields.formatForRepo()
+	if err != nil {
+		return err
+	}
+	updateItem.ID = itemID
+
+	_, err = s.repo.UpdateJobAppTrackerItemFields(updateItem, updateFields)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
 	// validate tracker
-	t, err := s.repo.lookupJobAppTrackerFromTrackerID(tid)
+	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
 	if err != nil {
 		return nil, err
 	}
 	// valid item
-	_, err = s.repo.LookupJobAppItem(t.GetID(), itemID)
+	repoItem, err := s.repo.LookupJobAppItem(t.GetID(), itemID)
 	if err != nil {
 		return nil, err
 	}
@@ -286,16 +373,55 @@ func (s *Service) UpdateJobAppItemFields(tid string, itemID string, fields *JobA
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.GetJobAppTrackerWithItemsFromUserID(tid)
+
+	// user never manually updates IsAttributed, so this check should be sufficient as orchestrator logic
+	if !repoItem.IsAttributed {
+		// modify tracker curItemsCompleted as needed
+	}
+	return s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
 }
 
-func (s *Service) ReceiveNewJobAppItem(userId string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
-	tracker, err := s.CreateJobAppItem(userId, fields)
+func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
+	// validate item belongs to tracker
+	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return s.ScoreTracker(tracker)
+	repoItem, err := s.repo.LookupJobAppItem(t.GetID(), itemID)
+	if err != nil {
+		return err
+	}
+	if !repoItem.IsAttributed {
+		// decrement tracker curItemsCompleted
+		t.CurItemsCompleted = max(0, t.CurItemsCompleted-1)
+		updateTracker, fields, err := s.ValidateCounters(t)
+		if err != nil {
+			return err
+		}
+		_, err = s.repo.UpdateJobAppTrackerFields(updateTracker, fields)
+		if err != nil {
+			return err
+		}
+	}
+
+	return s.repo.DeleteJobAppTrackerItem(&JobAppItem{ID: itemID})
 }
+
+// func (s *Service) ReceiveNewJobAppItem(userId string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
+// 	tracker, err := s.CreateJobAppItem(userId, fields)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return s.ScoreTracker(tracker)
+// }
+
+// func (s *Service) ReceiveNewJobAppItemUpdate(userId string, itemID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
+// 	tracker, err := s.UpdateJobAppItemFields(userId, itemID, fields)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return s.ScoreTracker(tracker)
+// }
 
 // StartTrackerUpdateListener is run as a goroutine to reset trackers as specified by the scheduler
 func (s *Service) StartTrackerUpdateListener() {
@@ -341,6 +467,7 @@ func toUpdateFields(tg *scheduler.TrackerGoal) *UnderlyingTrackerUpdateFields {
 }
 
 // ResetCurrentProgress is a general tracker reset function that may or may not need to be refactored
+// it modifies the tracker struct in place and returns a list of fields that were modified
 // I might need to expand to typed functions if different tracker types have different reset needs
 func (t *UnderlyingTracker) ResetCurrentProgress() []string {
 	t.CurItemsCompleted = 0

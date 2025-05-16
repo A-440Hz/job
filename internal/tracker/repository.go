@@ -57,8 +57,8 @@ func (r *Repository) GetJobAppTrackerWithItemsFromTrackerID(id string) (*JobAppT
 }
 
 func (r *Repository) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTracker, error) {
-	t := &JobAppTracker{UnderlyingTracker: UnderlyingTracker{UserID: uuid}}
-	res := r.db.Preload("Items").First(t)
+	t := &JobAppTracker{}
+	res := r.db.Preload("Items").Where("user_id = ?", uuid).First(t)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -159,7 +159,7 @@ func (r *Repository) UpdateJobAppTrackerItemFields(i *JobAppItem, fields []strin
 	return i, nil
 }
 
-func (r *Repository) DeleteJobAppTrackerItem(t *JobAppTracker, i *JobAppItem) error {
+func (r *Repository) DeleteJobAppTrackerItem(i *JobAppItem) error {
 	res := r.db.Delete(i)
 	if res.RowsAffected == 0 {
 		return errors.New("item not found")

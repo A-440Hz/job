@@ -24,6 +24,11 @@ func boolPtr(b bool) *bool {
 	return &b
 }
 
+func itemStatusPtr(s string) *ItemStatus {
+	status := ItemStatus(s)
+	return &status
+}
+
 func Test_formatForRepo(t *testing.T) {
 	n := time.Now()
 	tests := []struct {
@@ -141,7 +146,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			GoalDeadline:           &n,
 			GoalQuantity:           intPtr(1),
 			GoalFrequency:          strPtr(string(scheduler.DefaultFreq)),
-			CurItemsCompleted:      intPtr(2),
+			CurItemsCompleted:      intPtr(0),
 			CurBoxesAwarded:        intPtr(3),
 			CurGoalStreak:          intPtr(4),
 			MaxGoalStreak:          intPtr(5),
@@ -201,7 +206,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			assert.Equal(t, tt.FirstCompleted, updateTracker.FirstCompleted)
 
 			// test subsequent update -- happy path
-			newQuantity := *tt.GoalQuantity + 5
+			newQuantity := *tt.GoalQuantity + 50
 			updateTracker2, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(),
 				&JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
 					GoalQuantity:  &newQuantity,
@@ -220,12 +225,14 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 					GoalDeadline:      &newDeadline,
 					GoalFrequency:     strPtr("weekly"),
 					CurItemsCompleted: &moreItems,
+					GoalQuantity:      &newQuantity,
 				}})
 			require.NotNil(t, updateTracker2_5)
 			require.NoError(t, err)
 			assert.Equal(t, newDeadline, updateTracker2_5.GoalDeadline)
 			assert.Equal(t, scheduler.FreqWeekly, updateTracker2_5.GoalFrequency)
 			assert.Equal(t, moreItems, updateTracker2_5.CurItemsCompleted)
+			assert.Equal(t, newQuantity, updateTracker2_5.GoalQuantity)
 
 			// expect validation errors
 			wantErr := []string{maxGoalStreakField, maxItemsCompletedDailyField, totalItemsCompletedField, totalBoxesAwardedField, firstCompletedField}
@@ -280,12 +287,21 @@ func Test_CreateJobAppItem(t *testing.T) {
 			wantErrMsg: []string{"missing item name", "missing item status", "missing isAttributed"},
 		},
 		{
+			name:         "invalid-status",
+			Title:        strPtr("Title"),
+			Body:         strPtr("Body"),
+			Status:       itemStatusPtr("something-invalid"),
+			IsAttributed: boolPtr(false),
+			wantErrMsg:   []string{"invalid application status"},
+		},
+		{
 			name:            "with-attr-time",
 			Title:           strPtr("Title"),
 			Body:            strPtr("Body"),
 			Status:          &defaultStatus,
 			IsAttributed:    boolPtr(true),
 			AttributionTime: &n,
+			wantErrMsg:      []string{"cannot create an attributed item"},
 		},
 	}
 
@@ -415,7 +431,7 @@ func Test_Scheduler(t *testing.T) {
 
 }
 
-func Test_RecieveNewJobAppItem(t *testing.T) {
+func Test_JobAppTrackerItemScoring(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormDB()
 	require.NoError(t, err)
@@ -436,6 +452,7 @@ func Test_RecieveNewJobAppItem(t *testing.T) {
 	require.Equal(t, 1, t1.GoalQuantity)
 
 	statusComplete := StatusComplete
+	statusInProgress := StatusInProgress
 	t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
 		Title:        strPtr("Title"),
 		Body:         strPtr("Body"),
@@ -443,16 +460,11 @@ func Test_RecieveNewJobAppItem(t *testing.T) {
 		IsAttributed: boolPtr(false),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 1, t1.CurItemsCompleted)
-	assert.Equal(t, 0, t1.CurBoxesAwarded)
-	// assert.Equal(t, 1, t1.MaxGoalStreak)
-
-	t1, err = svc.ScoreTracker(t1)
-	require.NoError(t, err)
 	assert.Equal(t, 0, t1.CurItemsCompleted)
 	assert.Equal(t, 1, t1.CurBoxesAwarded)
+	// assert.Equal(t, 1, t1.MaxGoalStreak)
 
-	t1, err = svc.ReceiveNewJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+	t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
 		Title:        strPtr("Title"),
 		Body:         strPtr("Body"),
 		Status:       &statusComplete,
@@ -463,10 +475,14 @@ func Test_RecieveNewJobAppItem(t *testing.T) {
 	assert.Equal(t, 2, t1.CurBoxesAwarded)
 
 	// change the GoalQuantity to 2 and add more items
+	// note how it will not retroactively affect the boxes already awarded
 	t1, err = svc.UpdateJobAppTrackerFields(dummyUser.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields{GoalQuantity: intPtr(2)}})
 	require.NoError(t, err)
 	require.Equal(t, 2, t1.GoalQuantity)
+	assert.Equal(t, 2, t1.CurBoxesAwarded)
+	assert.Equal(t, 0, t1.CurItemsCompleted)
+
 	t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
 		Title:        strPtr("Title"),
 		Body:         strPtr("Body"),
@@ -477,21 +493,33 @@ func Test_RecieveNewJobAppItem(t *testing.T) {
 	assert.Equal(t, 1, t1.CurItemsCompleted)
 	assert.Equal(t, 2, t1.CurBoxesAwarded)
 
-	t1, err = svc.ScoreTracker(t1)
+	// test counters stay consistent when CreateJobAppItem fails &..
+	// test counters do not increment when item is in progress
+	t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("Title"),
+		Body:         strPtr("Body"),
+		Status:       &statusComplete,
+		IsAttributed: boolPtr(true),
+	})
+	require.Error(t, err)
+	require.Nil(t, t1)
+	t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("Title"),
+		Body:         strPtr("Body"),
+		Status:       &statusInProgress,
+		IsAttributed: boolPtr(false),
+	})
 	require.NoError(t, err)
 	assert.Equal(t, 1, t1.CurItemsCompleted)
 	assert.Equal(t, 2, t1.CurBoxesAwarded)
 
+	// test counters work as expected despite previous failed calls
 	t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
 		Title:        strPtr("Title"),
 		Body:         strPtr("Body"),
 		Status:       &statusComplete,
 		IsAttributed: boolPtr(false),
 	})
-	require.NoError(t, err)
-	assert.Equal(t, 2, t1.CurItemsCompleted)
-	assert.Equal(t, 2, t1.CurBoxesAwarded)
-	t1, err = svc.ScoreTracker(t1)
 	require.NoError(t, err)
 	assert.Equal(t, 0, t1.CurItemsCompleted)
 	assert.Equal(t, 3, t1.CurBoxesAwarded)
@@ -513,17 +541,10 @@ func Test_RecieveNewJobAppItem(t *testing.T) {
 	assert.Equal(t, 4, t2.CurItemsCompleted)
 	assert.Equal(t, 0, t2.CurBoxesAwarded)
 
-	t2, err = svc.ScoreTracker(t2)
-	require.NoError(t, err)
-	assert.Equal(t, 4, t2.CurItemsCompleted)
-	assert.Equal(t, 0, t2.CurBoxesAwarded)
-
 	t2, err = svc.UpdateJobAppTrackerFields(dummyUser2.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields{GoalQuantity: intPtr(2)}})
 	require.NoError(t, err)
 	require.Equal(t, 2, t2.GoalQuantity)
-	t2, err = svc.ScoreTracker(t2)
-	require.NoError(t, err)
 	assert.Equal(t, 0, t2.CurItemsCompleted)
 	assert.Equal(t, 2, t2.CurBoxesAwarded)
 
