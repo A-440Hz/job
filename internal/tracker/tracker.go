@@ -47,15 +47,15 @@ const (
 // There is no good reason for it to be a separate entity in the database, so I will create it in memory and store the two trackers together in gorm.
 // The separation is primarily to fulfill the composite pattern and hold specific types of Items.
 type UnderlyingTracker struct {
-	// I shouldn't need to embed a User. A foreign key is sufficient.
-	ID                string `gorm:"primaryKey"`
-	UserID            string `gorm:"index"` // the index tag improves query performance for common lookup fields
-	GoalDeadline      time.Time
-	GoalFrequency     scheduler.Frequency `gorm:"default:weekly"` // make sure to default this to daily as required for other types of trackers
-	GoalQuantity      int                 `gorm:"default:5"`
-	CurItemsCompleted int                 `gorm:"default:0"`
-	CurBoxesAwarded   int                 `gorm:"default:0"`
-	TrackerType       TrackerType
+	// I shouldn't need to embed a User. A foreign key is sufficient. The User attributes will displayed separately on the user page
+	ID                string              `gorm:"primaryKey"`
+	UserID            string              `gorm:"index"` // the index tag improves query performance for common lookup fields
+	GoalDeadline      time.Time           // when this time is reached, CurItemsCompleted will be reset and the deadline is pushed forward by GoalFrequency
+	GoalFrequency     scheduler.Frequency `gorm:"default:weekly"` // ideally this default should be overriden in the create hooks, per tracker type
+	GoalQuantity      int                 `gorm:"default:5"`      // the target number of items to complete within the deadline to reward a box
+	CurItemsCompleted int                 `gorm:"default:0"`      // the number of scorable items within this deadline that have not yet been converted
+	CurBoxesAwarded   int                 `gorm:"default:0"`      // the number of boxes awarded
+	TrackerType       TrackerType         // TrackerType helps link the UnderlyingTracker with its respective Update method
 
 	// stats
 	CurGoalStreak          int `gorm:"default:0"`

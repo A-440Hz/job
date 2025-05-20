@@ -49,8 +49,8 @@ func (i *JobAppItem) GetID() string {
 	return i.ID
 }
 
-func (i *JobAppItem) IsComplete() bool {
-	return i.Status == StatusComplete
+func (i *JobAppItem) IsScorable() bool {
+	return i.Status == StatusComplete && !i.IsAttributed
 }
 
 func (i *JobAppItem) EditStatus(s ItemStatus) error {

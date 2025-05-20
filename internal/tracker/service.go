@@ -146,6 +146,114 @@ func (s *Service) DeleteJobAppTracker(id string) error {
 	return s.repo.DeleteJobAppTracker(&JobAppTracker{UnderlyingTracker: UnderlyingTracker{ID: id}})
 }
 
+// CreateJobAppItem creates a new job app item and increments the tracker's CurItemsCompleted field by 1
+func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
+	// validate tracker; return immediately on invalid id
+	t, err := s.repo.LookupJobAppTrackerFromUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+	badFields := map[string]string{}
+	if fields.Title == nil {
+		badFields[titleField] = "missing item name"
+	}
+	if fields.Status == nil {
+		badFields[statusField] = "missing item status"
+	}
+	if fields.IsAttributed == nil {
+		badFields[isAttributedField] = "missing isAttributed"
+	} else if *fields.IsAttributed != false {
+		badFields[isAttributedField] = "cannot create an attributed item"
+	}
+	if fields.AttributionTime != nil {
+		badFields[attributionTimeField] = "cannot create an attributed item"
+	}
+	i, _, err := fields.formatForRepo()
+	if err != nil {
+		badFields["format"] = err.Error()
+	}
+	if len(badFields) > 0 {
+		err := errors.New("validation error:")
+		for _, v := range badFields {
+			err = errors.Join(err, errors.New(v))
+		}
+		return nil, err
+	}
+
+	i.TrackerID = t.GetID()
+	i, err = s.repo.CreateJobAppTrackerItem(i)
+	if err != nil {
+		return nil, err
+	}
+
+	if i.IsScorable() {
+		return s.addOneItemCount(t)
+	}
+	return s.repo.GetJobAppTrackerWithItemsFromUserID(userID)
+}
+
+// TODO: remove this method if not needed
+func (s *Service) LookupJobAppItems(trackerID string) ([]*JobAppItem, error) {
+	return s.repo.LookupJobAppItems(trackerID)
+}
+
+// UpdateJobAppItemFields handles user submitted update requests for job app items
+func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
+	// validate tracker
+	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
+	if err != nil {
+		return nil, err
+	}
+	// validate item
+	repoItem, err := s.repo.LookupJobAppItem(t.GetID(), itemID)
+	if err != nil {
+		return nil, err
+	}
+
+	// I cant think of a reason to validate any fields
+	updateItem, updateFields, err := fields.formatForRepo()
+	if err != nil {
+		return nil, err
+	}
+	updateItem.ID = itemID
+	_, err = s.repo.UpdateJobAppTrackerItemFields(updateItem, updateFields)
+	if err != nil {
+		return nil, err
+	}
+
+	if repoItem.IsScorable() {
+		// decrement tracker curItemsCompleted if this update makes it no longer scorable
+		if slices.Contains(updateFields, statusField) && updateItem.Status != StatusComplete {
+			return s.subOneItemCount(t)
+		}
+	} else if !repoItem.IsAttributed && slices.Contains(updateFields, statusField) && updateItem.Status == StatusComplete {
+		return s.addOneItemCount(t)
+	}
+	return s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
+}
+
+func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
+	// validate item belongs to tracker
+	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
+	if err != nil {
+		return err
+	}
+	repoItem, err := s.repo.LookupJobAppItem(t.GetID(), itemID)
+	if err != nil {
+		return err
+	}
+	// decrement tracker scorable item count if needed
+	if repoItem.IsScorable() {
+		_, err = s.subOneItemCount(t)
+		if err != nil {
+			return err
+		}
+	}
+	return s.repo.DeleteJobAppTrackerItem(&JobAppItem{ID: itemID})
+}
+
+// Tracker scoring-related methods:
+
 // GetScorableJobAppItems returns a list of job app items with create time within the tracker's goal timeframe
 // and are StatusComplete and not yet attributed
 func (s *Service) GetScorableJobAppItems(t *JobAppTracker) ([]JobAppItem, error) {
@@ -212,77 +320,18 @@ func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
 	return s.repo.GetJobAppTrackerWithItemsFromTrackerID(repoTracker.GetID())
 }
 
-// CreateJobAppItem creates a new job app item and increments the tracker's CurItemsCompleted field by 1
-func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
-	// validate tracker; return immediately on invalid id
-	t, err := s.repo.LookupJobAppTrackerFromUserID(userID)
-	if err != nil {
-		return nil, err
-	}
-	badFields := map[string]string{}
-	if fields.Title == nil {
-		badFields[titleField] = "missing item name"
-	}
-	if fields.Status == nil {
-		badFields[statusField] = "missing item status"
-	}
-	if fields.IsAttributed == nil {
-		badFields[isAttributedField] = "missing isAttributed"
-	} else if *fields.IsAttributed != false {
-		badFields[isAttributedField] = "cannot create an attributed item"
-	}
-	if fields.AttributionTime != nil {
-		badFields[attributionTimeField] = "cannot create an attributed item"
-	}
-	i, _, err := fields.formatForRepo()
-	if err != nil {
-		badFields["format"] = err.Error()
-	}
-	if len(badFields) > 0 {
-		err := errors.New("validation error:")
-		for _, v := range badFields {
-			err = errors.Join(err, errors.New(v))
-		}
-		return nil, err
-	}
-
-	i.TrackerID = t.GetID()
-	_, err = s.repo.CreateJobAppTrackerItem(i)
-	if err != nil {
-		return nil, err
-	}
-
-	if *fields.Status == StatusComplete && *fields.IsAttributed == false {
-		t.CurItemsCompleted = t.CurItemsCompleted + 1
-		_, err = s.repo.UpdateJobAppTrackerFields(t, []string{curItemsCompletedField})
-		if err != nil {
-			return nil, err
-		}
-		return s.updateTrackerState(t.GetID())
-	}
-	return s.repo.GetJobAppTrackerWithItemsFromUserID(userID)
-}
-
-// TODO: remove this method if not needed
-func (s *Service) LookupJobAppItems(trackerID string) ([]*JobAppItem, error) {
-	return s.repo.LookupJobAppItems(trackerID)
-}
-
 func (s *Service) updateJobAppItemFields(t *JobAppTracker, itemID string, fields *JobAppItemUpdateFields) error {
-
 	// validate item belongs to tracker
 	_, err := s.repo.LookupJobAppItem(t.GetID(), itemID)
 	if err != nil {
 		return err
 	}
-
 	// I cant think of a reason to validate any fields
 	updateItem, updateFields, err := fields.formatForRepo()
 	if err != nil {
 		return err
 	}
 	updateItem.ID = itemID
-
 	_, err = s.repo.UpdateJobAppTrackerItemFields(updateItem, updateFields)
 	if err != nil {
 		return err
@@ -290,72 +339,41 @@ func (s *Service) updateJobAppItemFields(t *JobAppTracker, itemID string, fields
 	return nil
 }
 
-func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
-	// validate tracker
-	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
+// addOneItemCount increments the CurItemsCompleted count for the tracker
+// t needs a valid tracker ID and accurate CurItemsCompleted count (to be incremented by 1)
+// it returns the updated tracker with all its items
+func (s *Service) addOneItemCount(t *JobAppTracker) (*JobAppTracker, error) {
+	t.CurItemsCompleted = t.CurItemsCompleted + 1
+	_, err := s.repo.UpdateJobAppTrackerFields(t, []string{curItemsCompletedField})
 	if err != nil {
 		return nil, err
 	}
-	// validate item
-	repoItem, err := s.repo.LookupJobAppItem(t.GetID(), itemID)
-	if err != nil {
-		return nil, err
-	}
-
-	// I cant think of a reason to validate any fields
-	updateItem, updateFields, err := fields.formatForRepo()
-	if err != nil {
-		return nil, err
-	}
-	updateItem.ID = itemID
-
-	_, err = s.repo.UpdateJobAppTrackerItemFields(updateItem, updateFields)
-	if err != nil {
-		return nil, err
-	}
-
-	// user never manually updates IsAttributed, so this check should be sufficient as orchestrator logic
-	if !repoItem.IsAttributed {
-		// modify tracker curItemsCompleted as needed
-	}
-	return s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
+	return s.updateTrackerState(t.GetID())
 }
 
-func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
-	// validate item belongs to tracker
-	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
+// subOneItemCount decrements the CurItemsCompleted count for the tracker
+// t needs a valid tracker ID and accurate CurItemsCompleted count (to be decremented by 1)
+// it returns the updated tracker with all its items
+func (s *Service) subOneItemCount(t *JobAppTracker) (*JobAppTracker, error) {
+	t.CurItemsCompleted = max(0, t.CurItemsCompleted-1)
+	_, err := s.repo.UpdateJobAppTrackerFields(t, []string{curItemsCompletedField})
 	if err != nil {
-		return err
+		return nil, err
 	}
-	repoItem, err := s.repo.LookupJobAppItem(t.GetID(), itemID)
-	if err != nil {
-		return err
-	}
-	if !repoItem.IsAttributed {
-		// decrement tracker curItemsCompleted
-		t.CurItemsCompleted = max(0, t.CurItemsCompleted-1)
-		_, err = s.repo.UpdateJobAppTrackerFields(t, []string{curItemsCompletedField})
-		if err != nil {
-			return err
-		}
-		_, err = s.updateTrackerState(t.GetID())
-		if err != nil {
-			return err
-		}
-	}
-
-	return s.repo.DeleteJobAppTrackerItem(&JobAppItem{ID: itemID})
+	return s.updateTrackerState(t.GetID())
 }
+
+// Scheduler-related methods:
 
 // StartTrackerUpdateListener is run as a goroutine to reset trackers as specified by the scheduler
 func (s *Service) StartTrackerUpdateListener() {
 	for tg := range s.scheduler.OutputCh {
-		s.updateUnderlyingTrackerFields(tg)
+		s.resetTrackerDeadline(tg)
 	}
 }
 
-// updateUnderlyingTrackerFields is a switch statement that queries the tracker type and calls the appropriate update method
-func (s *Service) updateUnderlyingTrackerFields(tg *scheduler.TrackerGoal) {
+// resetTrackerDeadline is a switch statement that queries the tracker type and calls the appropriate update method
+func (s *Service) resetTrackerDeadline(tg *scheduler.TrackerGoal) {
 	t, fields, err := toUpdateFields(tg).formatForRepo()
 	if err != nil {
 		// try fail gracefully

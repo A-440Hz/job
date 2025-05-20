@@ -345,6 +345,84 @@ func Test_CreateJobAppItem(t *testing.T) {
 
 }
 
+func Test_UpdateJobAppItemFields(t *testing.T) {
+	// test updating the status complete field and seeing if tracker curItemsComplete decrements by 1
+	db.SetEnvForTesting()
+	dBase, err := db.InitGormDB()
+	require.NoError(t, err)
+	dBase.AutoMigrate(&JobAppTracker{}, &JobAppItem{})
+	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
+	repo := NewRepository(dBase)
+	svc := NewService(repo, scheduler.NewScheduler())
+
+	dummyUser := user.User{ID: "usr_99999999"}
+	tracker, err := svc.CreateNewJobAppTracker(&dummyUser)
+	require.NoError(t, err)
+	require.NotNil(t, tracker)
+
+	// Set GoalQuantity to 2 for easier testing
+	tracker, err = svc.UpdateJobAppTrackerFields(dummyUser.GetID(), &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+			GoalQuantity: intPtr(2),
+		},
+	})
+	require.NoError(t, err)
+	require.Equal(t, 2, tracker.GoalQuantity)
+
+	statusComplete := StatusComplete
+	statusInProgress := StatusInProgress
+
+	// Create one completed item and ensure CurItemsCompleted is 1
+	_, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("Item 1"),
+		Body:         strPtr("Body 1"),
+		Status:       &statusComplete,
+		IsAttributed: boolPtr(false),
+	})
+	require.NoError(t, err)
+	tracker, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("Item 2"),
+		Body:         strPtr("Body 2"),
+		Status:       &statusInProgress,
+		IsAttributed: boolPtr(false),
+	})
+	require.NoError(t, err)
+
+	// At this point, CurItemsCompleted should be 0, CurBoxesAwarded should be 1
+	assert.Equal(t, 1, tracker.CurItemsCompleted)
+	assert.Equal(t, 0, tracker.CurBoxesAwarded)
+
+	// assume the first item is the one that is created first; gorm sorting should ensure this
+	item1 := tracker.Items[0]
+	item2 := tracker.Items[1]
+
+	// Update item1 status from complete to in-progress and check that CurItemsCompleted has decremented
+	tracker, err = svc.UpdateJobAppItemFields(dummyUser.GetID(), item1.ID, &JobAppItemUpdateFields{
+		Status: &statusInProgress,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 0, tracker.CurItemsCompleted)
+	assert.Equal(t, 0, tracker.CurBoxesAwarded)
+
+	// Update both items to complete and check for CurBoxesAwarded
+	tracker, err = svc.UpdateJobAppItemFields(dummyUser.GetID(), item1.ID, &JobAppItemUpdateFields{
+		Status: &statusComplete,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, tracker.CurItemsCompleted)
+	assert.Equal(t, 0, tracker.CurBoxesAwarded)
+	tracker, err = svc.UpdateJobAppItemFields(dummyUser.GetID(), item2.ID, &JobAppItemUpdateFields{
+		Status: &statusComplete,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 0, tracker.CurItemsCompleted)
+	assert.Equal(t, 1, tracker.CurBoxesAwarded)
+
+	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
+}
+
 func Test_Scheduler(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormDB()
