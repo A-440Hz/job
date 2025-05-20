@@ -26,6 +26,11 @@ func (f *Frequency) NumDays() int {
 	return freqToDays[*f]
 }
 
+func (f *Frequency) StrPtr() *string {
+	s := string(*f)
+	return &s
+}
+
 func IsValidFrequency(f Frequency) bool {
 	if _, exists := freqToDays[f]; !exists {
 		return false

@@ -141,7 +141,7 @@ func (s *Scheduler) AddTrackerGoal(tg *TrackerGoal) error {
 	return nil
 }
 
-func (s *Scheduler) Update(oldTg, newTg *TrackerGoal) error {
+func (s *Scheduler) ReplaceTrackerGoal(oldTg, newTg *TrackerGoal) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	idx, err := s.g.findByID(oldTg.TrackerID)

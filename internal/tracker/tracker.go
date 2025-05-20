@@ -22,9 +22,6 @@ const (
 	totalItemsCompletedField    = "total_items_completed"
 	totalBoxesAwardedField      = "total_boxes_awarded"
 	firstCompletedField         = "first_completed"
-
-	// job app tracker fields
-	// numBoxesAwardedField = "num_boxes_awarded"
 )
 
 // chatgpt says:
@@ -36,6 +33,11 @@ const (
 // This is fine as long as different tracker types can share the same type of stats.
 
 type TrackerType string
+
+func (tt TrackerType) StringPtr() *string {
+	s := string(tt)
+	return &s
+}
 
 const (
 	JobAppTrackerType TrackerType = "job_app_tracker"
@@ -103,6 +105,7 @@ func (t *UnderlyingTracker) ToTrackerGoal() *scheduler.TrackerGoal {
 		TrackerID:     t.ID,
 		GoalDeadline:  t.GoalDeadline,
 		GoalFrequency: t.GoalFrequency,
+		TrackerType:   *t.TrackerType.StringPtr(),
 	}
 }
 
