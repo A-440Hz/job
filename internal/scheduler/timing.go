@@ -38,7 +38,7 @@ func IsValidFrequency(f Frequency) bool {
 	return true
 }
 
-func GetDefaultGoalFrequency() Frequency {
+func GetDefaultCycleFrequency() Frequency {
 	return DefaultFreq
 }
 
@@ -47,8 +47,8 @@ func GetDefaultTimezone() *Timezone {
 	return NewTimezoneWithOffset(defaultTimezoneOffset)
 }
 
-// GetDefaultGoalDeadline returns 1AM at location l, defaulting to DefaultTimezone
-func GetDefaultGoalDeadline(z *Timezone) time.Time {
+// GetDefaultCycleDeadline returns 1AM at location l, defaulting to DefaultTimezone
+func GetDefaultCycleDeadline(z *Timezone) time.Time {
 	var l *time.Location
 	if z == nil {
 		log.Println("user timezone was nil -- mutating value to default timezone location")

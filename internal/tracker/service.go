@@ -24,10 +24,10 @@ func NewService(r *Repository, s *scheduler.Scheduler) *Service {
 // This method functions like a create hook for UnderlyingTracker.
 func (t *JobAppTracker) createUnderlyingTracker(u *user.User) {
 	t.UnderlyingTracker = UnderlyingTracker{
-		UserID:        u.GetID(),
-		GoalDeadline:  scheduler.GetDefaultGoalDeadline(u.Timezone),
-		GoalFrequency: scheduler.GetDefaultGoalFrequency(),
-		TrackerType:   JobAppTrackerType,
+		UserID:         u.GetID(),
+		CycleDeadline:  scheduler.GetDefaultCycleDeadline(u.Timezone),
+		CycleFrequency: scheduler.GetDefaultCycleFrequency(),
+		TrackerType:    JobAppTrackerType,
 	}
 }
 
@@ -107,15 +107,15 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 	}
 
 	// the front end should also avoid sending update reqs for identical deadlines and frequencies
-	if repoTracker.GoalDeadline == updateTracker.GoalDeadline {
+	if repoTracker.CycleDeadline == updateTracker.CycleDeadline {
 		//
 		updateFields = slices.DeleteFunc(updateFields, func(f string) bool {
-			return f == goalDeadlineField
+			return f == cycleDeadlineField
 		})
 	}
-	if repoTracker.GoalFrequency == updateTracker.GoalFrequency {
+	if repoTracker.CycleFrequency == updateTracker.CycleFrequency {
 		updateFields = slices.DeleteFunc(updateFields, func(f string) bool {
-			return f == goalFrequencyField
+			return f == cycleFrequencyField
 		})
 	}
 
@@ -127,7 +127,7 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 	}
 
 	// communicate with scheduler if needed.. updateFields was trimmed earlier if this step is not needed
-	if slices.Contains(updateFields, goalDeadlineField) || slices.Contains(updateFields, goalFrequencyField) {
+	if slices.Contains(updateFields, cycleDeadlineField) || slices.Contains(updateFields, cycleFrequencyField) {
 		// fail scheduler gracefully?
 		updateTracker.TrackerType = repoTracker.TrackerType
 		err = s.scheduler.ReplaceTrackerGoal(repoTracker.ToTrackerGoal(), updateTracker.ToTrackerGoal())
@@ -439,8 +439,8 @@ func (s *Service) resetTrackerDeadline(newTg *scheduler.TrackerGoal) error {
 // returning it in the form of UpdateFields for an update function
 func getUpdateFields(tg *scheduler.TrackerGoal) *UnderlyingTrackerUpdateFields {
 	return &UnderlyingTrackerUpdateFields{
-		GoalDeadline:  &tg.GoalDeadline,
-		GoalFrequency: tg.GoalFrequency.StrPtr(),
+		CycleDeadline:  &tg.CycleDeadline,
+		CycleFrequency: tg.CycleFrequency.StrPtr(),
 	}
 }
 

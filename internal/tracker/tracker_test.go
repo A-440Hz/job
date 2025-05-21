@@ -33,8 +33,8 @@ func Test_formatForRepo(t *testing.T) {
 	n := time.Now()
 	tests := []struct {
 		name                   string
-		GoalDeadline           *time.Time
-		GoalFrequency          *string
+		CycleDeadline          *time.Time
+		CycleFrequency         *string
 		GoalQuantity           *int
 		CurScorableItems       *int
 		CurBoxesAwarded        *int
@@ -48,9 +48,9 @@ func Test_formatForRepo(t *testing.T) {
 	}{
 		{
 			name:                   "valid-fields",
-			GoalDeadline:           &n,
+			CycleDeadline:          &n,
 			GoalQuantity:           intPtr(1),
-			GoalFrequency:          strPtr(string(scheduler.DefaultFreq)),
+			CycleFrequency:         strPtr(string(scheduler.DefaultFreq)),
 			CurScorableItems:       intPtr(2),
 			CurBoxesAwarded:        intPtr(3),
 			CurGoalStreak:          intPtr(4),
@@ -62,16 +62,16 @@ func Test_formatForRepo(t *testing.T) {
 			wantErrMsg:             nil,
 		},
 		{
-			name:          "invalid-frequency",
-			GoalFrequency: strPtr("1234671"),
-			wantErrMsg:    []string{"invalid goal frequency"},
+			name:           "invalid-frequency",
+			CycleFrequency: strPtr("1234671"),
+			wantErrMsg:     []string{"invalid goal frequency"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			updateFields := &UnderlyingTrackerUpdateFields{
-				GoalDeadline:           tt.GoalDeadline,
-				GoalFrequency:          tt.GoalFrequency,
+				CycleDeadline:          tt.CycleDeadline,
+				CycleFrequency:         tt.CycleFrequency,
 				GoalQuantity:           tt.GoalQuantity,
 				CurScorableItems:       tt.CurScorableItems,
 				CurBoxesAwarded:        tt.CurBoxesAwarded,
@@ -101,8 +101,8 @@ func Test_formatForRepo(t *testing.T) {
 			assert.Equal(t, jaT.UnderlyingTracker, *underlyingTracker)
 
 			// validate fields
-			assert.Equal(t, *tt.GoalDeadline, underlyingTracker.GoalDeadline)
-			assert.Equal(t, *tt.GoalFrequency, string(underlyingTracker.GoalFrequency))
+			assert.Equal(t, *tt.CycleDeadline, underlyingTracker.CycleDeadline)
+			assert.Equal(t, *tt.CycleFrequency, string(underlyingTracker.CycleFrequency))
 			assert.Equal(t, *tt.GoalQuantity, underlyingTracker.GoalQuantity)
 			assert.Equal(t, *tt.CurScorableItems, underlyingTracker.CurScorableItems)
 			assert.Equal(t, *tt.CurBoxesAwarded, underlyingTracker.CurBoxesAwarded)
@@ -128,8 +128,8 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 	n := time.Now().Round(time.Hour)
 	tests := []struct {
 		name                   string
-		GoalDeadline           *time.Time
-		GoalFrequency          *string
+		CycleDeadline          *time.Time
+		CycleFrequency         *string
 		GoalQuantity           *int
 		CurScorableItems       *int
 		CurBoxesAwarded        *int
@@ -143,9 +143,9 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 	}{
 		{
 			name:                   "valid-fields",
-			GoalDeadline:           &n,
+			CycleDeadline:          &n,
 			GoalQuantity:           intPtr(1),
-			GoalFrequency:          strPtr(string(scheduler.DefaultFreq)),
+			CycleFrequency:         strPtr(string(scheduler.DefaultFreq)),
 			CurScorableItems:       intPtr(0),
 			CurBoxesAwarded:        intPtr(3),
 			CurGoalStreak:          intPtr(4),
@@ -170,8 +170,8 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			assert.NotNil(t, t1)
 
 			updateFields := &JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-				GoalDeadline:           tt.GoalDeadline,
-				GoalFrequency:          tt.GoalFrequency,
+				CycleDeadline:          tt.CycleDeadline,
+				CycleFrequency:         tt.CycleFrequency,
 				GoalQuantity:           tt.GoalQuantity,
 				CurScorableItems:       tt.CurScorableItems,
 				CurBoxesAwarded:        tt.CurBoxesAwarded,
@@ -193,8 +193,8 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, updateTracker)
 			}
-			assert.Equal(t, *tt.GoalDeadline, updateTracker.GoalDeadline)
-			assert.Equal(t, *tt.GoalFrequency, string(updateTracker.GoalFrequency))
+			assert.Equal(t, *tt.CycleDeadline, updateTracker.CycleDeadline)
+			assert.Equal(t, *tt.CycleFrequency, string(updateTracker.CycleFrequency))
 			assert.Equal(t, *tt.GoalQuantity, updateTracker.GoalQuantity)
 			assert.Equal(t, *tt.CurScorableItems, updateTracker.CurScorableItems)
 			assert.Equal(t, *tt.CurBoxesAwarded, updateTracker.CurBoxesAwarded)
@@ -209,28 +209,28 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			newQuantity := *tt.GoalQuantity + 50
 			updateTracker2, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(),
 				&JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-					GoalQuantity:  &newQuantity,
-					GoalFrequency: strPtr("daily"),
+					GoalQuantity:   &newQuantity,
+					CycleFrequency: strPtr("daily"),
 				}})
 			require.NoError(t, err)
 			require.NotNil(t, updateTracker2)
 			assert.Equal(t, newQuantity, updateTracker2.GoalQuantity)
-			assert.Equal(t, scheduler.FreqDaily, updateTracker2.GoalFrequency)
+			assert.Equal(t, scheduler.FreqDaily, updateTracker2.CycleFrequency)
 
 			// test scheduler reassignment
-			newDeadline := tt.GoalDeadline.Add(time.Hour)
+			newDeadline := tt.CycleDeadline.Add(time.Hour)
 			moreItems := *tt.CurScorableItems + 10
 			updateTracker2_5, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(),
 				&JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-					GoalDeadline:     &newDeadline,
-					GoalFrequency:    strPtr("weekly"),
+					CycleDeadline:    &newDeadline,
+					CycleFrequency:   strPtr("weekly"),
 					CurScorableItems: &moreItems,
 					GoalQuantity:     &newQuantity,
 				}})
 			require.NotNil(t, updateTracker2_5)
 			require.NoError(t, err)
-			assert.Equal(t, newDeadline, updateTracker2_5.GoalDeadline)
-			assert.Equal(t, scheduler.FreqWeekly, updateTracker2_5.GoalFrequency)
+			assert.Equal(t, newDeadline, updateTracker2_5.CycleDeadline)
+			assert.Equal(t, scheduler.FreqWeekly, updateTracker2_5.CycleFrequency)
 			assert.Equal(t, moreItems, updateTracker2_5.CurScorableItems)
 			assert.Equal(t, newQuantity, updateTracker2_5.GoalQuantity)
 
@@ -456,29 +456,29 @@ func Test_Scheduler(t *testing.T) {
 	require.NoError(t, err)
 	jt00, err := svc.UpdateJobAppTrackerFields(u0.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-			GoalDeadline:  &t0,
-			GoalFrequency: strPtr("daily"),
+			CycleDeadline:  &t0,
+			CycleFrequency: strPtr("daily"),
 		},
 	})
 	require.NoError(t, err)
 	jt11, err := svc.UpdateJobAppTrackerFields(u1.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-			GoalDeadline:  &t1,
-			GoalFrequency: strPtr("daily"),
+			CycleDeadline:  &t1,
+			CycleFrequency: strPtr("daily"),
 		},
 	})
 	require.NoError(t, err)
 	jt22, err := svc.UpdateJobAppTrackerFields(u2.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-			GoalDeadline:  &t2,
-			GoalFrequency: strPtr("daily"),
+			CycleDeadline:  &t2,
+			CycleFrequency: strPtr("daily"),
 		},
 	})
 	require.NoError(t, err)
 	jt33, err := svc.UpdateJobAppTrackerFields(u3.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-			GoalDeadline:  &t3,
-			GoalFrequency: strPtr("daily"),
+			CycleDeadline:  &t3,
+			CycleFrequency: strPtr("daily"),
 		},
 	})
 	require.NoError(t, err)
@@ -492,18 +492,18 @@ func Test_Scheduler(t *testing.T) {
 	require.NoError(t, err)
 	jt333, err := svc.LookupJobAppTrackerFromTrackerID(jt3.GetID())
 	require.NoError(t, err)
-	assert.Equal(t, t0.AddDate(0, 0, 1), jt000.GoalDeadline)
-	assert.Equal(t, t1.AddDate(0, 0, 1), jt111.GoalDeadline)
-	assert.Equal(t, t2.AddDate(0, 0, 1), jt222.GoalDeadline)
-	assert.Equal(t, t3.AddDate(0, 0, 1), jt333.GoalDeadline)
-	// assert.NotEqual(t, jt000.GoalDeadline, jt00.GoalDeadline)
-	// assert.NotEqual(t, jt111.GoalDeadline, jt11.GoalDeadline)
-	// assert.NotEqual(t, jt222.GoalDeadline, jt22.GoalDeadline)
-	// assert.NotEqual(t, jt333.GoalDeadline, jt33.GoalDeadline)
-	log.Printf("after: %v, before: %v", jt000.GoalDeadline, jt00.GoalDeadline)
-	log.Printf("after: %v, before: %v", jt111.GoalDeadline, jt11.GoalDeadline)
-	log.Printf("after: %v, before: %v", jt222.GoalDeadline, jt22.GoalDeadline)
-	log.Printf("after: %v, before: %v", jt333.GoalDeadline, jt33.GoalDeadline)
+	assert.Equal(t, t0.AddDate(0, 0, 1), jt000.CycleDeadline)
+	assert.Equal(t, t1.AddDate(0, 0, 1), jt111.CycleDeadline)
+	assert.Equal(t, t2.AddDate(0, 0, 1), jt222.CycleDeadline)
+	assert.Equal(t, t3.AddDate(0, 0, 1), jt333.CycleDeadline)
+	// assert.NotEqual(t, jt000.CycleDeadline, jt00.CycleDeadline)
+	// assert.NotEqual(t, jt111.CycleDeadline, jt11.CycleDeadline)
+	// assert.NotEqual(t, jt222.CycleDeadline, jt22.CycleDeadline)
+	// assert.NotEqual(t, jt333.CycleDeadline, jt33.CycleDeadline)
+	log.Printf("after: %v, before: %v", jt000.CycleDeadline, jt00.CycleDeadline)
+	log.Printf("after: %v, before: %v", jt111.CycleDeadline, jt11.CycleDeadline)
+	log.Printf("after: %v, before: %v", jt222.CycleDeadline, jt22.CycleDeadline)
+	log.Printf("after: %v, before: %v", jt333.CycleDeadline, jt33.CycleDeadline)
 	svc.scheduler.Stop()
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
 

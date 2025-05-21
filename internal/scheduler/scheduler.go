@@ -33,28 +33,28 @@ type GoalHeap struct {
 }
 
 type TrackerGoal struct {
-	TrackerID     string
-	GoalDeadline  time.Time
-	GoalFrequency Frequency
-	index         int
-	TrackerType   string
+	TrackerID      string
+	CycleDeadline  time.Time
+	CycleFrequency Frequency
+	index          int
+	TrackerType    string
 }
 
 func (tg *TrackerGoal) resetDeadline() {
 	now := time.Now()
 	// a loop should be fine as long as front end prevents setting a deadline a million years back
-	// for tg.GoalDeadline.Before(now) {
-	// 	tg.GoalDeadline = tg.GoalDeadline.Add(time.Duration(tg.GoalFrequency.NumDays()))
+	// for tg.CycleDeadline.Before(now) {
+	// 	tg.CycleDeadline = tg.CycleDeadline.Add(time.Duration(tg.CycleFrequency.NumDays()))
 	// }
-	if now.Before(tg.GoalDeadline) {
-		log.Printf("reset deadline passthrough on %v", tg.GoalDeadline)
+	if now.Before(tg.CycleDeadline) {
+		log.Printf("reset deadline passthrough on %v", tg.CycleDeadline)
 		return
 	}
-	prev := tg.GoalDeadline
-	numDaysBetween := int(now.Sub(tg.GoalDeadline).Round(time.Hour)) / 24
-	numDaysToNext := (numDaysBetween/tg.GoalFrequency.NumDays() + 1) * tg.GoalFrequency.NumDays()
-	tg.GoalDeadline = tg.GoalDeadline.Add(time.Hour * 24 * time.Duration(numDaysToNext))
-	log.Printf("reset %v to %v", prev, tg.GoalDeadline)
+	prev := tg.CycleDeadline
+	numDaysBetween := int(now.Sub(tg.CycleDeadline).Round(time.Hour)) / 24
+	numDaysToNext := (numDaysBetween/tg.CycleFrequency.NumDays() + 1) * tg.CycleFrequency.NumDays()
+	tg.CycleDeadline = tg.CycleDeadline.Add(time.Hour * 24 * time.Duration(numDaysToNext))
+	log.Printf("reset %v to %v", prev, tg.CycleDeadline)
 }
 
 func NewScheduler() *Scheduler {
@@ -74,7 +74,7 @@ func NewScheduler() *Scheduler {
 }
 
 func (g GoalHeap) Len() int           { return len(g.heap) }
-func (g GoalHeap) Less(i, j int) bool { return g.heap[i].GoalDeadline.Before(g.heap[j].GoalDeadline) }
+func (g GoalHeap) Less(i, j int) bool { return g.heap[i].CycleDeadline.Before(g.heap[j].CycleDeadline) }
 func (g GoalHeap) Swap(i, j int) {
 	g.heap[i], g.heap[j] = g.heap[j], g.heap[i]
 	g.heap[i].index, g.heap[j].index = i, j
@@ -125,8 +125,8 @@ func (g *GoalHeap) peek() *TrackerGoal {
 func (s *Scheduler) updateTimer() {
 	// make sure nextTick is the closest deadline
 	if d := s.g.peek(); d != nil {
-		log.Print("reset timer to ", d.GoalDeadline)
-		s.timer.Reset(time.Until(d.GoalDeadline))
+		log.Print("reset timer to ", d.CycleDeadline)
+		s.timer.Reset(time.Until(d.CycleDeadline))
 	}
 	log.Print("updateTimer -> nil; heap is nil")
 
@@ -141,6 +141,7 @@ func (s *Scheduler) AddTrackerGoal(tg *TrackerGoal) error {
 	return nil
 }
 
+// ReplaceTrackerGoal swaps oldTg with newTg in the scheduler. If newTg is nil, it removes oldTg.
 func (s *Scheduler) ReplaceTrackerGoal(oldTg, newTg *TrackerGoal) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -153,9 +154,9 @@ func (s *Scheduler) ReplaceTrackerGoal(oldTg, newTg *TrackerGoal) error {
 		heap.Remove(s.g, idx)
 		return nil
 	}
-	// update in place if we only need to change GoalFrequency
-	if oldTg.GoalDeadline == newTg.GoalDeadline {
-		s.g.heap[idx].GoalFrequency = newTg.GoalFrequency
+	// update in place if we only need to change CycleFrequency
+	if oldTg.CycleDeadline == newTg.CycleDeadline {
+		s.g.heap[idx].CycleFrequency = newTg.CycleFrequency
 		return nil
 	}
 	// otherwise pop and replace old TrackerGoal
@@ -179,14 +180,14 @@ func (s *Scheduler) Start() {
 			close(s.OutputCh)
 			log.Print("Scheduler stopped")
 			for _, tg := range s.g.heap {
-				log.Print("heap: ", tg.GoalDeadline, tg.GoalFrequency)
+				log.Print("heap: ", tg.CycleDeadline, tg.CycleFrequency)
 			}
 			return
 		case t := <-s.timer.C:
 			s.mutex.Lock()
 			log.Printf("timer tick at %v", t)
 			tg := heap.Pop(s.g).(*TrackerGoal)
-			log.Printf("popped %v", tg.GoalDeadline)
+			log.Printf("popped %v", tg.CycleDeadline)
 			tg.resetDeadline()
 			s.OutputCh <- tg
 			heap.Push(s.g, tg)

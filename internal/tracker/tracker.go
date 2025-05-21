@@ -11,8 +11,8 @@ import (
 
 const (
 	// underlying tracker fields
-	goalDeadlineField           = "goal_deadline"
-	goalFrequencyField          = "goal_frequency"
+	cycleDeadlineField          = "cycle_deadline"
+	cycleFrequencyField         = "cycle_frequency"
 	goalQuantityField           = "goal_quantity"
 	curScorableItemsField       = "cur_scorable_items"
 	curBoxesAwardedField        = "cur_boxes_awarded"
@@ -44,7 +44,7 @@ const (
 	JobAppTrackerType TrackerType = "job_app_tracker"
 )
 
-// TODO: refactor GoalDeadline, GoalFrequency to CycleDeadline, CycleFrequency
+// TODO: refactor CycleDeadline, CycleFrequency to CycleDeadline, CycleFrequency
 
 // The underlying tracker is a base struct that contains the common fields for all trackers.
 // There is no good reason for it to be a separate entity in the database, so I will create it in memory and store the two trackers together in gorm.
@@ -53,8 +53,8 @@ type UnderlyingTracker struct {
 	// I shouldn't need to embed a User. A foreign key is sufficient. The User attributes will displayed separately on the user page
 	ID               string              `gorm:"primaryKey"`
 	UserID           string              `gorm:"index"` // the index tag improves query performance for common lookup fields
-	GoalDeadline     time.Time           // when this time is reached, CurItemsCompleted will be reset and the deadline is pushed forward by GoalFrequency
-	GoalFrequency    scheduler.Frequency `gorm:"default:weekly"` // ideally this default should be overriden in the create hooks, per tracker type
+	CycleDeadline    time.Time           // when this time is reached, CurItemsCompleted will be reset and the deadline is pushed forward by CycleFrequency
+	CycleFrequency   scheduler.Frequency `gorm:"default:weekly"` // ideally this default should be overriden in the create hooks, per tracker type
 	GoalQuantity     int                 `gorm:"default:5"`      // the target number of items to complete within the deadline to reward a box
 	CurScorableItems int                 `gorm:"default:0"`      // the number of scorable items within this deadline that have not yet been converted
 	CurBoxesAwarded  int                 `gorm:"default:0"`      // the number of boxes awarded
@@ -99,23 +99,23 @@ func (t *JobAppTracker) GetUserID() string {
 	return t.UserID
 }
 func (t *UnderlyingTracker) GetValidTimeframe() (time.Time, time.Time) {
-	days := -1 * t.GoalFrequency.NumDays()
-	begin := t.GoalDeadline.AddDate(0, 0, days)
-	return begin, t.GoalDeadline
+	days := -1 * t.CycleFrequency.NumDays()
+	begin := t.CycleDeadline.AddDate(0, 0, days)
+	return begin, t.CycleDeadline
 }
 
 func (t *UnderlyingTracker) ToTrackerGoal() *scheduler.TrackerGoal {
 	return &scheduler.TrackerGoal{
-		TrackerID:     t.ID,
-		GoalDeadline:  t.GoalDeadline,
-		GoalFrequency: t.GoalFrequency,
-		TrackerType:   *t.TrackerType.StringPtr(),
+		TrackerID:      t.ID,
+		CycleDeadline:  t.CycleDeadline,
+		CycleFrequency: t.CycleFrequency,
+		TrackerType:    *t.TrackerType.StringPtr(),
 	}
 }
 
 type UnderlyingTrackerUpdateFields struct {
-	GoalDeadline     *time.Time `json:"goalDeadline,omitempty"`
-	GoalFrequency    *string    `json:"goalFrequency,omitempty"`
+	CycleDeadline    *time.Time `json:"cycleDeadline,omitempty"`
+	CycleFrequency   *string    `json:"cycleFrequency,omitempty"`
 	GoalQuantity     *int       `json:"goalQuantity,omitempty"`
 	CurScorableItems *int       `json:"curScorableItems,omitempty"`
 	CurBoxesAwarded  *int       `json:"curBoxesAwarded,omitempty"`
@@ -133,17 +133,17 @@ type UnderlyingTrackerUpdateFields struct {
 func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []string, error) {
 	t := &UnderlyingTracker{}
 	fields := []string{}
-	if uf.GoalDeadline != nil {
-		t.GoalDeadline = *uf.GoalDeadline
-		fields = append(fields, goalDeadlineField)
+	if uf.CycleDeadline != nil {
+		t.CycleDeadline = *uf.CycleDeadline
+		fields = append(fields, cycleDeadlineField)
 	}
-	if uf.GoalFrequency != nil {
-		f := scheduler.Frequency(*uf.GoalFrequency)
+	if uf.CycleFrequency != nil {
+		f := scheduler.Frequency(*uf.CycleFrequency)
 		if !scheduler.IsValidFrequency(f) {
 			return nil, nil, fmt.Errorf("invalid goal frequency: %q", f)
 		}
-		t.GoalFrequency = f
-		fields = append(fields, goalFrequencyField)
+		t.CycleFrequency = f
+		fields = append(fields, cycleFrequencyField)
 	}
 	if uf.GoalQuantity != nil {
 		t.GoalQuantity = *uf.GoalQuantity
