@@ -14,12 +14,13 @@ const (
 	goalDeadlineField           = "goal_deadline"
 	goalFrequencyField          = "goal_frequency"
 	goalQuantityField           = "goal_quantity"
-	curItemsCompletedField      = "cur_items_completed"
+	curScorableItemsField       = "cur_scorable_items"
 	curBoxesAwardedField        = "cur_boxes_awarded"
 	curGoalStreakField          = "cur_goal_streak"
 	maxGoalStreakField          = "max_goal_streak"
-	maxItemsCompletedDailyField = "max_items_completed_daily"
+	curItemsCompletedDailyField = "cur_items_completed_daily"
 	totalItemsCompletedField    = "total_items_completed"
+	maxItemsCompletedDailyField = "max_items_completed_daily"
 	totalBoxesAwardedField      = "total_boxes_awarded"
 	firstCompletedField         = "first_completed"
 )
@@ -43,25 +44,28 @@ const (
 	JobAppTrackerType TrackerType = "job_app_tracker"
 )
 
+// TODO: refactor GoalDeadline, GoalFrequency to CycleDeadline, CycleFrequency
+
 // The underlying tracker is a base struct that contains the common fields for all trackers.
 // There is no good reason for it to be a separate entity in the database, so I will create it in memory and store the two trackers together in gorm.
 // The separation is primarily to fulfill the composite pattern and hold specific types of Items.
 type UnderlyingTracker struct {
 	// I shouldn't need to embed a User. A foreign key is sufficient. The User attributes will displayed separately on the user page
-	ID                string              `gorm:"primaryKey"`
-	UserID            string              `gorm:"index"` // the index tag improves query performance for common lookup fields
-	GoalDeadline      time.Time           // when this time is reached, CurItemsCompleted will be reset and the deadline is pushed forward by GoalFrequency
-	GoalFrequency     scheduler.Frequency `gorm:"default:weekly"` // ideally this default should be overriden in the create hooks, per tracker type
-	GoalQuantity      int                 `gorm:"default:5"`      // the target number of items to complete within the deadline to reward a box
-	CurItemsCompleted int                 `gorm:"default:0"`      // the number of scorable items within this deadline that have not yet been converted
-	CurBoxesAwarded   int                 `gorm:"default:0"`      // the number of boxes awarded
-	TrackerType       TrackerType         // TrackerType helps link the UnderlyingTracker with its respective Update method
+	ID               string              `gorm:"primaryKey"`
+	UserID           string              `gorm:"index"` // the index tag improves query performance for common lookup fields
+	GoalDeadline     time.Time           // when this time is reached, CurItemsCompleted will be reset and the deadline is pushed forward by GoalFrequency
+	GoalFrequency    scheduler.Frequency `gorm:"default:weekly"` // ideally this default should be overriden in the create hooks, per tracker type
+	GoalQuantity     int                 `gorm:"default:5"`      // the target number of items to complete within the deadline to reward a box
+	CurScorableItems int                 `gorm:"default:0"`      // the number of scorable items within this deadline that have not yet been converted
+	CurBoxesAwarded  int                 `gorm:"default:0"`      // the number of boxes awarded
+	TrackerType      TrackerType         // TrackerType helps link the UnderlyingTracker with its respective Update method
 
 	// stats
 	CurGoalStreak          int `gorm:"default:0"`
 	MaxGoalStreak          int `gorm:"default:0"`
-	MaxItemsCompletedDaily int `gorm:"default:0"`
+	CurItemsCompletedDaily int `gorm:"default:0"`
 	TotalItemsCompleted    int `gorm:"default:0"`
+	MaxItemsCompletedDaily int `gorm:"default:0"`
 	TotalBoxesAwarded      int `gorm:"default:0"` // idk about this one.. it sounds like somthing for Collection to track
 	FirstCompleted         *time.Time
 	CreatedAt              time.Time
@@ -110,17 +114,18 @@ func (t *UnderlyingTracker) ToTrackerGoal() *scheduler.TrackerGoal {
 }
 
 type UnderlyingTrackerUpdateFields struct {
-	GoalDeadline      *time.Time `json:"goalDeadline,omitempty"`
-	GoalFrequency     *string    `json:"goalFrequency,omitempty"`
-	GoalQuantity      *int       `json:"goalQuantity,omitempty"`
-	CurItemsCompleted *int       `json:"curItemsCompleted,omitempty"`
-	CurBoxesAwarded   *int       `json:"curBoxesAwarded,omitempty"`
+	GoalDeadline     *time.Time `json:"goalDeadline,omitempty"`
+	GoalFrequency    *string    `json:"goalFrequency,omitempty"`
+	GoalQuantity     *int       `json:"goalQuantity,omitempty"`
+	CurScorableItems *int       `json:"curScorableItems,omitempty"`
+	CurBoxesAwarded  *int       `json:"curBoxesAwarded,omitempty"`
 
 	//stats
 	CurGoalStreak          *int       `json:"curGoalStreak,omitempty"`
 	MaxGoalStreak          *int       `json:"maxGoalStreak,omitempty"`
-	MaxItemsCompletedDaily *int       `json:"maxItemsCompletedDaily,omitempty"`
+	CurItemsCompletedDaily *int       `json:"curItemsCompletedDaily,omitempty"`
 	TotalItemsCompleted    *int       `json:"totalItemsCompleted,omitempty"`
+	MaxItemsCompletedDaily *int       `json:"maxItemsCompletedDaily,omitempty"`
 	TotalBoxesAwarded      *int       `json:"totalBoxesAwarded,omitempty"`
 	FirstCompleted         *time.Time `json:"firstCompleted,omitempty"`
 }
@@ -144,9 +149,9 @@ func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []
 		t.GoalQuantity = *uf.GoalQuantity
 		fields = append(fields, goalQuantityField)
 	}
-	if uf.CurItemsCompleted != nil {
-		t.CurItemsCompleted = *uf.CurItemsCompleted
-		fields = append(fields, curItemsCompletedField)
+	if uf.CurScorableItems != nil {
+		t.CurScorableItems = *uf.CurScorableItems
+		fields = append(fields, curScorableItemsField)
 	}
 	if uf.CurBoxesAwarded != nil {
 		t.CurBoxesAwarded = *uf.CurBoxesAwarded
@@ -160,13 +165,17 @@ func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []
 		t.MaxGoalStreak = *uf.MaxGoalStreak
 		fields = append(fields, maxGoalStreakField)
 	}
-	if uf.MaxItemsCompletedDaily != nil {
-		t.MaxItemsCompletedDaily = *uf.MaxItemsCompletedDaily
-		fields = append(fields, maxItemsCompletedDailyField)
+	if uf.CurItemsCompletedDaily != nil {
+		t.CurItemsCompletedDaily = *uf.CurItemsCompletedDaily
+		fields = append(fields, curItemsCompletedDailyField)
 	}
 	if uf.TotalItemsCompleted != nil {
 		t.TotalItemsCompleted = *uf.TotalItemsCompleted
 		fields = append(fields, totalItemsCompletedField)
+	}
+	if uf.MaxItemsCompletedDaily != nil {
+		t.MaxItemsCompletedDaily = *uf.MaxItemsCompletedDaily
+		fields = append(fields, maxItemsCompletedDailyField)
 	}
 	if uf.TotalBoxesAwarded != nil {
 		t.TotalBoxesAwarded = *uf.TotalBoxesAwarded

@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	"job/internal/scheduler"
 
 	"gorm.io/gorm"
@@ -34,21 +35,21 @@ func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, erro
 	}
 	badFields := map[string]string{}
 	if u.IsRegistered() {
-		badFields["registered"] = "user already registered"
+		badFields[registeredField] = "user already registered"
 	}
 	if uf.Username == nil {
-		badFields["username"] = "missing username for registration request"
+		badFields[usernameField] = "missing username for registration request"
 	}
 	if uf.Email == nil {
-		badFields["email"] = "missing email for registration request"
+		badFields[emailField] = "missing email for registration request"
 	}
 	if uf.Password == nil {
-		badFields["password"] = "missing password for registration request"
+		badFields[passwordField] = "missing password for registration request"
 	}
 	if len(badFields) > 0 {
 		err := errors.New("validation error:")
-		for _, v := range badFields {
-			err = errors.Join(err, errors.New(v))
+		for id, v := range badFields {
+			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
 		}
 		return nil, err
 	}
@@ -62,23 +63,23 @@ func (s *Service) validateUpdateUserFields(u User) error {
 	if u.Username != nil {
 		res := s.repo.db.Where("username = ?", *u.Username).First(&User{})
 		if res.Error == nil {
-			badFields["username"] = "username already taken"
+			badFields[usernameField] = "username already taken"
 		} else if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			badFields["username_query"] = res.Error.Error()
+			badFields[usernameField] = res.Error.Error()
 		}
 	}
 	if u.Email != nil {
 		res := s.repo.db.Where("email = ?", *u.Email).First(&User{})
 		if res.Error == nil {
-			badFields["email"] = "email already registered"
+			badFields[emailField] = "email already registered"
 		} else if !errors.Is(res.Error, gorm.ErrRecordNotFound) {
-			badFields["email_query"] = res.Error.Error()
+			badFields[emailField] = res.Error.Error()
 		}
 	}
 	if len(badFields) > 0 {
 		err := errors.New("validation error:")
-		for _, v := range badFields {
-			err = errors.Join(err, errors.New(v))
+		for id, v := range badFields {
+			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
 		}
 		return err
 	}

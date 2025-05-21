@@ -36,7 +36,7 @@ type JobAppItem struct {
 	Title        string // Company: Role
 	Body         string // optional description
 	Status       ItemStatus
-	IsAttributed bool // this flips when a tracker progress is assigned from this item
+	IsAttributed bool // TODO: refactor the name of this to IsScorable and flip the bool
 	// probably sync shenanigans to iron out? attempt sync on each item creation?
 	// also i can refactor this later to award more lootboxes when the status (rejected, etc) changes
 	AttributionTime *time.Time // might be useful for solving sync issues/debugging later

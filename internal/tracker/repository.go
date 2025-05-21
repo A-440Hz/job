@@ -65,7 +65,7 @@ func (r *Repository) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTr
 	return t, nil
 }
 
-// updateUnderlyingTrackerFields is a switch statement that queries the tracker type and calls the appropriate update method
+// updateUnderlyingTrackerFields is a dispatcher which queries the tracker type and calls the appropriate tracker update method
 func (r *Repository) updateUnderlyingTrackerFields(t *UnderlyingTracker, fields []string) error {
 	var err error
 	switch t.TrackerType {
@@ -98,7 +98,7 @@ func (r *Repository) DeleteJobAppTracker(t *JobAppTracker) error {
 	return nil
 }
 
-// GetScorableJobAppItems returns tracker items within the goal timeframe which are StatusComplete and not yet attributed
+// GetScorableJobAppItems returns scorable (StatusComplete && !IsAttributed) tracker items created within the goal timeframe which are
 // returning list instead of pointers because of small expected return size and faster field access
 func (r *Repository) GetScorableJobAppItems(t *JobAppTracker) ([]JobAppItem, error) {
 	items := []JobAppItem{}

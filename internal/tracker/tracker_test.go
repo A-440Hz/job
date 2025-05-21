@@ -36,7 +36,7 @@ func Test_formatForRepo(t *testing.T) {
 		GoalDeadline           *time.Time
 		GoalFrequency          *string
 		GoalQuantity           *int
-		CurItemsCompleted      *int
+		CurScorableItems       *int
 		CurBoxesAwarded        *int
 		CurGoalStreak          *int
 		MaxGoalStreak          *int
@@ -51,7 +51,7 @@ func Test_formatForRepo(t *testing.T) {
 			GoalDeadline:           &n,
 			GoalQuantity:           intPtr(1),
 			GoalFrequency:          strPtr(string(scheduler.DefaultFreq)),
-			CurItemsCompleted:      intPtr(2),
+			CurScorableItems:       intPtr(2),
 			CurBoxesAwarded:        intPtr(3),
 			CurGoalStreak:          intPtr(4),
 			MaxGoalStreak:          intPtr(5),
@@ -73,7 +73,7 @@ func Test_formatForRepo(t *testing.T) {
 				GoalDeadline:           tt.GoalDeadline,
 				GoalFrequency:          tt.GoalFrequency,
 				GoalQuantity:           tt.GoalQuantity,
-				CurItemsCompleted:      tt.CurItemsCompleted,
+				CurScorableItems:       tt.CurScorableItems,
 				CurBoxesAwarded:        tt.CurBoxesAwarded,
 				CurGoalStreak:          tt.CurGoalStreak,
 				MaxGoalStreak:          tt.MaxGoalStreak,
@@ -104,7 +104,7 @@ func Test_formatForRepo(t *testing.T) {
 			assert.Equal(t, *tt.GoalDeadline, underlyingTracker.GoalDeadline)
 			assert.Equal(t, *tt.GoalFrequency, string(underlyingTracker.GoalFrequency))
 			assert.Equal(t, *tt.GoalQuantity, underlyingTracker.GoalQuantity)
-			assert.Equal(t, *tt.CurItemsCompleted, underlyingTracker.CurItemsCompleted)
+			assert.Equal(t, *tt.CurScorableItems, underlyingTracker.CurScorableItems)
 			assert.Equal(t, *tt.CurBoxesAwarded, underlyingTracker.CurBoxesAwarded)
 			assert.Equal(t, *tt.CurGoalStreak, underlyingTracker.CurGoalStreak)
 			assert.Equal(t, *tt.MaxGoalStreak, underlyingTracker.MaxGoalStreak)
@@ -131,7 +131,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 		GoalDeadline           *time.Time
 		GoalFrequency          *string
 		GoalQuantity           *int
-		CurItemsCompleted      *int
+		CurScorableItems       *int
 		CurBoxesAwarded        *int
 		CurGoalStreak          *int
 		MaxGoalStreak          *int
@@ -146,7 +146,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			GoalDeadline:           &n,
 			GoalQuantity:           intPtr(1),
 			GoalFrequency:          strPtr(string(scheduler.DefaultFreq)),
-			CurItemsCompleted:      intPtr(0),
+			CurScorableItems:       intPtr(0),
 			CurBoxesAwarded:        intPtr(3),
 			CurGoalStreak:          intPtr(4),
 			MaxGoalStreak:          intPtr(5),
@@ -173,7 +173,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 				GoalDeadline:           tt.GoalDeadline,
 				GoalFrequency:          tt.GoalFrequency,
 				GoalQuantity:           tt.GoalQuantity,
-				CurItemsCompleted:      tt.CurItemsCompleted,
+				CurScorableItems:       tt.CurScorableItems,
 				CurBoxesAwarded:        tt.CurBoxesAwarded,
 				CurGoalStreak:          tt.CurGoalStreak,
 				MaxGoalStreak:          tt.MaxGoalStreak,
@@ -196,7 +196,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			assert.Equal(t, *tt.GoalDeadline, updateTracker.GoalDeadline)
 			assert.Equal(t, *tt.GoalFrequency, string(updateTracker.GoalFrequency))
 			assert.Equal(t, *tt.GoalQuantity, updateTracker.GoalQuantity)
-			assert.Equal(t, *tt.CurItemsCompleted, updateTracker.CurItemsCompleted)
+			assert.Equal(t, *tt.CurScorableItems, updateTracker.CurScorableItems)
 			assert.Equal(t, *tt.CurBoxesAwarded, updateTracker.CurBoxesAwarded)
 			assert.Equal(t, *tt.CurGoalStreak, updateTracker.CurGoalStreak)
 			assert.Equal(t, *tt.MaxGoalStreak, updateTracker.MaxGoalStreak)
@@ -219,19 +219,19 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 
 			// test scheduler reassignment
 			newDeadline := tt.GoalDeadline.Add(time.Hour)
-			moreItems := *tt.CurItemsCompleted + 10
+			moreItems := *tt.CurScorableItems + 10
 			updateTracker2_5, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(),
 				&JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-					GoalDeadline:      &newDeadline,
-					GoalFrequency:     strPtr("weekly"),
-					CurItemsCompleted: &moreItems,
-					GoalQuantity:      &newQuantity,
+					GoalDeadline:     &newDeadline,
+					GoalFrequency:    strPtr("weekly"),
+					CurScorableItems: &moreItems,
+					GoalQuantity:     &newQuantity,
 				}})
 			require.NotNil(t, updateTracker2_5)
 			require.NoError(t, err)
 			assert.Equal(t, newDeadline, updateTracker2_5.GoalDeadline)
 			assert.Equal(t, scheduler.FreqWeekly, updateTracker2_5.GoalFrequency)
-			assert.Equal(t, moreItems, updateTracker2_5.CurItemsCompleted)
+			assert.Equal(t, moreItems, updateTracker2_5.CurScorableItems)
 			assert.Equal(t, newQuantity, updateTracker2_5.GoalQuantity)
 
 			// expect validation errors
@@ -373,7 +373,7 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 	statusComplete := StatusComplete
 	statusInProgress := StatusInProgress
 
-	// Create one completed item and ensure CurItemsCompleted is 1
+	// Create one completed item and ensure CurScorableItems is 1
 	_, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
 		Title:        strPtr("Item 1"),
 		Body:         strPtr("Body 1"),
@@ -389,20 +389,20 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// At this point, CurItemsCompleted should be 0, CurBoxesAwarded should be 1
-	assert.Equal(t, 1, tracker.CurItemsCompleted)
+	// At this point, CurScorableItems should be 0, CurBoxesAwarded should be 1
+	assert.Equal(t, 1, tracker.CurScorableItems)
 	assert.Equal(t, 0, tracker.CurBoxesAwarded)
 
 	// assume the first item is the one that is created first; gorm sorting should ensure this
 	item1 := tracker.Items[0]
 	item2 := tracker.Items[1]
 
-	// Update item1 status from complete to in-progress and check that CurItemsCompleted has decremented
+	// Update item1 status from complete to in-progress and check that CurScorableItems has decremented
 	tracker, err = svc.UpdateJobAppItemFields(dummyUser.GetID(), item1.ID, &JobAppItemUpdateFields{
 		Status: &statusInProgress,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 0, tracker.CurItemsCompleted)
+	assert.Equal(t, 0, tracker.CurScorableItems)
 	assert.Equal(t, 0, tracker.CurBoxesAwarded)
 
 	// Update both items to complete and check for CurBoxesAwarded
@@ -410,13 +410,13 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 		Status: &statusComplete,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 1, tracker.CurItemsCompleted)
+	assert.Equal(t, 1, tracker.CurScorableItems)
 	assert.Equal(t, 0, tracker.CurBoxesAwarded)
 	tracker, err = svc.UpdateJobAppItemFields(dummyUser.GetID(), item2.ID, &JobAppItemUpdateFields{
 		Status: &statusComplete,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 0, tracker.CurItemsCompleted)
+	assert.Equal(t, 0, tracker.CurScorableItems)
 	assert.Equal(t, 1, tracker.CurBoxesAwarded)
 
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
@@ -538,7 +538,7 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 		IsAttributed: boolPtr(false),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 0, t1.CurItemsCompleted)
+	assert.Equal(t, 0, t1.CurScorableItems)
 	assert.Equal(t, 1, t1.CurBoxesAwarded)
 	// assert.Equal(t, 1, t1.MaxGoalStreak)
 
@@ -549,7 +549,7 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 		IsAttributed: boolPtr(false),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 0, t1.CurItemsCompleted)
+	assert.Equal(t, 0, t1.CurScorableItems)
 	assert.Equal(t, 2, t1.CurBoxesAwarded)
 
 	// change the GoalQuantity to 2 and add more items
@@ -559,7 +559,7 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 2, t1.GoalQuantity)
 	assert.Equal(t, 2, t1.CurBoxesAwarded)
-	assert.Equal(t, 0, t1.CurItemsCompleted)
+	assert.Equal(t, 0, t1.CurScorableItems)
 
 	t1, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
 		Title:        strPtr("Title"),
@@ -568,7 +568,7 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 		IsAttributed: boolPtr(false),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 1, t1.CurItemsCompleted)
+	assert.Equal(t, 1, t1.CurScorableItems)
 	assert.Equal(t, 2, t1.CurBoxesAwarded)
 
 	// test counters stay consistent when CreateJobAppItem fails &..
@@ -588,7 +588,7 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 		IsAttributed: boolPtr(false),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 1, t1.CurItemsCompleted)
+	assert.Equal(t, 1, t1.CurScorableItems)
 	assert.Equal(t, 2, t1.CurBoxesAwarded)
 
 	// test counters work as expected despite previous failed calls
@@ -599,7 +599,7 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 		IsAttributed: boolPtr(false),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, 0, t1.CurItemsCompleted)
+	assert.Equal(t, 0, t1.CurScorableItems)
 	assert.Equal(t, 3, t1.CurBoxesAwarded)
 
 	// test behavior when decreasing GoalQuantity to a lower number than current items
@@ -616,14 +616,14 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 		})
 		require.NoError(t, err)
 	}
-	assert.Equal(t, 4, t2.CurItemsCompleted)
+	assert.Equal(t, 4, t2.CurScorableItems)
 	assert.Equal(t, 0, t2.CurBoxesAwarded)
 
 	t2, err = svc.UpdateJobAppTrackerFields(dummyUser2.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields{GoalQuantity: intPtr(2)}})
 	require.NoError(t, err)
 	require.Equal(t, 2, t2.GoalQuantity)
-	assert.Equal(t, 0, t2.CurItemsCompleted)
+	assert.Equal(t, 0, t2.CurScorableItems)
 	assert.Equal(t, 2, t2.CurBoxesAwarded)
 
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")

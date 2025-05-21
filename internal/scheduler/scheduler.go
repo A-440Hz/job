@@ -148,13 +148,18 @@ func (s *Scheduler) ReplaceTrackerGoal(oldTg, newTg *TrackerGoal) error {
 	if err != nil {
 		return err
 	}
+	// remove oldTg if replacing with nil
+	if newTg == nil {
+		heap.Remove(s.g, idx)
+		return nil
+	}
 	// update in place if we only need to change GoalFrequency
 	if oldTg.GoalDeadline == newTg.GoalDeadline {
 		s.g.heap[idx].GoalFrequency = newTg.GoalFrequency
 		return nil
 	}
 	// otherwise pop and replace old TrackerGoal
-	_ = heap.Remove(s.g, idx)
+	heap.Remove(s.g, idx)
 	heap.Push(s.g, newTg)
 	s.updateTimer()
 	return nil
@@ -187,17 +192,6 @@ func (s *Scheduler) Start() {
 			heap.Push(s.g, tg)
 			s.updateTimer()
 			s.mutex.Unlock()
-			// case <-time.After(time.Until(*<-s.nextTick)): // fix this mechanism if needed
-			// 	// what happens when the first index in the heap changes?
-			// 	// I probably need a holding var in the scheduler to hold 1 TrackerGoal outside of the heap
-			// 	s.mutex.Lock()
-			// 	tg := heap.Pop(s.g).(*TrackerGoal)
-			// 	log.Printf("popped %v", tg.GoalDeadline)
-			// 	tg.resetDeadline()
-			// 	s.OutputCh <- tg
-			// 	heap.Push(s.g, tg)
-			// 	s.updateTimer()
-			// 	s.mutex.Unlock()
 		}
 	}
 }
