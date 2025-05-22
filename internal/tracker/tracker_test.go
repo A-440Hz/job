@@ -317,7 +317,7 @@ func Test_CreateJobAppItem(t *testing.T) {
 				Body:            tt.Body,
 				Status:          tt.Status,
 				IsAttributed:    tt.IsAttributed,
-				AttributionTime: tt.AttributionTime,
+				attributionTime: tt.AttributionTime,
 			})
 
 			if len(tt.wantErrMsg) > 0 {

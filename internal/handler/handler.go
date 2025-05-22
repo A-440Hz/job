@@ -1,69 +1,15 @@
 package handler
 
 import (
-	"encoding/json"
 	"job/internal/tracker"
 	"job/internal/user"
-	"net/http"
-
-	"gorm.io/gorm"
 )
 
+// I can split this into modular handlers if I need to scale my project
 type Handler struct {
 	UserService    *user.Service
 	TrackerService *tracker.Service
+	// CollectionService *collection.Service
+
+	// this is where I would put my middleware... if I had any!
 }
-
-// HandleJobAppTrackerPage handles main page of the webapp
-func (h *Handler) HandleJobAppTrackerPage(w http.ResponseWriter, r *http.Request) {
-
-	// get user from cookie or create user
-	var user *user.User
-	uuid, err := getUserIdFromCookie(r)
-	if err != nil {
-		// check error type(?); create and store new user in cookie and db if not found
-		user, err = h.UserService.CreateNewUser(PollUserTimezone(r))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		err = setUserCookie(w, user.GetID())
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			clearUserCookie(w)
-			return
-		}
-	} else {
-		user, err = h.UserService.LookupUser(uuid)
-		if err != nil {
-			// should I clear the cookie if the user is not found? I don't see why not
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			clearUserCookie(w)
-			return
-		}
-	}
-
-	// create new tracker if tracker not found
-	tracker, err := h.TrackerService.GetJobAppTrackerWithItemsFromUserID(user.GetID())
-	if err == gorm.ErrRecordNotFound {
-		tracker, err = h.TrackerService.CreateNewJobAppTracker(user)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]any{
-		"user":    user,
-		"tracker": tracker,
-	})
-}
-
-// HandleCollectionsPage
-
-// HandleUserPage
-// set options, see stats, set profile? potential friends profiles

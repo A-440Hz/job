@@ -167,7 +167,7 @@ func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields
 	} else if *fields.IsAttributed != false {
 		badFields[isAttributedField] = "cannot create an attributed item"
 	}
-	if fields.AttributionTime != nil {
+	if fields.attributionTime != nil {
 		badFields[attributionTimeField] = "cannot create an attributed item"
 	}
 	i, _, err := fields.formatForRepo()
@@ -292,7 +292,7 @@ func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
 	badFields := map[string]string{}
 	for _, id := range updateItems {
 		err := s.updateJobAppItemFields(repoTracker, id, &JobAppItemUpdateFields{
-			AttributionTime: &n,
+			attributionTime: &n,
 			IsAttributed:    &tr,
 		})
 		if err != nil {
@@ -475,7 +475,7 @@ func (s *Service) clearTrackerItems(tg *scheduler.TrackerGoal) (*UnderlyingTrack
 		}
 		for _, item := range items {
 			err := s.updateJobAppItemFields(repoTracker, item.GetID(), &JobAppItemUpdateFields{
-				AttributionTime: &n,
+				attributionTime: &n,
 				IsAttributed:    &tr,
 			})
 			if err != nil {

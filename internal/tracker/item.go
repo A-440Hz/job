@@ -77,12 +77,13 @@ func (s *ItemStatus) Value() (driver.Value, error) {
 	return string(*s), nil
 }
 
+// TODO: IsScorable
 type JobAppItemUpdateFields struct {
 	Title           *string     `json:"title,omitempty"`
 	Body            *string     `json:"body,omitempty"`
 	Status          *ItemStatus `json:"status,omitempty"`
 	IsAttributed    *bool       `json:"isAttributed,omitempty"`
-	AttributionTime *time.Time  `json:"attributionTime,omitempty"`
+	attributionTime *time.Time  //`json:"attributionTime,omitempty"`
 }
 
 // formatForRepo returns error when Status is not a ValidJobAppItemStatus
@@ -108,8 +109,8 @@ func (uf *JobAppItemUpdateFields) formatForRepo() (*JobAppItem, []string, error)
 		j.IsAttributed = *uf.IsAttributed
 		fields = append(fields, isAttributedField)
 	}
-	if uf.AttributionTime != nil {
-		j.AttributionTime = uf.AttributionTime
+	if uf.attributionTime != nil {
+		j.AttributionTime = uf.attributionTime
 		fields = append(fields, attributionTimeField)
 	}
 	return j, fields, nil
