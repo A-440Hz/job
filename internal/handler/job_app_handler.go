@@ -34,8 +34,8 @@ func getJobAppItemUpdateFields(r *http.Request) (*tracker.JobAppItemUpdateFields
 	return &fields, nil
 }
 
-// ServeJobAppTracker_MainPage handles main page of the webapp
-func (h *Handler) ServeJobAppTracker_MainPage(w http.ResponseWriter, r *http.Request) {
+// ServeJobAppTrackerMainPage handles main page of the webapp
+func (h *Handler) ServeJobAppTrackerMainPage(w http.ResponseWriter, r *http.Request) {
 	// get user from cookie or create user
 	var user *user.User
 	uuid, err := getUserIdFromCookie(r)

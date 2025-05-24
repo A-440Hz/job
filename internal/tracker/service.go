@@ -55,9 +55,9 @@ func (s *Service) LookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker, er
 }
 
 // LookupJobAppTrackerFromTrackerID is probably needed for the scheduler to trigger tracker
-func (s *Service) LookupJobAppTrackerFromTrackerID(id string) (*JobAppTracker, error) {
-	return s.repo.lookupJobAppTrackerFromTrackerID(id)
-}
+// func (s *Service) LookupJobAppTrackerFromTrackerID(id string) (*JobAppTracker, error) {
+// 	return s.repo.lookupJobAppTrackerFromTrackerID(id)
+// }
 
 func (s *Service) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTracker, error) {
 	return s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
@@ -386,8 +386,17 @@ func (s *Service) subOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 
 // Scheduler-related methods:
 
-// StartTrackerUpdateListener is run as a goroutine to reset trackers as specified by the scheduler
-func (s *Service) StartTrackerUpdateListener() {
+func (s *Service) Start() {
+	go s.scheduler.Start()
+	go s.startTrackerUpdateListener()
+}
+
+func (s *Service) Stop() {
+	s.scheduler.Stop()
+}
+
+// startTrackerUpdateListener is run as a goroutine to reset trackers as specified by the scheduler
+func (s *Service) startTrackerUpdateListener() {
 	for tg := range s.scheduler.OutputCh {
 		err := s.resetTrackerDeadline(tg)
 		if err != nil {

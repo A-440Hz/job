@@ -443,8 +443,8 @@ func Test_Scheduler(t *testing.T) {
 	u3 := user.User{ID: "usr_33333333"}
 
 	// start scheduler
-	go svc.scheduler.Start()
-	go svc.StartTrackerUpdateListener()
+	// go svc.scheduler.Start()
+	svc.Start()
 
 	jt0, err := svc.CreateNewJobAppTracker(&u0)
 	require.NoError(t, err)
@@ -461,6 +461,7 @@ func Test_Scheduler(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	assert.NotEqual(t, jt0, jt00)
 	jt11, err := svc.UpdateJobAppTrackerFields(u1.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
 			CycleDeadline:  &t1,
@@ -468,6 +469,7 @@ func Test_Scheduler(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	assert.NotEqual(t, jt1, jt11)
 	jt22, err := svc.UpdateJobAppTrackerFields(u2.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
 			CycleDeadline:  &t2,
@@ -475,6 +477,7 @@ func Test_Scheduler(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	assert.NotEqual(t, jt2, jt22)
 	jt33, err := svc.UpdateJobAppTrackerFields(u3.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
 			CycleDeadline:  &t3,
@@ -482,15 +485,16 @@ func Test_Scheduler(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+	assert.NotEqual(t, jt3, jt33)
 	time.Sleep(time.Second * 28)
 
-	jt000, err := svc.LookupJobAppTrackerFromTrackerID(jt0.GetID())
+	jt000, err := svc.LookupJobAppTrackerFromUserID(u0.GetID())
 	require.NoError(t, err)
-	jt111, err := svc.LookupJobAppTrackerFromTrackerID(jt1.GetID())
+	jt111, err := svc.LookupJobAppTrackerFromUserID(u1.GetID())
 	require.NoError(t, err)
-	jt222, err := svc.LookupJobAppTrackerFromTrackerID(jt2.GetID())
+	jt222, err := svc.LookupJobAppTrackerFromUserID(u2.GetID())
 	require.NoError(t, err)
-	jt333, err := svc.LookupJobAppTrackerFromTrackerID(jt3.GetID())
+	jt333, err := svc.LookupJobAppTrackerFromUserID(u3.GetID())
 	require.NoError(t, err)
 	assert.Equal(t, t0.AddDate(0, 0, 1), jt000.CycleDeadline)
 	assert.Equal(t, t1.AddDate(0, 0, 1), jt111.CycleDeadline)
