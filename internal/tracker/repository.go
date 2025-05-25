@@ -169,3 +169,12 @@ func (r *Repository) DeleteJobAppTrackerItem(i *JobAppItem) error {
 	}
 	return nil
 }
+
+func (r *Repository) selectAll() ([]JobAppTracker, error) {
+	trackers := []JobAppTracker{}
+	res := r.db.Preload("Items").Find(&trackers)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return trackers, nil
+}

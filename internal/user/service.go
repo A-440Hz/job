@@ -122,3 +122,7 @@ func (s *Service) LookupUser(id string) (*User, error) {
 func (s *Service) DeleteUser(id string) error {
 	return s.repo.DeleteUser(&User{ID: id})
 }
+
+func (s *Service) SelectAll() ([]User, error) {
+	return s.repo.selectAll()
+}

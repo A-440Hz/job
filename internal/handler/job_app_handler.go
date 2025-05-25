@@ -10,17 +10,10 @@ import (
 )
 
 func getJobAppTrackerUpdateFields(r *http.Request) (*tracker.JobAppTrackerUpdateFields, error) {
-	var underlyingFields tracker.UnderlyingTrackerUpdateFields
 	var fields tracker.JobAppTrackerUpdateFields
 	d := json.NewDecoder(r.Body)
-	if err := d.Decode(&underlyingFields); err != nil {
-		return nil, err
-	}
 	if err := d.Decode(&fields); err != nil {
 		return nil, err
-	}
-	if !underlyingFields.IsNil() {
-		fields.UnderlyingTrackerUpdateFields = underlyingFields
 	}
 	return &fields, nil
 }
@@ -34,8 +27,25 @@ func getJobAppItemUpdateFields(r *http.Request) (*tracker.JobAppItemUpdateFields
 	return &fields, nil
 }
 
-// ServeJobAppTrackerMainPage handles main page of the webapp
-func (h *Handler) ServeJobAppTrackerMainPage(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeMainPage(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		h.GetUserAndTrackerItems(w, r)
+	case http.MethodPatch:
+		h.UpdateJobAppTrackerFields(w, r)
+	case http.MethodPost:
+		h.CreateJobAppItem(w, r)
+	case http.MethodPut:
+		h.UpdateJobAppItemFields(w, r)
+	case http.MethodDelete:
+		h.DeleteJobAppItem(w, r)
+	default:
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// GetUserAndTrackerItems retrieves or creates a User, and resturns it along with its tracker and any items
+func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request) {
 	// get user from cookie or create user
 	var user *user.User
 	uuid, err := getUserIdFromCookie(r)

@@ -36,11 +36,8 @@ func main() {
 	}
 	h.TrackerService.Start()
 
-	http.HandleFunc("/careers", h.ServeJobAppTrackerMainPage)
-	http.HandleFunc("/careers/edit", h.UpdateJobAppTrackerFields)
-	http.HandleFunc("/careers/new-entry", h.CreateJobAppItem)
-	http.HandleFunc("/careers/edit-entry", h.UpdateJobAppItemFields)
-	http.HandleFunc("/careers/delete-entry", h.DeleteJobAppItem)
+	http.HandleFunc("/careers", h.ServeMainPage)
+	http.HandleFunc("/careers/test", h.SelectEverything)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)

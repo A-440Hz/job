@@ -65,3 +65,12 @@ func (r *Repository) DeleteUser(u *User) error {
 	}
 	return nil
 }
+
+func (r *Repository) selectAll() ([]User, error) {
+	users := []User{}
+	res := r.db.Find(&users)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return users, nil
+}

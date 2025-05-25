@@ -166,6 +166,8 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			// a constant tracker to test against
 			dummyUser := user.User{ID: "usr_12345678"}
 			t1, err := svc.CreateNewJobAppTracker(&dummyUser)
+			defer dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+
 			require.NoError(t, err)
 			assert.NotNil(t, t1)
 
@@ -249,7 +251,6 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			for _, e := range wantErr {
 				assert.ErrorContains(t, err, e)
 			}
-			dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
 		})
 	}
 }

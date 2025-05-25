@@ -504,3 +504,7 @@ func (s *Service) clearTrackerItems(tg *scheduler.TrackerGoal) (*UnderlyingTrack
 	}
 	return ut, nil
 }
+
+func (s *Service) SelectAll() ([]JobAppTracker, error) {
+	return s.repo.selectAll()
+}
