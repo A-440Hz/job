@@ -55,6 +55,7 @@ func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, erro
 	}
 	t := true
 	uf.Registered = &t
+	// TODO: use a repo function and prevent the exported function from updating passwords
 	return s.UpdateUserFields(id, uf)
 }
 
@@ -123,6 +124,6 @@ func (s *Service) DeleteUser(id string) error {
 	return s.repo.DeleteUser(&User{ID: id})
 }
 
-func (s *Service) SelectAll() ([]User, error) {
+func (s *Service) SelectAllUsers() ([]User, error) {
 	return s.repo.selectAll()
 }

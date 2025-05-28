@@ -115,8 +115,10 @@ func (h *Handler) UpdateJobAppTrackerFields(w http.ResponseWriter, r *http.Reque
 	json.NewEncoder(w).Encode(t)
 }
 
-// TODO: smooth out distinction
+// TODO: do cascade gorm delete or series of delete calls here
 func (h *Handler) DeleteUserRequest(w http.ResponseWriter, r *http.Request) {
+	// after delete hook
+	// https://stackoverflow.com/questions/76762629/how-to-cascade-a-delete-in-gorm
 }
 
 func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {

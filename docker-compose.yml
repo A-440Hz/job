@@ -8,9 +8,22 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: my_password
-      POSTGRES_DB: my_db
+      POSTGRES_DB: postgres
     volumes:
       - pgdata:/var/lib/postgresql/data
+  db-local:
+    image: postgres:latest
+    container_name: postgres-localhost
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: postgres2
+      POSTGRES_PASSWORD: my_password2
+      POSTGRES_DB: my_db
+    volumes:
+      - pgdata_local:/var/lib/postgresql/data
 
 volumes:
   pgdata:
+  pgdata_local:

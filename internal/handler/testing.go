@@ -6,12 +6,12 @@ import (
 )
 
 func (h *Handler) SelectEverything(w http.ResponseWriter, r *http.Request) {
-	trackers, err := h.TrackerService.SelectAll()
+	trackers, err := h.TrackerService.SelectAllJobAppTrackers()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
-	users, err := h.UserService.SelectAll()
+	users, err := h.UserService.SelectAllUsers()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

@@ -22,7 +22,7 @@ import (
 
 func main() {
 	db.SetEnvForTesting()
-	db, err := db.InitGormDB()
+	db, err := db.InitGormLocalDB()
 	if err != nil {
 		panic(err)
 	}

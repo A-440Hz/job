@@ -18,10 +18,9 @@ const outputChannelSize = 50
 
 // Scheduler always lives in memory and manages when to trigger and reset TrackerGoals
 type Scheduler struct {
-	g      *GoalHeap
-	mutex  sync.Mutex
-	stopCh chan bool
-	// nextTick chan *time.Time //
+	g        *GoalHeap
+	mutex    sync.Mutex
+	stopCh   chan bool
 	OutputCh chan *TrackerGoal
 	timer    *time.Timer
 }
@@ -51,7 +50,9 @@ func (tg *TrackerGoal) resetDeadline() {
 		return
 	}
 	prev := tg.CycleDeadline
-	numDaysBetween := int(now.Sub(tg.CycleDeadline).Round(time.Hour)) / 24
+	numDaysBetween := int(now.Sub(tg.CycleDeadline).Round(time.Hour) / (time.Hour * 24))
+	log.Printf("numDaysBetween: %d, now: %v, prev: %v", numDaysBetween, now, prev)
+	log.Printf("tg.CycleFrequency.NumDays(): %d", tg.CycleFrequency.NumDays())
 	numDaysToNext := (numDaysBetween/tg.CycleFrequency.NumDays() + 1) * tg.CycleFrequency.NumDays()
 	tg.CycleDeadline = tg.CycleDeadline.Add(time.Hour * 24 * time.Duration(numDaysToNext))
 	log.Printf("reset %v to %v", prev, tg.CycleDeadline)
@@ -67,8 +68,7 @@ func NewScheduler() *Scheduler {
 		g:        g,
 		OutputCh: make(chan *TrackerGoal, outputChannelSize),
 		stopCh:   make(chan bool, 1),
-		// nextTick: make(chan *time.Time, 1), // channel needs to be buffered to store values without a ready receiver
-		timer: time.NewTimer(time.Hour * 24 * 365), // set it 1 year in the future
+		timer:    time.NewTimer(time.Hour * 24 * 365), // set it 1 year in the future
 	}
 	return s
 }
@@ -123,12 +123,13 @@ func (g *GoalHeap) peek() *TrackerGoal {
 }
 
 func (s *Scheduler) updateTimer() {
-	// make sure nextTick is the closest deadline
+	log.Printf("updateTimer triggered. heap top is %v", s.g.peek())
 	if d := s.g.peek(); d != nil {
 		log.Print("reset timer to ", d.CycleDeadline)
 		s.timer.Reset(time.Until(d.CycleDeadline))
+	} else {
+		log.Print("updateTimer -> nil; heap is nil")
 	}
-	log.Print("updateTimer -> nil; heap is nil")
 
 }
 
@@ -147,7 +148,10 @@ func (s *Scheduler) ReplaceTrackerGoal(oldTg, newTg *TrackerGoal) error {
 	defer s.mutex.Unlock()
 	idx, err := s.g.findByID(oldTg.TrackerID)
 	if err != nil {
-		return err
+		log.Print("Could not find old TrackerGoal in heap, pushing new one to finish replace process")
+		heap.Push(s.g, newTg)
+		s.updateTimer()
+		return nil
 	}
 	// remove oldTg if replacing with nil
 	if newTg == nil {

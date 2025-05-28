@@ -27,7 +27,7 @@ func boolPtr(b bool) *bool {
 
 func Test_validateRegisterBaseUser(t *testing.T) {
 	db.SetEnvForTesting()
-	db, err := db.InitGormDB()
+	db, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	db.AutoMigrate(&User{})
 	db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
@@ -129,7 +129,7 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 
 func Test_RegisterBaseUser(t *testing.T) {
 	db.SetEnvForTesting()
-	dbase, err := db.InitGormDB()
+	dbase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	dbase.AutoMigrate(&User{})
 	dbase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
@@ -170,7 +170,7 @@ func Test_RegisterBaseUser(t *testing.T) {
 
 func Test_UpdateUserFields(t *testing.T) {
 	db.SetEnvForTesting()
-	dBase, err := db.InitGormDB()
+	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	dBase.AutoMigrate(&User{})
 	dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
@@ -264,7 +264,7 @@ func Test_UpdateUserFields(t *testing.T) {
 
 func Test_DeleteUser(t *testing.T) {
 	db.SetEnvForTesting()
-	db, err := db.InitGormDB()
+	db, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	db.AutoMigrate(&User{})
 	db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")

@@ -170,7 +170,23 @@ func (r *Repository) DeleteJobAppTrackerItem(i *JobAppItem) error {
 	return nil
 }
 
-func (r *Repository) selectAll() ([]JobAppTracker, error) {
+// getAllUnderlyingTrackers runs on startup, retrieving repo trackers of every type and feeding them into the scheduler
+// it currently does not filter "expired" trackers and has no
+func (r *Repository) getAllUnderlyingTrackers() ([]UnderlyingTracker, error) {
+	allUnderlying := []UnderlyingTracker{}
+	jobAppTrackers := []JobAppTracker{}
+	res := r.db.Find(&jobAppTrackers)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	for _, jat := range jobAppTrackers {
+		allUnderlying = append(allUnderlying, jat.UnderlyingTracker)
+	}
+	// insert more tracker types here:
+	return allUnderlying, nil
+}
+
+func (r *Repository) selectAllJobAppTrackers() ([]JobAppTracker, error) {
 	trackers := []JobAppTracker{}
 	res := r.db.Preload("Items").Find(&trackers)
 	if res.Error != nil {

@@ -54,6 +54,7 @@ func (r *Repository) UpdateUserFields(u *User, fields []string) (*User, error) {
 }
 
 // as is this does a soft delete https://gorm.io/docs/delete.html#Soft-Delete
+// TODO: look into OnDelete:Cascade and AfterDelete https://stackoverflow.com/questions/76762629/how-to-cascade-a-delete-in-gorm
 func (r *Repository) DeleteUser(u *User) error {
 	// no lookups here because i dont need to log the user struct
 	res := r.db.Delete(u)

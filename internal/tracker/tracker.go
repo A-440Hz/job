@@ -18,9 +18,9 @@ const (
 	curBoxesAwardedField        = "cur_boxes_awarded"
 	curGoalStreakField          = "cur_goal_streak"
 	maxGoalStreakField          = "max_goal_streak"
-	curItemsCompletedDailyField = "cur_items_completed_daily"
+	curCycleItemsCompleted      = "cur_cycle_items_completed"
 	totalItemsCompletedField    = "total_items_completed"
-	maxItemsCompletedDailyField = "max_items_completed_daily"
+	maxCycleItemsCompletedField = "max_cycle_items_completed"
 	totalBoxesAwardedField      = "total_boxes_awarded"
 	firstCompletedField         = "first_completed"
 )
@@ -44,8 +44,6 @@ const (
 	JobAppTrackerType TrackerType = "job_app_tracker"
 )
 
-// TODO: refactor CycleDeadline, CycleFrequency to CycleDeadline, CycleFrequency
-
 // The underlying tracker is a base struct that contains the common fields for all trackers.
 // There is no good reason for it to be a separate entity in the database, so I will create it in memory and store the two trackers together in gorm.
 // The separation is primarily to fulfill the composite pattern and hold specific types of Items.
@@ -63,10 +61,10 @@ type UnderlyingTracker struct {
 	// stats
 	CurGoalStreak          int `gorm:"default:0"`
 	MaxGoalStreak          int `gorm:"default:0"`
-	CurItemsCompletedDaily int `gorm:"default:0"`
+	CurCycleItemsCompleted int `gorm:"default:0"`
 	TotalItemsCompleted    int `gorm:"default:0"`
-	MaxItemsCompletedDaily int `gorm:"default:0"`
-	TotalBoxesAwarded      int `gorm:"default:0"` // idk about this one.. it sounds like somthing for Collection to track
+	MaxCycleItemsCompleted int `gorm:"default:0"`
+	TotalBoxesAwarded      int `gorm:"default:0"`
 	FirstCompleted         *time.Time
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
@@ -84,10 +82,12 @@ type JobAppTracker struct {
 type TrackerStats struct {
 	CurGoalStreak          int     `json:"curGoalStreak"`
 	MaxGoalStreak          int     `json:"maxGoalStreak"`
-	MaxItemsCompletedDaily int     `json:"maxItemsCompletedDaily"`
+	MaxCycleItemsCompleted int     `json:"maxCycleItemsCompleted"`
 	TotalItemsCompleted    int     `json:"totalItemsCompleted"`
 	TotalBoxesAwarded      int     `json:"totalBoxesAwarded"`
 	AvgDailyCompleted      float64 `json:"avgDailyCompleted"`
+	// What about AvgCycleCompleted? i think that's too difficult to accurately track given how every time the user
+	// updates CycleDeadline it counts as a new cycle
 }
 
 // GetID returns the "TrackerID" primary key of the UnderlyingTracker
@@ -98,6 +98,7 @@ func (t *JobAppTracker) GetID() string {
 func (t *JobAppTracker) GetUserID() string {
 	return t.UserID
 }
+
 func (t *UnderlyingTracker) GetValidTimeframe() (time.Time, time.Time) {
 	days := -1 * t.CycleFrequency.NumDays()
 	begin := t.CycleDeadline.AddDate(0, 0, days)
@@ -123,9 +124,9 @@ type UnderlyingTrackerUpdateFields struct {
 	//stats
 	CurGoalStreak          *int       `json:"curGoalStreak,omitempty"`
 	MaxGoalStreak          *int       `json:"maxGoalStreak,omitempty"`
-	CurItemsCompletedDaily *int       `json:"curItemsCompletedDaily,omitempty"`
+	CurCycleItemsCompleted *int       `json:"curCycleItemsCompleted,omitempty"`
 	TotalItemsCompleted    *int       `json:"totalItemsCompleted,omitempty"`
-	MaxItemsCompletedDaily *int       `json:"maxItemsCompletedDaily,omitempty"`
+	MaxCycleItemsCompleted *int       `json:"maxCycleItemsCompleted,omitempty"`
 	TotalBoxesAwarded      *int       `json:"totalBoxesAwarded,omitempty"`
 	FirstCompleted         *time.Time `json:"firstCompleted,omitempty"`
 }
@@ -165,17 +166,17 @@ func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []
 		t.MaxGoalStreak = *uf.MaxGoalStreak
 		fields = append(fields, maxGoalStreakField)
 	}
-	if uf.CurItemsCompletedDaily != nil {
-		t.CurItemsCompletedDaily = *uf.CurItemsCompletedDaily
-		fields = append(fields, curItemsCompletedDailyField)
+	if uf.CurCycleItemsCompleted != nil {
+		t.CurCycleItemsCompleted = *uf.CurCycleItemsCompleted
+		fields = append(fields, curCycleItemsCompleted)
 	}
 	if uf.TotalItemsCompleted != nil {
 		t.TotalItemsCompleted = *uf.TotalItemsCompleted
 		fields = append(fields, totalItemsCompletedField)
 	}
-	if uf.MaxItemsCompletedDaily != nil {
-		t.MaxItemsCompletedDaily = *uf.MaxItemsCompletedDaily
-		fields = append(fields, maxItemsCompletedDailyField)
+	if uf.MaxCycleItemsCompleted != nil {
+		t.MaxCycleItemsCompleted = *uf.MaxCycleItemsCompleted
+		fields = append(fields, maxCycleItemsCompletedField)
 	}
 	if uf.TotalBoxesAwarded != nil {
 		t.TotalBoxesAwarded = *uf.TotalBoxesAwarded

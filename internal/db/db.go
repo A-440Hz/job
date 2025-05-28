@@ -13,9 +13,10 @@ import (
 )
 
 // these vars coorespond to docker-compose and internal/db/testing.go to connect to the db
-// firebase has its own "DATABASE_URL" so I need to remember not to mess it up when deploying
+// railway has its own "DATABASE_URL" so I need to remember not to mess it up when deploying
 const sqlDSNTesting = "DATABASE_URL_SQL_TESTING"
 const gormDSNTesting = "DATABASE_URL_GORM_TESTING"
+const gormDSNLocalhost = "DATABASE_URL_GORM_LOCALHOST"
 
 func getDSN(env string) (string, error) {
 	dsn, ok := os.LookupEnv(env)
@@ -50,7 +51,7 @@ func Connect() (*sql.DB, error) {
 // connections pooling and can group multiple db operations into single atomic operation
 // manages migrations so I don't have to
 // summarize and rejustify this later
-func InitGormDB() (*gorm.DB, error) {
+func InitGormTestDB() (*gorm.DB, error) {
 	dsn, err := getDSN(gormDSNTesting)
 	if err != nil {
 		return nil, err
@@ -58,6 +59,19 @@ func InitGormDB() (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("unable to open DB connection with %q: %w", gormDSNTesting, err)
+	}
+
+	return db, nil
+}
+
+func InitGormLocalDB() (*gorm.DB, error) {
+	dsn, err := getDSN(gormDSNLocalhost)
+	if err != nil {
+		return nil, err
+	}
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		return nil, fmt.Errorf("unable to open DB connection with %q: %w", gormDSNLocalhost, err)
 	}
 
 	return db, nil

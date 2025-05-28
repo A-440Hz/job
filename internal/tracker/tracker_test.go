@@ -40,7 +40,7 @@ func Test_formatForRepo(t *testing.T) {
 		CurBoxesAwarded        *int
 		CurGoalStreak          *int
 		MaxGoalStreak          *int
-		MaxItemsCompletedDaily *int
+		MaxCycleItemsCompleted *int
 		TotalItemsCompleted    *int
 		TotalBoxesAwarded      *int
 		FirstCompleted         *time.Time
@@ -55,7 +55,7 @@ func Test_formatForRepo(t *testing.T) {
 			CurBoxesAwarded:        intPtr(3),
 			CurGoalStreak:          intPtr(4),
 			MaxGoalStreak:          intPtr(5),
-			MaxItemsCompletedDaily: intPtr(6),
+			MaxCycleItemsCompleted: intPtr(6),
 			TotalItemsCompleted:    intPtr(7),
 			TotalBoxesAwarded:      intPtr(8),
 			FirstCompleted:         &n,
@@ -77,7 +77,7 @@ func Test_formatForRepo(t *testing.T) {
 				CurBoxesAwarded:        tt.CurBoxesAwarded,
 				CurGoalStreak:          tt.CurGoalStreak,
 				MaxGoalStreak:          tt.MaxGoalStreak,
-				MaxItemsCompletedDaily: tt.MaxItemsCompletedDaily,
+				MaxCycleItemsCompleted: tt.MaxCycleItemsCompleted,
 				TotalItemsCompleted:    tt.TotalItemsCompleted,
 				TotalBoxesAwarded:      tt.TotalBoxesAwarded,
 				FirstCompleted:         tt.FirstCompleted,
@@ -108,7 +108,7 @@ func Test_formatForRepo(t *testing.T) {
 			assert.Equal(t, *tt.CurBoxesAwarded, underlyingTracker.CurBoxesAwarded)
 			assert.Equal(t, *tt.CurGoalStreak, underlyingTracker.CurGoalStreak)
 			assert.Equal(t, *tt.MaxGoalStreak, underlyingTracker.MaxGoalStreak)
-			assert.Equal(t, *tt.MaxItemsCompletedDaily, underlyingTracker.MaxItemsCompletedDaily)
+			assert.Equal(t, *tt.MaxCycleItemsCompleted, underlyingTracker.MaxCycleItemsCompleted)
 			assert.Equal(t, *tt.TotalItemsCompleted, underlyingTracker.TotalItemsCompleted)
 			assert.Equal(t, *tt.TotalBoxesAwarded, underlyingTracker.TotalBoxesAwarded)
 			assert.Equal(t, tt.FirstCompleted, underlyingTracker.FirstCompleted)
@@ -118,7 +118,7 @@ func Test_formatForRepo(t *testing.T) {
 
 func Test_UpdateJobAppTrackerFields(t *testing.T) {
 	db.SetEnvForTesting()
-	dBase, err := db.InitGormDB()
+	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	dBase.AutoMigrate(&JobAppTracker{})
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
@@ -135,7 +135,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 		CurBoxesAwarded        *int
 		CurGoalStreak          *int
 		MaxGoalStreak          *int
-		MaxItemsCompletedDaily *int
+		MaxCycleItemsCompleted *int
 		TotalItemsCompleted    *int
 		TotalBoxesAwarded      *int
 		FirstCompleted         *time.Time
@@ -150,7 +150,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			CurBoxesAwarded:        intPtr(3),
 			CurGoalStreak:          intPtr(4),
 			MaxGoalStreak:          intPtr(5),
-			MaxItemsCompletedDaily: intPtr(6),
+			MaxCycleItemsCompleted: intPtr(6),
 			TotalItemsCompleted:    intPtr(7),
 			TotalBoxesAwarded:      intPtr(8),
 			FirstCompleted:         &n,
@@ -179,7 +179,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 				CurBoxesAwarded:        tt.CurBoxesAwarded,
 				CurGoalStreak:          tt.CurGoalStreak,
 				MaxGoalStreak:          tt.MaxGoalStreak,
-				MaxItemsCompletedDaily: tt.MaxItemsCompletedDaily,
+				MaxCycleItemsCompleted: tt.MaxCycleItemsCompleted,
 				TotalItemsCompleted:    tt.TotalItemsCompleted,
 				TotalBoxesAwarded:      tt.TotalBoxesAwarded,
 				FirstCompleted:         tt.FirstCompleted,
@@ -202,7 +202,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			assert.Equal(t, *tt.CurBoxesAwarded, updateTracker.CurBoxesAwarded)
 			assert.Equal(t, *tt.CurGoalStreak, updateTracker.CurGoalStreak)
 			assert.Equal(t, *tt.MaxGoalStreak, updateTracker.MaxGoalStreak)
-			assert.Equal(t, *tt.MaxItemsCompletedDaily, updateTracker.MaxItemsCompletedDaily)
+			assert.Equal(t, *tt.MaxCycleItemsCompleted, updateTracker.MaxCycleItemsCompleted)
 			assert.Equal(t, *tt.TotalItemsCompleted, updateTracker.TotalItemsCompleted)
 			assert.Equal(t, *tt.TotalBoxesAwarded, updateTracker.TotalBoxesAwarded)
 			assert.Equal(t, tt.FirstCompleted, updateTracker.FirstCompleted)
@@ -237,12 +237,12 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			assert.Equal(t, newQuantity, updateTracker2_5.GoalQuantity)
 
 			// expect validation errors
-			wantErr := []string{maxGoalStreakField, maxItemsCompletedDailyField, totalItemsCompletedField, totalBoxesAwardedField, firstCompletedField}
+			wantErr := []string{maxGoalStreakField, maxCycleItemsCompletedField, totalItemsCompletedField, totalBoxesAwardedField, firstCompletedField}
 			newFirstCompleted := tt.FirstCompleted.Add(100 * time.Hour)
 			updateTracker3, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(),
 				&JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
 					MaxGoalStreak:          intPtr(*tt.MaxGoalStreak - 1),
-					MaxItemsCompletedDaily: intPtr(*tt.MaxItemsCompletedDaily - 1),
+					MaxCycleItemsCompleted: intPtr(*tt.MaxCycleItemsCompleted - 1),
 					TotalItemsCompleted:    intPtr(*tt.TotalItemsCompleted - 1),
 					TotalBoxesAwarded:      intPtr(*tt.TotalBoxesAwarded - 1),
 					FirstCompleted:         &newFirstCompleted,
@@ -257,7 +257,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 
 func Test_CreateJobAppItem(t *testing.T) {
 	db.SetEnvForTesting()
-	dBase, err := db.InitGormDB()
+	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	dBase.AutoMigrate(&JobAppTracker{}, &JobAppItem{})
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
@@ -349,7 +349,7 @@ func Test_CreateJobAppItem(t *testing.T) {
 func Test_UpdateJobAppItemFields(t *testing.T) {
 	// test updating the status complete field and seeing if tracker curItemsComplete decrements by 1
 	db.SetEnvForTesting()
-	dBase, err := db.InitGormDB()
+	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	dBase.AutoMigrate(&JobAppTracker{}, &JobAppItem{})
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
@@ -426,7 +426,7 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 
 func Test_Scheduler(t *testing.T) {
 	db.SetEnvForTesting()
-	dBase, err := db.InitGormDB()
+	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	dBase.AutoMigrate(&JobAppTracker{})
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
@@ -474,7 +474,7 @@ func Test_Scheduler(t *testing.T) {
 	jt22, err := svc.UpdateJobAppTrackerFields(u2.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
 			CycleDeadline:  &t2,
-			CycleFrequency: strPtr("daily"),
+			CycleFrequency: strPtr("weekly"),
 		},
 	})
 	require.NoError(t, err)
@@ -482,7 +482,7 @@ func Test_Scheduler(t *testing.T) {
 	jt33, err := svc.UpdateJobAppTrackerFields(u3.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
 			CycleDeadline:  &t3,
-			CycleFrequency: strPtr("daily"),
+			CycleFrequency: strPtr("weekly"),
 		},
 	})
 	require.NoError(t, err)
@@ -499,8 +499,8 @@ func Test_Scheduler(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, t0.AddDate(0, 0, 1), jt000.CycleDeadline)
 	assert.Equal(t, t1.AddDate(0, 0, 1), jt111.CycleDeadline)
-	assert.Equal(t, t2.AddDate(0, 0, 1), jt222.CycleDeadline)
-	assert.Equal(t, t3.AddDate(0, 0, 1), jt333.CycleDeadline)
+	assert.Equal(t, t2.AddDate(0, 0, 7), jt222.CycleDeadline)
+	assert.Equal(t, t3.AddDate(0, 0, 7), jt333.CycleDeadline)
 	// assert.NotEqual(t, jt000.CycleDeadline, jt00.CycleDeadline)
 	// assert.NotEqual(t, jt111.CycleDeadline, jt11.CycleDeadline)
 	// assert.NotEqual(t, jt222.CycleDeadline, jt22.CycleDeadline)
@@ -516,7 +516,7 @@ func Test_Scheduler(t *testing.T) {
 
 func Test_JobAppTrackerItemScoring(t *testing.T) {
 	db.SetEnvForTesting()
-	dBase, err := db.InitGormDB()
+	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	dBase.AutoMigrate(&JobAppTracker{})
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
