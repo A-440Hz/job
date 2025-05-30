@@ -3,6 +3,7 @@ package tracker
 import (
 	"errors"
 	"fmt"
+	"job/internal/collection"
 	"job/internal/scheduler"
 	"job/internal/user"
 	"log"
@@ -13,12 +14,13 @@ import (
 )
 
 type Service struct {
-	repo      *Repository
-	scheduler *scheduler.Scheduler
+	repo       *Repository
+	scheduler  *scheduler.Scheduler
+	collection *collection.Service
 }
 
-func NewService(r *Repository, s *scheduler.Scheduler) *Service {
-	return &Service{repo: r, scheduler: s}
+func NewService(r *Repository, s *scheduler.Scheduler, c *collection.Service) *Service {
+	return &Service{repo: r, scheduler: s, collection: c}
 }
 
 // This method functions like a create hook for UnderlyingTracker.
@@ -334,8 +336,11 @@ func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
 		updateFields = append(updateFields, maxCycleItemsCompletedField)
 	}
 
-	// update official count of lootboxes
-	// s.SomeChannel <- &LootboxDeltaRequest{user_id, numDelta}
+	// update collection lootbox count
+	_, err = s.collection.AssignBoxes(repoTracker.GetUserID(), numToAward)
+	if err != nil {
+		log.Print(err)
+	}
 
 	// update tracker state
 	repoTracker.CurScorableItems = max(0, repoTracker.CurScorableItems-repoTracker.GoalQuantity*numToAward)
@@ -438,9 +443,13 @@ func (s *Service) resetTrackerDeadline(poppedTg *scheduler.TrackerGoal) error {
 		updateTracker.CurGoalStreak = 0
 		updateFields = append(updateFields, curGoalStreakField)
 
-		// TODO: here is also where the tracker would tell the collection to take away a reward (or unopened box?)
-		// if the user enabled that tracker setting
-		// s.SomeChannel <- &{user_id, numBoxesDelta}
+		// Take away a lootbox or a reward if user enabled this setting
+		if repoTracker.MissedGoalPenalty {
+			_, err := s.collection.AssignBoxes(repoTracker.UserID, -1)
+			if err != nil {
+				return fmt.Errorf("unable to apply penalty on %q failed tracker %q goal: %w", repoTracker.UserID, repoTracker.ID, err)
+			}
+		}
 	}
 
 	// reset tracker cycle counters

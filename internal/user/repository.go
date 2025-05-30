@@ -8,6 +8,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const ()
+
 type Repository struct {
 	db *gorm.DB
 }

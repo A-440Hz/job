@@ -16,6 +16,7 @@ const (
 	goalQuantityField           = "goal_quantity"
 	curScorableItemsField       = "cur_scorable_items"
 	curBoxesAwardedField        = "cur_boxes_awarded"
+	missedGoalPenaltyField      = "missed_goal_penalty"
 	curGoalStreakField          = "cur_goal_streak"
 	maxGoalStreakField          = "max_goal_streak"
 	curCycleItemsCompleted      = "cur_cycle_items_completed"
@@ -49,14 +50,15 @@ const (
 // The separation is primarily to fulfill the composite pattern and hold specific types of Items.
 type UnderlyingTracker struct {
 	// I shouldn't need to embed a User. A foreign key is sufficient. The User attributes will displayed separately on the user page
-	ID               string              `gorm:"primaryKey"`
-	UserID           string              `gorm:"index"` // the index tag improves query performance for common lookup fields
-	CycleDeadline    time.Time           // when this time is reached, CurItemsCompleted will be reset and the deadline is pushed forward by CycleFrequency
-	CycleFrequency   scheduler.Frequency `gorm:"default:weekly"` // ideally this default should be overriden in the create hooks, per tracker type
-	GoalQuantity     int                 `gorm:"default:5"`      // the target number of items to complete within the deadline to reward a box
-	CurScorableItems int                 `gorm:"default:0"`      // the number of scorable items within this deadline that have not yet been converted
-	CurBoxesAwarded  int                 `gorm:"default:0"`      // the number of boxes awarded
-	TrackerType      TrackerType         // TrackerType helps link the UnderlyingTracker with its respective Update method
+	ID                string              `gorm:"primaryKey"`
+	UserID            string              `gorm:"index"` // the index tag improves query performance for common lookup fields
+	CycleDeadline     time.Time           // when this time is reached, CurItemsCompleted will be reset and the deadline is pushed forward by CycleFrequency
+	CycleFrequency    scheduler.Frequency `gorm:"default:weekly"` // ideally this default should be overriden in the create hooks, per tracker type
+	GoalQuantity      int                 `gorm:"default:5"`      // the target number of items to complete within the deadline to reward a box
+	CurScorableItems  int                 `gorm:"default:0"`      // the number of scorable items within this deadline that have not yet been converted
+	CurBoxesAwarded   int                 `gorm:"default:0"`      // the number of boxes awarded
+	TrackerType       TrackerType         // TrackerType helps link the UnderlyingTracker with its respective Update method
+	MissedGoalPenalty bool                `gorm:"default:false"` // if enabled, enacts a reward penalty on missed goal cycle
 
 	// stats
 	CurGoalStreak          int `gorm:"default:0"`
@@ -115,11 +117,12 @@ func (t *UnderlyingTracker) ToTrackerGoal() *scheduler.TrackerGoal {
 }
 
 type UnderlyingTrackerUpdateFields struct {
-	CycleDeadline    *time.Time `json:"cycleDeadline,omitempty"`
-	CycleFrequency   *string    `json:"cycleFrequency,omitempty"`
-	GoalQuantity     *int       `json:"goalQuantity,omitempty"`
-	CurScorableItems *int       `json:"curScorableItems,omitempty"`
-	CurBoxesAwarded  *int       `json:"curBoxesAwarded,omitempty"`
+	CycleDeadline     *time.Time `json:"cycleDeadline,omitempty"`
+	CycleFrequency    *string    `json:"cycleFrequency,omitempty"`
+	GoalQuantity      *int       `json:"goalQuantity,omitempty"`
+	CurScorableItems  *int       `json:"curScorableItems,omitempty"`
+	CurBoxesAwarded   *int       `json:"curBoxesAwarded,omitempty"`
+	MissedGoalPenalty *bool      `json:"missedGoalPenalty,omitempty"`
 
 	//stats
 	CurGoalStreak          *int       `json:"curGoalStreak,omitempty"`
@@ -157,6 +160,10 @@ func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []
 	if uf.CurBoxesAwarded != nil {
 		t.CurBoxesAwarded = *uf.CurBoxesAwarded
 		fields = append(fields, curBoxesAwardedField)
+	}
+	if uf.MissedGoalPenalty != nil {
+		t.MissedGoalPenalty = *uf.MissedGoalPenalty
+		fields = append(fields, missedGoalPenaltyField)
 	}
 	if uf.CurGoalStreak != nil {
 		t.CurGoalStreak = *uf.CurGoalStreak

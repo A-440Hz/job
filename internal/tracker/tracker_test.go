@@ -1,6 +1,7 @@
 package tracker
 
 import (
+	"job/internal/collection"
 	"job/internal/db"
 	"job/internal/scheduler"
 	"job/internal/user"
@@ -123,7 +124,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 	dBase.AutoMigrate(&JobAppTracker{})
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
-	svc := NewService(repo, scheduler.NewScheduler())
+	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
 	n := time.Now().Round(time.Hour)
 	tests := []struct {
@@ -263,7 +264,7 @@ func Test_CreateJobAppItem(t *testing.T) {
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
 	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
-	svc := NewService(repo, scheduler.NewScheduler())
+	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
 	defaultStatus := StatusComplete
 	n := time.Now().Round(time.Hour)
@@ -355,7 +356,7 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
 	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
-	svc := NewService(repo, scheduler.NewScheduler())
+	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
 	dummyUser := user.User{ID: "usr_99999999"}
 	tracker, err := svc.CreateNewJobAppTracker(&dummyUser)
@@ -431,7 +432,7 @@ func Test_Scheduler(t *testing.T) {
 	dBase.AutoMigrate(&JobAppTracker{})
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
-	svc := NewService(repo, scheduler.NewScheduler())
+	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
 	t0 := time.Now().Round(time.Second)
 	t1 := t0.Add(time.Second * 4)
@@ -443,8 +444,6 @@ func Test_Scheduler(t *testing.T) {
 	u2 := user.User{ID: "usr_22222222"}
 	u3 := user.User{ID: "usr_33333333"}
 
-	// start scheduler
-	// go svc.scheduler.Start()
 	svc.Start()
 
 	jt0, err := svc.CreateNewJobAppTracker(&u0)
@@ -522,7 +521,7 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
 	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
-	svc := NewService(repo, scheduler.NewScheduler())
+	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
 	dummyUser := user.User{ID: "usr_12345678"}
 	t1, err := svc.CreateNewJobAppTracker(&dummyUser)
