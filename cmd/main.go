@@ -8,6 +8,7 @@ package main
 */
 
 import (
+	"job/internal/collection"
 	"job/internal/db"
 	"job/internal/handler"
 	"job/internal/scheduler"
@@ -28,8 +29,9 @@ func main() {
 	}
 	db.AutoMigrate(&user.User{}, tracker.JobAppTracker{}, tracker.JobAppItem{})
 
-	userService := user.NewService(user.NewRepository(db))
-	trackerService := tracker.NewService(tracker.NewRepository(db), scheduler.NewScheduler())
+	collectionService := collection.NewService(collection.NewRepository(db))
+	userService := user.NewService(user.NewRepository(db), collectionService)
+	trackerService := tracker.NewService(tracker.NewRepository(db), scheduler.NewScheduler(), collectionService)
 	h := &handler.Handler{
 		UserService:    userService,
 		TrackerService: trackerService,

@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"fmt"
+	"job/internal/collection"
 	"job/internal/scheduler"
 
 	"gorm.io/gorm"
@@ -11,16 +12,21 @@ import (
 // TODO: figure out the business logic for updating password/changing email; should require verification
 
 type Service struct {
-	repo *Repository
+	repo       *Repository
+	collection *collection.Service
 }
 
-func NewService(r *Repository) *Service {
-	return &Service{repo: r}
+func NewService(r *Repository, c *collection.Service) *Service {
+	return &Service{repo: r, collection: c}
 }
 
 // CreateNewUser creates a new user with the given timezone and returns it. Nil input defaults to the default timezone.
 func (s *Service) CreateNewUser(t *scheduler.Timezone) (*User, error) {
 	u, err := s.repo.CreateUser(&User{Timezone: t})
+	if err != nil {
+		return nil, err
+	}
+	_, err = s.collection.CreateNewUserInventory(u.GetID())
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,7 @@ package tracker
 import (
 	"errors"
 	"fmt"
+	"job/internal/collection"
 	"job/internal/scheduler"
 	"job/internal/user"
 	"log"
@@ -13,12 +14,13 @@ import (
 )
 
 type Service struct {
-	repo      *Repository
-	scheduler *scheduler.Scheduler
+	repo       *Repository
+	scheduler  *scheduler.Scheduler
+	collection *collection.Service
 }
 
-func NewService(r *Repository, s *scheduler.Scheduler) *Service {
-	return &Service{repo: r, scheduler: s}
+func NewService(r *Repository, s *scheduler.Scheduler, c *collection.Service) *Service {
+	return &Service{repo: r, scheduler: s, collection: c}
 }
 
 // This method functions like a create hook for UnderlyingTracker.

@@ -83,7 +83,7 @@ type JobAppItemUpdateFields struct {
 	Body            *string     `json:"body,omitempty"`
 	Status          *ItemStatus `json:"status,omitempty"`
 	IsAttributed    *bool       `json:"isAttributed,omitempty"`
-	attributionTime *time.Time  //`json:"attributionTime,omitempty"`
+	attributionTime *time.Time  // no json tag here because this is set internally
 }
 
 // formatForRepo returns error when Status is not a ValidJobAppItemStatus

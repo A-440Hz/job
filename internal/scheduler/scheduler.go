@@ -183,6 +183,7 @@ func (s *Scheduler) Start() {
 			close(s.stopCh)
 			close(s.OutputCh)
 			log.Print("Scheduler stopped")
+			// TODO: this loop doesnt print
 			for _, tg := range s.g.heap {
 				log.Print("heap: ", tg.CycleDeadline, tg.CycleFrequency)
 			}

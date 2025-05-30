@@ -4,6 +4,7 @@ package user
 // user promotion/registration
 // user cookies
 import (
+	"job/internal/collection"
 	"job/internal/db"
 
 	"testing"
@@ -33,7 +34,7 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 	db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 
 	repo := NewRepository(db)
-	svc := NewService(repo)
+	svc := NewService(repo, collection.NewService(collection.NewRepository(db)))
 
 	tests := []struct {
 		name       string
@@ -134,7 +135,7 @@ func Test_RegisterBaseUser(t *testing.T) {
 	dbase.AutoMigrate(&User{})
 	dbase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 	repo := NewRepository(dbase)
-	svc := NewService(repo)
+	svc := NewService(repo, collection.NewService(collection.NewRepository(dbase)))
 
 	u1, err := svc.CreateNewUser(nil)
 	require.NoError(t, err)
@@ -175,7 +176,7 @@ func Test_UpdateUserFields(t *testing.T) {
 	dBase.AutoMigrate(&User{})
 	dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
-	svc := NewService(repo)
+	svc := NewService(repo, collection.NewService(collection.NewRepository(dBase)))
 
 	tests := []struct {
 		name       string
@@ -270,7 +271,7 @@ func Test_DeleteUser(t *testing.T) {
 	db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 
 	repo := NewRepository(db)
-	svc := NewService(repo)
+	svc := NewService(repo, collection.NewService(collection.NewRepository(db)))
 
 	u1, err := svc.CreateNewUser(nil)
 	require.NoError(t, err)
