@@ -445,6 +445,7 @@ func (s *Service) resetTrackerDeadline(poppedTg *scheduler.TrackerGoal) error {
 
 		// Take away a lootbox or a reward if user enabled this setting
 		if repoTracker.MissedGoalPenalty {
+			// TODO: can wrap a more complex penalty function here; maybe reduce boxes or take away collectable or take away coins
 			_, err := s.collection.AssignBoxes(repoTracker.UserID, -1)
 			if err != nil {
 				return fmt.Errorf("unable to apply penalty on %q failed tracker %q goal: %w", repoTracker.UserID, repoTracker.ID, err)
