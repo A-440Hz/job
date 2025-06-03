@@ -261,8 +261,7 @@ func Test_CreateJobAppItem(t *testing.T) {
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	dBase.AutoMigrate(&JobAppTracker{}, &JobAppItem{})
-	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
-	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
@@ -340,8 +339,7 @@ func Test_CreateJobAppItem(t *testing.T) {
 			assert.Equal(t, *tt.Status, t1.Items[0].Status)
 			assert.Equal(t, *tt.IsAttributed, t1.Items[0].IsAttributed)
 			assert.Equal(t, tt.AttributionTime, t1.Items[0].AttributionTime)
-			dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
-			dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
+			dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
 		})
 	}
 
@@ -353,8 +351,7 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	dBase.AutoMigrate(&JobAppTracker{}, &JobAppItem{})
-	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
-	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
@@ -421,8 +418,7 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 	assert.Equal(t, 0, tracker.CurScorableItems)
 	assert.Equal(t, 1, tracker.CurBoxesAwarded)
 
-	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
-	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
 }
 
 func Test_Scheduler(t *testing.T) {
@@ -444,8 +440,6 @@ func Test_Scheduler(t *testing.T) {
 	u2 := user.User{ID: "usr_22222222"}
 	u3 := user.User{ID: "usr_33333333"}
 
-	// start scheduler
-	// go svc.scheduler.Start()
 	svc.Start()
 
 	jt0, err := svc.CreateNewJobAppTracker(&u0)
@@ -520,8 +514,7 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	dBase.AutoMigrate(&JobAppTracker{})
-	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
-	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
@@ -632,6 +625,5 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 	assert.Equal(t, 0, t2.CurScorableItems)
 	assert.Equal(t, 2, t2.CurBoxesAwarded)
 
-	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
-	dBase.Exec("TRUNCATE TABLE job_app_items RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
 }

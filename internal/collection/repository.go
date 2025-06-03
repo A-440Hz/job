@@ -58,7 +58,7 @@ func (r *Repository) CreateUserCollectable(u *UserCollectable) (*UserCollectable
 	return u, nil
 }
 
-func (r *Repository) UpdateUserCollectable(u *UserCollectable, fields []string) (*UserCollectable, error) {
+func (r *Repository) UpdateUserCollectableFields(u *UserCollectable, fields []string) (*UserCollectable, error) {
 	res := r.db.Model(u).Select(fields).Updates(u)
 	if res.Error != nil {
 		return nil, res.Error
@@ -66,8 +66,8 @@ func (r *Repository) UpdateUserCollectable(u *UserCollectable, fields []string) 
 	return u, nil
 }
 
-func (r *Repository) LookupUserCollectable(id string) (*UserCollectable, error) {
-	u := &UserCollectable{UserID: id}
+func (r *Repository) LookupUserCollectable(userId string, collectableID int) (*UserCollectable, error) {
+	u := &UserCollectable{UserID: userId, CollectableID: collectableID}
 	res := r.db.First(u)
 	if res.Error != nil {
 		return nil, res.Error

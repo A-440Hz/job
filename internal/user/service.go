@@ -119,7 +119,7 @@ func (s *Service) UpdateUserFields(id string, fields *UserUpdateFields) (*User, 
 		return nil, err
 	}
 	// it is best practice to return the updated user object
-	return s.LookupUser(id)
+	return s.repo.LookupUser(id)
 }
 
 func (s *Service) LookupUser(id string) (*User, error) {
@@ -127,6 +127,14 @@ func (s *Service) LookupUser(id string) (*User, error) {
 }
 
 func (s *Service) DeleteUser(id string) error {
+	i, err := s.collection.LookupUserInventory(id)
+	if err != nil {
+		return err
+	}
+	err = s.collection.DeleteUserInventory(i)
+	if err != nil {
+		return err
+	}
 	return s.repo.DeleteUser(&User{ID: id})
 }
 

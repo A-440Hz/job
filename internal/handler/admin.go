@@ -5,6 +5,7 @@ import (
 	"net/http"
 )
 
+// TODO: gate or block this function in production
 func (h *Handler) SelectEverything(w http.ResponseWriter, r *http.Request) {
 	trackers, err := h.TrackerService.SelectAllJobAppTrackers()
 	if err != nil {
