@@ -127,8 +127,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	dBase.AutoMigrate(&JobAppTracker{}, &collection.Collectable{})
-	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+	db.CleanDB(*dBase, &JobAppTracker{})
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
@@ -266,8 +265,7 @@ func Test_CreateJobAppItem(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	dBase.AutoMigrate(&JobAppTracker{}, &JobAppItem{})
-	dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{})
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
@@ -356,8 +354,7 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	dBase.AutoMigrate(&JobAppTracker{}, &JobAppItem{})
-	dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{})
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
@@ -431,8 +428,7 @@ func Test_Scheduler(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	dBase.AutoMigrate(&JobAppTracker{})
-	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+	db.CleanDB(*dBase, &JobAppTracker{}, &JobAppItem{})
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
@@ -519,8 +515,7 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	dBase.AutoMigrate(&JobAppTracker{})
-	dBase.Exec("TRUNCATE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
+	db.CleanDB(*dBase, JobAppTracker{})
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 

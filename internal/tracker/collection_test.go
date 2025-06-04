@@ -20,8 +20,6 @@ func Test_AssignBoxes(t *testing.T) {
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	db.CleanDB(*dBase, &JobAppTracker{}, &JobAppItem{}, &collection.UserInventory{})
-	// dBase.AutoMigrate(&JobAppTracker{}, &JobAppItem{}, &collection.UserInventory{})
-	// dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items, user_inventories RESTART IDENTITY CASCADE")
 	cSvc := collection.NewService(collection.NewRepository(dBase))
 	tSvc := NewService(NewRepository(dBase), scheduler.NewScheduler(), cSvc)
 	uSvc := user.NewService(user.NewRepository(dBase), cSvc)
@@ -96,6 +94,31 @@ func Test_AssignBoxes(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, ui.NumLootboxes, 5)
 				return ui, nil
+			},
+		},
+		{
+			name:         "add-then-delete",
+			wantNumBoxes: 12,
+			ops: func(tSvc *Service, uSvc *user.Service, wantNumBoxes int) (*collection.UserInventory, error) {
+				user, err := uSvc.CreateNewUser(nil)
+				require.NoError(t, err)
+				_, err = tSvc.CreateNewJobAppTracker(user)
+				require.NoError(t, err)
+
+				// set item goal to 1 for easy count
+				repoTracker, err := tSvc.UpdateJobAppTrackerFields(user.GetID(), &JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields{GoalQuantity: intPtr(1)}})
+				require.NoError(t, err)
+
+				// create items
+				for range wantNumBoxes {
+					repoTracker, err = tSvc.CreateJobAppItem(user.GetID(), newItem)
+					require.NoError(t, err)
+				}
+				for _, i := range repoTracker.Items {
+					err = tSvc.DeleteJobAppItem(user.GetID(), i.GetID())
+					require.NoError(t, err)
+				}
+				return tSvc.collection.LookupUserInventory(user.GetID())
 			},
 		},
 	}

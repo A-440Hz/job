@@ -32,13 +32,11 @@ func boolPtr(b bool) *bool {
 
 func Test_validateRegisterBaseUser(t *testing.T) {
 	db.SetEnvForTesting()
-	db, err := db.InitGormTestDB()
+	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	db.AutoMigrate(&User{})
-	db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+	db.CleanDB(*dBase, User{})
 
-	repo := NewRepository(db)
-	svc := NewService(repo, collection.NewService(collection.NewRepository(db)))
+	svc := NewService(NewRepository(dBase), collection.NewService(collection.NewRepository(dBase)))
 
 	tests := []struct {
 		name       string
@@ -127,7 +125,7 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 				assert.NotEqual(t, u1.GetID(), u2.GetID())
 				assert.NotNil(t, u2)
 			}
-			db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+			dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 		})
 	}
 }
@@ -136,8 +134,7 @@ func Test_RegisterBaseUser(t *testing.T) {
 	db.SetEnvForTesting()
 	dbase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	dbase.AutoMigrate(&User{})
-	dbase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+	db.CleanDB(*dbase, User{})
 	repo := NewRepository(dbase)
 	svc := NewService(repo, collection.NewService(collection.NewRepository(dbase)))
 
@@ -170,15 +167,13 @@ func Test_RegisterBaseUser(t *testing.T) {
 	})
 	assert.ErrorContains(t, err, "user already registered")
 	dbase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
-
 }
 
 func Test_UpdateUserFields(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	dBase.AutoMigrate(&User{})
-	dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+	db.CleanDB(*dBase, User{})
 	repo := NewRepository(dBase)
 	svc := NewService(repo, collection.NewService(collection.NewRepository(dBase)))
 
@@ -269,13 +264,10 @@ func Test_UpdateUserFields(t *testing.T) {
 
 func Test_DeleteUser(t *testing.T) {
 	db.SetEnvForTesting()
-	db, err := db.InitGormTestDB()
+	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	db.AutoMigrate(&User{})
-	db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
-
-	repo := NewRepository(db)
-	svc := NewService(repo, collection.NewService(collection.NewRepository(db)))
+	db.CleanDB(*dBase, User{})
+	svc := NewService(NewRepository(dBase), collection.NewService(collection.NewRepository(dBase)))
 
 	u1, err := svc.CreateNewUser(nil)
 	require.NoError(t, err)
@@ -310,5 +302,5 @@ func Test_DeleteUser(t *testing.T) {
 	u, err = svc.UpdateUserFields(id3, &UserUpdateFields{Username: strPtr("test")})
 	assert.ErrorContains(t, err, "record not found")
 	assert.Nil(t, u)
-	db.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 }
