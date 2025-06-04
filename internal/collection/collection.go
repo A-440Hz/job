@@ -18,7 +18,7 @@ const (
 
 type CollectableValue string
 
-var values map[CollectableValue]int = map[CollectableValue]int{ValueCommon: 5, ValueRare: 15, ValueUltraRare: 50, ValueLegendary: 200}
+var values map[CollectableValue]int = map[CollectableValue]int{ValueCommon: 5, ValueRare: 15, ValueUltraRare: 35, ValueLegendary: 135}
 
 func (c CollectableValue) ToPoints() int {
 	return values[c]

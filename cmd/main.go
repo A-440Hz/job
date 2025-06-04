@@ -27,14 +27,15 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	db.AutoMigrate(&user.User{}, tracker.JobAppTracker{}, tracker.JobAppItem{})
+	db.AutoMigrate(&user.User{}, tracker.JobAppTracker{}, tracker.JobAppItem{}, collection.Collectable{})
 
 	collectionService := collection.NewService(collection.NewRepository(db))
 	userService := user.NewService(user.NewRepository(db), collectionService)
 	trackerService := tracker.NewService(tracker.NewRepository(db), scheduler.NewScheduler(), collectionService)
 	h := &handler.Handler{
-		UserService:    userService,
-		TrackerService: trackerService,
+		UserService:       userService,
+		TrackerService:    trackerService,
+		CollectionService: collectionService,
 	}
 	h.TrackerService.Start()
 

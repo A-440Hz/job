@@ -2,6 +2,8 @@ package db
 
 import (
 	"os"
+	"path"
+	"runtime"
 
 	"gorm.io/gorm"
 )
@@ -13,11 +15,20 @@ func SetEnvForTesting() {
 }
 
 func CleanDB(b gorm.DB, structs ...any) {
-
 	b.AutoMigrate(structs...)
 	// TRUNCATE - efficient delete
 	// RESTART IDENTITY - Automatically restart sequences owned by columns of the truncated table(s)
 	// CASCADE - Automatically truncate all tables that have foreign-key references to any of the named tables, or to any tables added to the group due to CASCADE
 	b.Exec("TRUNCATE TABLE users, job_app_trackers, job_app_items, user_inventories RESTART IDENTITY CASCADE")
+}
 
+// https://intellij-support.jetbrains.com/hc/en-us/community/posts/360009685279-Go-test-working-directory-keeps-changing-to-dir-of-the-test-file-instead-of-value-in-template
+// it's pretty cool that you get to do this in golang to get releative paths to work
+func ChdirGoTests() {
+	_, filename, _, _ := runtime.Caller(0)
+	dir := path.Join(path.Dir(filename), "../..")
+	err := os.Chdir(dir)
+	if err != nil {
+		panic(err)
+	}
 }

@@ -13,6 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	// https://intellij-support.jetbrains.com/hc/en-us/community/posts/360009685279-Go-test-working-directory-keeps-changing-to-dir-of-the-test-file-instead-of-value-in-template
+	// it's pretty cool that you get to do this in golang to get releative paths to work
+	db.ChdirGoTests()
+}
+
 func intPtr(i int) *int {
 	return &i
 }
@@ -121,7 +127,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	dBase.AutoMigrate(&JobAppTracker{})
+	dBase.AutoMigrate(&JobAppTracker{}, &collection.Collectable{})
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))

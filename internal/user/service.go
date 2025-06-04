@@ -22,7 +22,7 @@ func NewService(r *Repository, c *collection.Service) *Service {
 
 // CreateNewUser creates a new user with the given timezone and returns it. Nil input defaults to the default timezone.
 func (s *Service) CreateNewUser(t *scheduler.Timezone) (*User, error) {
-	u, err := s.repo.CreateUser(&User{Timezone: t})
+	u, err := s.repo.createUser(&User{Timezone: t})
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (s *Service) CreateNewUser(t *scheduler.Timezone) (*User, error) {
 
 // should this refactor to a updateUserFields function which is called in the handler layer?
 func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, error) {
-	u, err := s.repo.LookupUser(id)
+	u, err := s.repo.lookupUser(id)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func (s *Service) validateUpdateUserFields(u User) error {
 // UpdateUserFields updates the valid user fields specified in the fields map.
 // TODO: rethink business logic for changing email/username and enable changing password
 func (s *Service) UpdateUserFields(id string, fields *UserUpdateFields) (*User, error) {
-	_, err := s.repo.LookupUser(id)
+	_, err := s.repo.lookupUser(id)
 	if err != nil {
 		return nil, err
 	}
@@ -114,16 +114,16 @@ func (s *Service) UpdateUserFields(id string, fields *UserUpdateFields) (*User, 
 
 	// i could check for differences here but i don't think it's that important
 	updateUser.ID = id
-	_, err = s.repo.UpdateUserFields(updateUser, updateFields)
+	_, err = s.repo.updateUserFields(updateUser, updateFields)
 	if err != nil {
 		return nil, err
 	}
 	// it is best practice to return the updated user object
-	return s.repo.LookupUser(id)
+	return s.repo.lookupUser(id)
 }
 
 func (s *Service) LookupUser(id string) (*User, error) {
-	return s.repo.LookupUser(id)
+	return s.repo.lookupUser(id)
 }
 
 func (s *Service) DeleteUser(id string) error {
@@ -135,7 +135,7 @@ func (s *Service) DeleteUser(id string) error {
 	if err != nil {
 		return err
 	}
-	return s.repo.DeleteUser(&User{ID: id})
+	return s.repo.deleteUser(&User{ID: id})
 }
 
 func (s *Service) SelectAllUsers() ([]User, error) {

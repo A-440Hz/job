@@ -27,7 +27,7 @@ func (u *User) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-func (r *Repository) CreateUser(u *User) (*User, error) {
+func (r *Repository) createUser(u *User) (*User, error) {
 	res := r.db.Create(u)
 	if res.Error != nil {
 		return nil, res.Error
@@ -35,7 +35,7 @@ func (r *Repository) CreateUser(u *User) (*User, error) {
 	return u, nil
 }
 
-func (r *Repository) LookupUser(id string) (*User, error) {
+func (r *Repository) lookupUser(id string) (*User, error) {
 	u := &User{ID: id}
 	res := r.db.First(u)
 	if res.Error != nil {
@@ -45,7 +45,7 @@ func (r *Repository) LookupUser(id string) (*User, error) {
 	return u, nil
 }
 
-func (r *Repository) UpdateUserFields(u *User, fields []string) (*User, error) {
+func (r *Repository) updateUserFields(u *User, fields []string) (*User, error) {
 	// https://www.codingexplorations.com/blog/gorm-save-vs-update-explained
 	// db.Save updates all fields, which is okay for user registration, but not efficient for operations like changing username or password individually
 	res := r.db.Model(u).Select(fields).Updates(u)
@@ -57,7 +57,7 @@ func (r *Repository) UpdateUserFields(u *User, fields []string) (*User, error) {
 
 // as is this does a soft delete https://gorm.io/docs/delete.html#Soft-Delete
 // TODO: look into OnDelete:Cascade and AfterDelete https://stackoverflow.com/questions/76762629/how-to-cascade-a-delete-in-gorm
-func (r *Repository) DeleteUser(u *User) error {
+func (r *Repository) deleteUser(u *User) error {
 	// no lookups here because i dont need to log the user struct
 	res := r.db.Delete(u)
 	if res.RowsAffected == 0 {

@@ -20,8 +20,8 @@ func (t *JobAppTracker) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// CreateJobAppTracker relies on an UnderlyingTracker being set in the service layer
-func (r *Repository) CreateJobAppTracker(t *JobAppTracker) (*JobAppTracker, error) {
+// createJobAppTracker relies on an UnderlyingTracker being set in the service layer
+func (r *Repository) createJobAppTracker(t *JobAppTracker) (*JobAppTracker, error) {
 	res := r.db.Create(t)
 	if res.Error != nil {
 		return nil, res.Error
@@ -38,7 +38,7 @@ func (r *Repository) lookupJobAppTrackerFromTrackerID(id string) (*JobAppTracker
 	return t, nil
 }
 
-func (r *Repository) LookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker, error) {
+func (r *Repository) lookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker, error) {
 	t := &JobAppTracker{}
 	res := r.db.Where("user_id = ?", uuid).First(t)
 	if res.Error != nil {
@@ -47,7 +47,7 @@ func (r *Repository) LookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker,
 	return t, nil
 }
 
-func (r *Repository) GetJobAppTrackerWithItemsFromTrackerID(id string) (*JobAppTracker, error) {
+func (r *Repository) getJobAppTrackerWithItemsFromTrackerID(id string) (*JobAppTracker, error) {
 	t := &JobAppTracker{UnderlyingTracker: UnderlyingTracker{ID: id}}
 	res := r.db.Preload("Items").First(t)
 	if res.Error != nil {
@@ -56,7 +56,7 @@ func (r *Repository) GetJobAppTrackerWithItemsFromTrackerID(id string) (*JobAppT
 	return t, nil
 }
 
-func (r *Repository) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTracker, error) {
+func (r *Repository) getJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTracker, error) {
 	t := &JobAppTracker{}
 	res := r.db.Preload("Items").Where("user_id = ?", uuid).First(t)
 	if res.Error != nil {
@@ -71,14 +71,14 @@ func (r *Repository) updateUnderlyingTrackerFields(t *UnderlyingTracker, fields 
 	switch t.TrackerType {
 	case JobAppTrackerType:
 		t := &JobAppTracker{UnderlyingTracker: *t}
-		_, err = r.UpdateJobAppTrackerFields(t, fields)
+		_, err = r.updateJobAppTrackerFields(t, fields)
 	default:
 		err = errors.New("invalid tracker type")
 	}
 	return err
 }
 
-func (r *Repository) UpdateJobAppTrackerFields(t *JobAppTracker, fields []string) (*JobAppTracker, error) {
+func (r *Repository) updateJobAppTrackerFields(t *JobAppTracker, fields []string) (*JobAppTracker, error) {
 	res := r.db.Model(t).Select(fields).Updates(t)
 	if res.Error != nil {
 		return nil, res.Error
@@ -86,8 +86,8 @@ func (r *Repository) UpdateJobAppTrackerFields(t *JobAppTracker, fields []string
 	return t, nil
 }
 
-// DeleteJobAppTracker soft deletes tracker t https://gorm.io/docs/delete.html#Soft-Delete
-func (r *Repository) DeleteJobAppTracker(t *JobAppTracker) error {
+// deleteJobAppTracker soft deletes tracker t https://gorm.io/docs/delete.html#Soft-Delete
+func (r *Repository) deleteJobAppTracker(t *JobAppTracker) error {
 	res := r.db.Delete(t)
 	if res.RowsAffected == 0 {
 		return errors.New("tracker not found")
@@ -98,9 +98,9 @@ func (r *Repository) DeleteJobAppTracker(t *JobAppTracker) error {
 	return nil
 }
 
-// GetScorableJobAppItems returns scorable (StatusComplete && !IsAttributed) tracker items created within the goal timeframe which are
+// getScorableJobAppItems returns scorable (StatusComplete && !IsAttributed) tracker items created within the goal timeframe which are
 // returning list instead of pointers because of small expected return size and faster field access
-func (r *Repository) GetScorableJobAppItems(t *JobAppTracker) ([]JobAppItem, error) {
+func (r *Repository) getScorableJobAppItems(t *JobAppTracker) ([]JobAppItem, error) {
 	items := []JobAppItem{}
 	// is there a case for validation or do i assume tracker timeframes are always set correctly?
 	begin, end := t.GetValidTimeframe()
@@ -123,7 +123,7 @@ func (i *JobAppItem) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-func (r *Repository) CreateJobAppTrackerItem(i *JobAppItem) (*JobAppItem, error) {
+func (r *Repository) createJobAppTrackerItem(i *JobAppItem) (*JobAppItem, error) {
 	res := r.db.Create(i)
 	if res.Error != nil {
 		return nil, res.Error
@@ -131,7 +131,7 @@ func (r *Repository) CreateJobAppTrackerItem(i *JobAppItem) (*JobAppItem, error)
 	return i, nil
 }
 
-func (r *Repository) LookupJobAppItems(trackerID string) ([]*JobAppItem, error) {
+func (r *Repository) lookupJobAppItems(trackerID string) ([]*JobAppItem, error) {
 	var items []*JobAppItem
 	res := r.db.Where("tracker_id = ?", trackerID).
 		Order("created_at ASC"). // ordering options pattern? https://gorm.io/docs/query.html#Order
@@ -142,7 +142,7 @@ func (r *Repository) LookupJobAppItems(trackerID string) ([]*JobAppItem, error) 
 	return items, nil
 }
 
-func (r *Repository) LookupJobAppItem(trackerID, itemID string) (*JobAppItem, error) {
+func (r *Repository) lookupJobAppItem(trackerID, itemID string) (*JobAppItem, error) {
 	item := &JobAppItem{ID: itemID}
 	res := r.db.Where("tracker_id = ?", trackerID).First(&item)
 	if res.Error != nil {
@@ -151,7 +151,7 @@ func (r *Repository) LookupJobAppItem(trackerID, itemID string) (*JobAppItem, er
 	return item, nil
 }
 
-func (r *Repository) UpdateJobAppTrackerItemFields(i *JobAppItem, fields []string) (*JobAppItem, error) {
+func (r *Repository) updateJobAppTrackerItemFields(i *JobAppItem, fields []string) (*JobAppItem, error) {
 	res := r.db.Model(i).Select(fields).Updates(i)
 	if res.Error != nil {
 		return nil, res.Error
@@ -159,7 +159,7 @@ func (r *Repository) UpdateJobAppTrackerItemFields(i *JobAppItem, fields []strin
 	return i, nil
 }
 
-func (r *Repository) DeleteJobAppTrackerItem(i *JobAppItem) error {
+func (r *Repository) deleteJobAppTrackerItem(i *JobAppItem) error {
 	res := r.db.Delete(i)
 	if res.RowsAffected == 0 {
 		return errors.New("item not found")
@@ -186,6 +186,7 @@ func (r *Repository) getAllUnderlyingTrackers() ([]UnderlyingTracker, error) {
 	return allUnderlying, nil
 }
 
+// selectAllJobAppTrackers is an admin function used for debugging. TODO: hide or gate this
 func (r *Repository) selectAllJobAppTrackers() ([]JobAppTracker, error) {
 	trackers := []JobAppTracker{}
 	res := r.db.Preload("Items").Find(&trackers)

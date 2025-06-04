@@ -11,6 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	db.ChdirGoTests()
+}
+
 func Test_AssignBoxes(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()

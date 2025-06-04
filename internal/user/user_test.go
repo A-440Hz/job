@@ -13,6 +13,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func init() {
+	db.ChdirGoTests()
+}
+
 // these are a reprecusion of using pointer attibutes in gorm
 func int64Ptr(i int64) *int64 {
 	return &i

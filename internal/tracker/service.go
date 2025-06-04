@@ -36,7 +36,7 @@ func (t *JobAppTracker) createUnderlyingTracker(u *user.User) {
 func (s *Service) CreateNewJobAppTracker(u *user.User) (*JobAppTracker, error) {
 	t := &JobAppTracker{}
 	t.createUnderlyingTracker(u)
-	t, err := s.repo.CreateJobAppTracker(t)
+	t, err := s.repo.createJobAppTracker(t)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (s *Service) CreateNewJobAppTracker(u *user.User) (*JobAppTracker, error) {
 // LookupJobAppTrackerFromUserID (by uuid) is the default function used in the service layer to lookup trackers.
 // It relies on a db.Where call in gorm, which is efficient because user_id is specified as a gorm index.
 func (s *Service) LookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker, error) {
-	return s.repo.LookupJobAppTrackerFromUserID(uuid)
+	return s.repo.lookupJobAppTrackerFromUserID(uuid)
 }
 
 // LookupJobAppTrackerFromTrackerID is probably needed for the scheduler to trigger tracker
@@ -62,11 +62,11 @@ func (s *Service) LookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker, er
 // }
 
 func (s *Service) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTracker, error) {
-	return s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
+	return s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
 }
 
 func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUpdateFields) (*JobAppTracker, error) {
-	repoTracker, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
+	repoTracker, err := s.repo.lookupJobAppTrackerFromUserID(uuid)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +123,7 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 
 	// push user-settable field updates to repo
 	updateTracker.ID = repoTracker.GetID()
-	updateTracker, err = s.repo.UpdateJobAppTrackerFields(updateTracker, updateFields)
+	updateTracker, err = s.repo.updateJobAppTrackerFields(updateTracker, updateFields)
 	if err != nil {
 		return nil, err
 	}
@@ -147,17 +147,17 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 		return s.updateTrackerState(repoTracker.GetID())
 	}
 
-	return s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
+	return s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
 }
 
 func (s *Service) DeleteJobAppTracker(id string) error {
-	return s.repo.DeleteJobAppTracker(&JobAppTracker{UnderlyingTracker: UnderlyingTracker{ID: id}})
+	return s.repo.deleteJobAppTracker(&JobAppTracker{UnderlyingTracker: UnderlyingTracker{ID: id}})
 }
 
 // CreateJobAppItem creates a new job app item and increments the tracker's CurScorableItems field by 1
 func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
 	// validate tracker; return immediately on invalid id
-	t, err := s.repo.LookupJobAppTrackerFromUserID(userID)
+	t, err := s.repo.lookupJobAppTrackerFromUserID(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +189,7 @@ func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields
 	}
 
 	i.TrackerID = t.GetID()
-	i, err = s.repo.CreateJobAppTrackerItem(i)
+	i, err = s.repo.createJobAppTrackerItem(i)
 	if err != nil {
 		return nil, err
 	}
@@ -197,23 +197,23 @@ func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields
 	if i.IsScorable() {
 		return s.addOneScorableItem(t)
 	}
-	return s.repo.GetJobAppTrackerWithItemsFromUserID(userID)
+	return s.repo.getJobAppTrackerWithItemsFromUserID(userID)
 }
 
 // TODO: remove this method if not needed
 func (s *Service) LookupJobAppItems(trackerID string) ([]*JobAppItem, error) {
-	return s.repo.LookupJobAppItems(trackerID)
+	return s.repo.lookupJobAppItems(trackerID)
 }
 
 // UpdateJobAppItemFields handles user submitted update requests for job app items
 func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *JobAppItemUpdateFields) (*JobAppTracker, error) {
 	// validate tracker
-	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
+	t, err := s.repo.lookupJobAppTrackerFromUserID(uuid)
 	if err != nil {
 		return nil, err
 	}
 	// validate item
-	repoItem, err := s.repo.LookupJobAppItem(t.GetID(), itemID)
+	repoItem, err := s.repo.lookupJobAppItem(t.GetID(), itemID)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *Job
 		return nil, err
 	}
 	updateItem.ID = itemID
-	_, err = s.repo.UpdateJobAppTrackerItemFields(updateItem, updateFields)
+	_, err = s.repo.updateJobAppTrackerItemFields(updateItem, updateFields)
 	if err != nil {
 		return nil, err
 	}
@@ -238,16 +238,16 @@ func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *Job
 		// increment it if this update makes the item scorable
 		return s.addOneScorableItem(t)
 	}
-	return s.repo.GetJobAppTrackerWithItemsFromUserID(uuid)
+	return s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
 }
 
 func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
 	// validate item belongs to tracker
-	t, err := s.repo.LookupJobAppTrackerFromUserID(uuid)
+	t, err := s.repo.lookupJobAppTrackerFromUserID(uuid)
 	if err != nil {
 		return err
 	}
-	repoItem, err := s.repo.LookupJobAppItem(t.GetID(), itemID)
+	repoItem, err := s.repo.lookupJobAppItem(t.GetID(), itemID)
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
 			return err
 		}
 	}
-	return s.repo.DeleteJobAppTrackerItem(&JobAppItem{ID: itemID})
+	return s.repo.deleteJobAppTrackerItem(&JobAppItem{ID: itemID})
 }
 
 // Tracker scoring-related methods:
@@ -268,7 +268,7 @@ func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
 func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
 	// I went back and forth on this for a while but I decided to just go with a lot (+2) of lookup calls
 	// and have this function be easier to use (just require a valid id)
-	repoTracker, err := s.repo.GetJobAppTrackerWithItemsFromTrackerID(tid)
+	repoTracker, err := s.repo.getJobAppTrackerWithItemsFromTrackerID(tid)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +279,7 @@ func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
 	// check if tracker needs to be scored; exit early if not
 	n := time.Now()
 	numToAward := repoTracker.CurScorableItems / repoTracker.GoalQuantity
-	items, err := s.repo.GetScorableJobAppItems(repoTracker)
+	items, err := s.repo.getScorableJobAppItems(repoTracker)
 	if err != nil {
 		return nil, err
 	}
@@ -346,16 +346,16 @@ func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
 	repoTracker.CurScorableItems = max(0, repoTracker.CurScorableItems-repoTracker.GoalQuantity*numToAward)
 	repoTracker.CurBoxesAwarded = repoTracker.CurBoxesAwarded + numToAward
 	repoTracker.TotalBoxesAwarded = repoTracker.TotalBoxesAwarded + numToAward
-	_, err = s.repo.UpdateJobAppTrackerFields(repoTracker, updateFields)
+	_, err = s.repo.updateJobAppTrackerFields(repoTracker, updateFields)
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.GetJobAppTrackerWithItemsFromTrackerID(repoTracker.GetID())
+	return s.repo.getJobAppTrackerWithItemsFromTrackerID(repoTracker.GetID())
 }
 
 func (s *Service) updateJobAppItemFields(t *JobAppTracker, itemID string, fields *JobAppItemUpdateFields) error {
 	// validate item belongs to tracker
-	_, err := s.repo.LookupJobAppItem(t.GetID(), itemID)
+	_, err := s.repo.lookupJobAppItem(t.GetID(), itemID)
 	if err != nil {
 		return err
 	}
@@ -365,7 +365,7 @@ func (s *Service) updateJobAppItemFields(t *JobAppTracker, itemID string, fields
 		return err
 	}
 	updateItem.ID = itemID
-	_, err = s.repo.UpdateJobAppTrackerItemFields(updateItem, updateFields)
+	_, err = s.repo.updateJobAppTrackerItemFields(updateItem, updateFields)
 	if err != nil {
 		return err
 	}
@@ -384,7 +384,7 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 		t.FirstCompleted = &n
 		fields = append(fields, firstCompletedField)
 	}
-	_, err := s.repo.UpdateJobAppTrackerFields(t, fields)
+	_, err := s.repo.updateJobAppTrackerFields(t, fields)
 	if err != nil {
 		return nil, err
 	}
@@ -396,7 +396,7 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 // it returns the updated tracker with all its items
 func (s *Service) subOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 	t.CurScorableItems = max(0, t.CurScorableItems-1)
-	_, err := s.repo.UpdateJobAppTrackerFields(t, []string{curScorableItemsField})
+	_, err := s.repo.updateJobAppTrackerFields(t, []string{curScorableItemsField})
 	if err != nil {
 		return nil, err
 	}
@@ -504,7 +504,7 @@ func (s *Service) clearTrackerItems(tg *scheduler.TrackerGoal, newCycleStartTime
 		n := time.Now()
 		tr := true
 		badFields := map[string]string{}
-		items, err := s.repo.GetScorableJobAppItems(repoTracker)
+		items, err := s.repo.getScorableJobAppItems(repoTracker)
 		if err != nil {
 			return nil, 0, err
 		}

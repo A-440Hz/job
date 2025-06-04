@@ -1,10 +1,14 @@
 package collection
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
 
 	"gorm.io/gorm"
 )
+
+const seedFile = "data/collectables.json"
 
 type Repository struct {
 	db *gorm.DB
@@ -14,7 +18,24 @@ func NewRepository(d *gorm.DB) *Repository {
 	return &Repository{db: d}
 }
 
-func (r *Repository) CreateUserInventory(u *UserInventory) (*UserInventory, error) {
+// importCollectables deletes the collectables table and re-imports it from the json seedFile
+func (r *Repository) importCollectables() error {
+	r.db.Exec("TRUNCATE TABLE collectables RESTART IDENTITY CASCADE")
+	f, err := os.Open(seedFile)
+	defer f.Close()
+	if err != nil {
+		return err
+	}
+	var collectables []Collectable
+	err = json.NewDecoder(f).Decode(&collectables)
+	if err != nil {
+		return err
+	}
+	res := r.db.Create(&collectables)
+	return res.Error
+}
+
+func (r *Repository) createUserInventory(u *UserInventory) (*UserInventory, error) {
 	res := r.db.Create(u)
 	if res.Error != nil {
 		return nil, res.Error
@@ -22,7 +43,7 @@ func (r *Repository) CreateUserInventory(u *UserInventory) (*UserInventory, erro
 	return u, nil
 }
 
-func (r *Repository) LookupUserInventory(id string) (*UserInventory, error) {
+func (r *Repository) lookupUserInventory(id string) (*UserInventory, error) {
 	u := &UserInventory{UserID: id}
 	res := r.db.First(u)
 	if res.Error != nil {
@@ -31,7 +52,7 @@ func (r *Repository) LookupUserInventory(id string) (*UserInventory, error) {
 	return u, nil
 }
 
-func (r *Repository) UpdateUserInventoryFields(u *UserInventory, fields []string) (*UserInventory, error) {
+func (r *Repository) updateUserInventoryFields(u *UserInventory, fields []string) (*UserInventory, error) {
 	res := r.db.Model(u).Select(fields).Updates(u)
 	if res.Error != nil {
 		return nil, res.Error
@@ -39,7 +60,7 @@ func (r *Repository) UpdateUserInventoryFields(u *UserInventory, fields []string
 	return u, nil
 }
 
-func (r *Repository) DeleteUserInventory(u *UserInventory) error {
+func (r *Repository) deleteUserInventory(u *UserInventory) error {
 	res := r.db.Delete(u)
 	if res.RowsAffected == 0 {
 		return errors.New("user inventory not found")
@@ -50,7 +71,7 @@ func (r *Repository) DeleteUserInventory(u *UserInventory) error {
 	return nil
 }
 
-func (r *Repository) CreateUserCollectable(u *UserCollectable) (*UserCollectable, error) {
+func (r *Repository) createUserCollectable(u *UserCollectable) (*UserCollectable, error) {
 	res := r.db.Create(u)
 	if res.Error != nil {
 		return nil, res.Error
@@ -58,7 +79,7 @@ func (r *Repository) CreateUserCollectable(u *UserCollectable) (*UserCollectable
 	return u, nil
 }
 
-func (r *Repository) UpdateUserCollectableFields(u *UserCollectable, fields []string) (*UserCollectable, error) {
+func (r *Repository) updateUserCollectableFields(u *UserCollectable, fields []string) (*UserCollectable, error) {
 	res := r.db.Model(u).Select(fields).Updates(u)
 	if res.Error != nil {
 		return nil, res.Error
@@ -66,7 +87,7 @@ func (r *Repository) UpdateUserCollectableFields(u *UserCollectable, fields []st
 	return u, nil
 }
 
-func (r *Repository) LookupUserCollectable(userId string, collectableID int) (*UserCollectable, error) {
+func (r *Repository) lookupUserCollectable(userId string, collectableID int) (*UserCollectable, error) {
 	u := &UserCollectable{UserID: userId, CollectableID: collectableID}
 	res := r.db.First(u)
 	if res.Error != nil {
@@ -75,7 +96,7 @@ func (r *Repository) LookupUserCollectable(userId string, collectableID int) (*U
 	return u, nil
 }
 
-func (r *Repository) DeleteUserCollectable(u *UserCollectable) error {
+func (r *Repository) deleteUserCollectable(u *UserCollectable) error {
 	res := r.db.Delete(u)
 	if res.RowsAffected == 0 {
 		return errors.New("user collectable not found")
@@ -84,4 +105,13 @@ func (r *Repository) DeleteUserCollectable(u *UserCollectable) error {
 		return res.Error
 	}
 	return nil
+}
+
+func (r *Repository) selectAllCollectables() ([]Collectable, error) {
+	collectables := []Collectable{}
+	res := r.db.Find(&collectables)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return collectables, nil
 }
