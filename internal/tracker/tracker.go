@@ -18,7 +18,6 @@ const (
 	curBoxesAwardedField        = "cur_boxes_awarded"
 	missedGoalPenaltyField      = "missed_goal_penalty"
 	curDailyStreakField         = "cur_daily_streak"
-	isHotDailyStreakField       = "is_hot_daily_streak"
 	curGoalStreakField          = "cur_goal_streak"
 	maxGoalStreakField          = "max_goal_streak"
 	curCycleItemsCompleted      = "cur_cycle_items_completed"
@@ -27,6 +26,9 @@ const (
 	totalBoxesAwardedField      = "total_boxes_awarded"
 	firstCompletedField         = "first_completed"
 	lastCompletedField          = "last_completed"
+
+	// isLitDailyStreakField       = "is_lit_daily_streak"
+	// if this has no field then that makes it clear it doesnt belong in the repo, right?
 )
 
 // chatgpt says:
@@ -64,19 +66,21 @@ type UnderlyingTracker struct {
 	MissedGoalPenalty bool                `gorm:"default:false"` // if enabled, enacts a reward penalty on missed goal cycle
 
 	// stats
-	CurDailyStreak         int  `gorm:"default:0"`
-	IsHotDailyStreak       bool `gorm:"default:false"`
-	CurGoalStreak          int  `gorm:"default:0"`
-	MaxGoalStreak          int  `gorm:"default:0"`
-	CurCycleItemsCompleted int  `gorm:"default:0"`
-	TotalItemsCompleted    int  `gorm:"default:0"`
-	MaxCycleItemsCompleted int  `gorm:"default:0"`
-	TotalBoxesAwarded      int  `gorm:"default:0"`
+	CurDailyStreak         int `gorm:"default:0"`
+	CurGoalStreak          int `gorm:"default:0"`
+	MaxGoalStreak          int `gorm:"default:0"`
+	CurCycleItemsCompleted int `gorm:"default:0"`
+	TotalItemsCompleted    int `gorm:"default:0"`
+	MaxCycleItemsCompleted int `gorm:"default:0"`
+	TotalBoxesAwarded      int `gorm:"default:0"`
 	FirstCompleted         *time.Time
 	LastCompleted          *time.Time
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
 	DeletedAt              gorm.DeletedAt `gorm:"index"`
+
+	// not lived in repo.. it feels bad to read validate write it every lookup every day
+	IsLitDailyStreak bool `gorm:"default:false"`
 }
 
 // this is a composite which holds JobAppItems and associates them to the UnderlyingTracker
@@ -109,6 +113,19 @@ func (t *JobAppTracker) GetID() string {
 
 func (t *JobAppTracker) GetUserID() string {
 	return t.UserID
+}
+
+func (t *UnderlyingTracker) DailyStreakMet() bool {
+	if t.LastCompleted == nil {
+		return false
+	}
+	return t.LastCompleted.Equal(scheduler.GetCurrentServerDay())
+}
+
+// CheckIfLit populates the IsLitDailyStreak field for a streak effect
+// it goes everywhere a tracker is returned to the client
+func (t *UnderlyingTracker) CheckIfLit() {
+	t.IsLitDailyStreak = t.DailyStreakMet()
 }
 
 func (t *UnderlyingTracker) GetValidTimeframe() (time.Time, time.Time) {

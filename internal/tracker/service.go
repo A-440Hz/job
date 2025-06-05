@@ -53,7 +53,12 @@ func (s *Service) CreateNewJobAppTracker(u *user.User) (*JobAppTracker, error) {
 // LookupJobAppTrackerFromUserID (by uuid) is the default function used in the service layer to lookup trackers.
 // It relies on a db.Where call in gorm, which is efficient because user_id is specified as a gorm index.
 func (s *Service) LookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker, error) {
-	return s.repo.lookupJobAppTrackerFromUserID(uuid)
+	t, err := s.repo.lookupJobAppTrackerFromUserID(uuid)
+	if err != nil {
+		return nil, err
+	}
+	t.CheckIfLit()
+	return t, nil
 }
 
 // LookupJobAppTrackerFromTrackerID is probably needed for the scheduler to trigger tracker
@@ -62,7 +67,12 @@ func (s *Service) LookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker, er
 // }
 
 func (s *Service) GetJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTracker, error) {
-	return s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
+	t, err := s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
+	if err != nil {
+		return nil, err
+	}
+	t.CheckIfLit()
+	return t, nil
 }
 
 func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUpdateFields) (*JobAppTracker, error) {
@@ -117,7 +127,12 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 		return s.updateTrackerState(repoTracker.GetID())
 	}
 
-	return s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
+	t, err := s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
+	if err != nil {
+		return nil, err
+	}
+	t.CheckIfLit()
+	return t, nil
 }
 
 func (s *Service) DeleteJobAppTracker(id string) error {
@@ -358,7 +373,10 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 	if t.LastCompleted == nil || scheduler.OneDayApart(n, *t.LastCompleted) {
 		t.CurDailyStreak += 1
 		fields = append(fields, curDailyStreakField)
-	} else {
+		// TODO: I can add counters for rewards or give rewards every time here.
+		// I think some coins is a better philosophy than lootboxes
+		// that way it makes more sense when there's multiple trackers too.
+	} else if !t.DailyStreakMet() {
 		t.CurDailyStreak = 0
 		fields = append(fields, curDailyStreakField)
 	}
