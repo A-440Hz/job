@@ -45,6 +45,15 @@ func (r *Repository) lookupUser(id string) (*User, error) {
 	return u, nil
 }
 
+func (r *Repository) lookupUserByUsername(uname *string) (*User, error) {
+	u := &User{Username: uname}
+	res := r.db.First(u)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return u, nil
+}
+
 func (r *Repository) updateUserFields(u *User, fields []string) (*User, error) {
 	// https://www.codingexplorations.com/blog/gorm-save-vs-update-explained
 	// db.Save updates all fields, which is okay for user registration, but not efficient for operations like changing username or password individually

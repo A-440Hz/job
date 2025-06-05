@@ -60,6 +60,15 @@ func GetDefaultCycleDeadline(z *Timezone) time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day()+1, 1, 0, 0, 0, l)
 }
 
+func GetCurrentServerDay() time.Time {
+	return time.Now().Round(24 * time.Hour)
+}
+
+// OneDayApart is intended for use with truncated times from GetCurrentServerDay
+func OneDayApart(new, old time.Time) bool {
+	return new.Sub(old) < (time.Hour*25) && !new.Equal(old)
+}
+
 // Timezone is a Valuer/Scanner interface for gorm to store time.Location as a basic type
 // https://gorm.io/docs/data_types.html#Custom-Data-Types
 // offsetSeconds represents seconds east of UTC, used for time.FixedZone syntax. UTC-7 is -7 * 60 * 60 = -25200

@@ -4,7 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"job/internal/collection"
+	"job/internal/db"
 	"job/internal/scheduler"
+	"log"
+	"slices"
 
 	"gorm.io/gorm"
 )
@@ -63,6 +66,42 @@ func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, erro
 	uf.Registered = &t
 	// TODO: use a repo function and prevent the exported function from updating passwords
 	return s.UpdateUserFields(id, uf)
+}
+
+// LoginUser handles a user's login request
+func (s *Service) LoginUser(uf *UserUpdateFields) (*User, error) {
+	loginReq, fields, err := uf.formatForRepo()
+	if err != nil {
+		return nil, err
+	}
+	badFields := map[string]string{}
+	if !slices.Contains(fields, passwordField) {
+		badFields[passwordField] = "no password detected"
+	}
+	if !slices.Contains(fields, usernameField) {
+		badFields[usernameField] = "no username detected"
+	}
+	if len(badFields) > 0 {
+		err := errors.New("validation error:")
+		for id, v := range badFields {
+			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
+		}
+		return nil, err
+	}
+
+	repoUser, err := s.repo.lookupUserByUsername(loginReq.Username)
+	if err != nil {
+		// i could put better logs here to identify attacks
+		// TODO: i should remember to put a liability note somehow hAha
+		log.Print(err)
+		return nil, db.GenericLoginError
+	}
+
+	if !db.PasswordMatchesHash(*uf.Password, *repoUser.Password) {
+		return nil, db.GenericLoginError
+	}
+
+	return repoUser, nil
 }
 
 func (s *Service) validateUpdateUserFields(u User) error {

@@ -74,43 +74,13 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 	// regarding the updateDeadline field: because it's a time.Time value,
 	// I will assume the timezone is correctly accounted for from the front end
 	// and I can throw it straight into the scheduler
-	badFields := map[string]string{}
 	updateTracker, updateFields, err := fields.formatForRepo()
 	if err != nil {
-		badFields["format"] = err.Error()
-	}
-	if len(updateFields) == 0 {
-		badFields["fields"] = "no fields to update"
-	}
-
-	// TODO: probably move this out into a validate function
-	// stats invariants
-	if slices.Contains(updateFields, maxGoalStreakField) && updateTracker.MaxGoalStreak < repoTracker.MaxGoalStreak {
-		badFields[maxGoalStreakField] = fmt.Sprintf("cannot decrease %q", maxGoalStreakField)
-	}
-	if slices.Contains(updateFields, maxCycleItemsCompletedField) && updateTracker.MaxCycleItemsCompleted < repoTracker.MaxCycleItemsCompleted {
-		badFields[maxCycleItemsCompletedField] = fmt.Sprintf("cannot decrease %q", maxCycleItemsCompletedField)
-	}
-	if slices.Contains(updateFields, totalItemsCompletedField) && updateTracker.TotalItemsCompleted < repoTracker.TotalItemsCompleted {
-		badFields[totalItemsCompletedField] = fmt.Sprintf("cannot decrease %q", totalItemsCompletedField)
-	}
-	if slices.Contains(updateFields, totalBoxesAwardedField) && updateTracker.TotalBoxesAwarded < repoTracker.TotalBoxesAwarded {
-		badFields[totalBoxesAwardedField] = fmt.Sprintf("cannot decrease %q", totalBoxesAwardedField)
-	}
-	if slices.Contains(updateFields, firstCompletedField) && repoTracker.FirstCompleted != nil && updateTracker.FirstCompleted.After(*repoTracker.FirstCompleted) {
-		badFields[firstCompletedField] = fmt.Sprintf("cannot increment %q", firstCompletedField)
-	}
-	if len(badFields) > 0 {
-		err := errors.New("validation error:")
-		for id, v := range badFields {
-			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
-		}
 		return nil, err
 	}
 
 	// the front end should also avoid sending update reqs for identical deadlines and frequencies
 	if repoTracker.CycleDeadline == updateTracker.CycleDeadline {
-		//
 		updateFields = slices.DeleteFunc(updateFields, func(f string) bool {
 			return f == cycleDeadlineField
 		})
@@ -376,14 +346,25 @@ func (s *Service) updateJobAppItemFields(t *JobAppTracker, itemID string, fields
 // t needs a valid tracker ID and accurate CurScorableItems count (to be incremented by 1)
 // it returns the updated tracker with all its items
 func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
+	n := scheduler.GetCurrentServerDay()
 	t.CurScorableItems = t.CurScorableItems + 1
 	fields := []string{curScorableItemsField}
 	// populate FirstCompleted to track averages
 	if t.FirstCompleted == nil {
-		n := time.Now()
 		t.FirstCompleted = &n
 		fields = append(fields, firstCompletedField)
 	}
+	// populate LastCompleted and manage daily streak
+	if t.LastCompleted == nil || scheduler.OneDayApart(n, *t.LastCompleted) {
+		t.CurDailyStreak += 1
+		fields = append(fields, curDailyStreakField)
+	} else {
+		t.CurDailyStreak = 0
+		fields = append(fields, curDailyStreakField)
+	}
+	t.LastCompleted = &n
+	fields = append(fields, lastCompletedField)
+
 	_, err := s.repo.updateJobAppTrackerFields(t, fields)
 	if err != nil {
 		return nil, err

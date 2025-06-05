@@ -220,6 +220,7 @@ func Test_UpdateUserFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// a constant user to claim some fields
+			defer dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 			u1, err := svc.CreateNewUser(nil)
 			require.NoError(t, err)
 			u1, err = svc.RegisterBaseUser(u1.GetID(), &UserUpdateFields{
@@ -246,7 +247,6 @@ func Test_UpdateUserFields(t *testing.T) {
 					assert.Contains(t, err.Error(), msg)
 				}
 				assert.Empty(t, updateU2)
-				dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 				return
 			}
 			assert.NoError(t, err)
@@ -257,7 +257,6 @@ func Test_UpdateUserFields(t *testing.T) {
 			assert.Equal(t, updateU2.Username, tt.Username)
 			assert.Equal(t, updateU2.Email, tt.Email)
 			assert.Equal(t, updateU2.Timezone.GetOffset(), *tt.Timezone)
-			dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 		})
 	}
 }

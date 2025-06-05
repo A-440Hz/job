@@ -39,34 +39,22 @@ func itemStatusPtr(s string) *ItemStatus {
 func Test_formatForRepo(t *testing.T) {
 	n := time.Now()
 	tests := []struct {
-		name                   string
-		CycleDeadline          *time.Time
-		CycleFrequency         *string
-		GoalQuantity           *int
-		CurScorableItems       *int
-		CurBoxesAwarded        *int
-		CurGoalStreak          *int
-		MaxGoalStreak          *int
-		MaxCycleItemsCompleted *int
-		TotalItemsCompleted    *int
-		TotalBoxesAwarded      *int
-		FirstCompleted         *time.Time
-		wantErrMsg             []string
+		name             string
+		CycleDeadline    *time.Time
+		CycleFrequency   *string
+		GoalQuantity     *int
+		CurScorableItems *int
+		CurBoxesAwarded  *int
+		wantErrMsg       []string
 	}{
 		{
-			name:                   "valid-fields",
-			CycleDeadline:          &n,
-			GoalQuantity:           intPtr(1),
-			CycleFrequency:         strPtr(string(scheduler.DefaultFreq)),
-			CurScorableItems:       intPtr(2),
-			CurBoxesAwarded:        intPtr(3),
-			CurGoalStreak:          intPtr(4),
-			MaxGoalStreak:          intPtr(5),
-			MaxCycleItemsCompleted: intPtr(6),
-			TotalItemsCompleted:    intPtr(7),
-			TotalBoxesAwarded:      intPtr(8),
-			FirstCompleted:         &n,
-			wantErrMsg:             nil,
+			name:             "valid-fields",
+			CycleDeadline:    &n,
+			GoalQuantity:     intPtr(1),
+			CycleFrequency:   strPtr(string(scheduler.DefaultFreq)),
+			CurScorableItems: intPtr(2),
+			CurBoxesAwarded:  intPtr(3),
+			wantErrMsg:       nil,
 		},
 		{
 			name:           "invalid-frequency",
@@ -77,17 +65,11 @@ func Test_formatForRepo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			updateFields := &UnderlyingTrackerUpdateFields{
-				CycleDeadline:          tt.CycleDeadline,
-				CycleFrequency:         tt.CycleFrequency,
-				GoalQuantity:           tt.GoalQuantity,
-				CurScorableItems:       tt.CurScorableItems,
-				CurBoxesAwarded:        tt.CurBoxesAwarded,
-				CurGoalStreak:          tt.CurGoalStreak,
-				MaxGoalStreak:          tt.MaxGoalStreak,
-				MaxCycleItemsCompleted: tt.MaxCycleItemsCompleted,
-				TotalItemsCompleted:    tt.TotalItemsCompleted,
-				TotalBoxesAwarded:      tt.TotalBoxesAwarded,
-				FirstCompleted:         tt.FirstCompleted,
+				CycleDeadline:    tt.CycleDeadline,
+				CycleFrequency:   tt.CycleFrequency,
+				GoalQuantity:     tt.GoalQuantity,
+				CurScorableItems: tt.CurScorableItems,
+				CurBoxesAwarded:  tt.CurBoxesAwarded,
 			}
 
 			underlyingTracker, fields, err := updateFields.formatForRepo()
@@ -113,12 +95,6 @@ func Test_formatForRepo(t *testing.T) {
 			assert.Equal(t, *tt.GoalQuantity, underlyingTracker.GoalQuantity)
 			assert.Equal(t, *tt.CurScorableItems, underlyingTracker.CurScorableItems)
 			assert.Equal(t, *tt.CurBoxesAwarded, underlyingTracker.CurBoxesAwarded)
-			assert.Equal(t, *tt.CurGoalStreak, underlyingTracker.CurGoalStreak)
-			assert.Equal(t, *tt.MaxGoalStreak, underlyingTracker.MaxGoalStreak)
-			assert.Equal(t, *tt.MaxCycleItemsCompleted, underlyingTracker.MaxCycleItemsCompleted)
-			assert.Equal(t, *tt.TotalItemsCompleted, underlyingTracker.TotalItemsCompleted)
-			assert.Equal(t, *tt.TotalBoxesAwarded, underlyingTracker.TotalBoxesAwarded)
-			assert.Equal(t, tt.FirstCompleted, underlyingTracker.FirstCompleted)
 		})
 	}
 }
@@ -133,34 +109,22 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 
 	n := time.Now().Round(time.Hour)
 	tests := []struct {
-		name                   string
-		CycleDeadline          *time.Time
-		CycleFrequency         *string
-		GoalQuantity           *int
-		CurScorableItems       *int
-		CurBoxesAwarded        *int
-		CurGoalStreak          *int
-		MaxGoalStreak          *int
-		MaxCycleItemsCompleted *int
-		TotalItemsCompleted    *int
-		TotalBoxesAwarded      *int
-		FirstCompleted         *time.Time
-		wantErrMsg             []string
+		name             string
+		CycleDeadline    *time.Time
+		CycleFrequency   *string
+		GoalQuantity     *int
+		CurScorableItems *int
+		CurBoxesAwarded  *int
+		wantErrMsg       []string
 	}{
 		{
-			name:                   "valid-fields",
-			CycleDeadline:          &n,
-			GoalQuantity:           intPtr(1),
-			CycleFrequency:         strPtr(string(scheduler.DefaultFreq)),
-			CurScorableItems:       intPtr(0),
-			CurBoxesAwarded:        intPtr(3),
-			CurGoalStreak:          intPtr(4),
-			MaxGoalStreak:          intPtr(5),
-			MaxCycleItemsCompleted: intPtr(6),
-			TotalItemsCompleted:    intPtr(7),
-			TotalBoxesAwarded:      intPtr(8),
-			FirstCompleted:         &n,
-			wantErrMsg:             nil,
+			name:             "valid-fields",
+			CycleDeadline:    &n,
+			GoalQuantity:     intPtr(1),
+			CycleFrequency:   strPtr(string(scheduler.DefaultFreq)),
+			CurScorableItems: intPtr(0),
+			CurBoxesAwarded:  intPtr(3),
+			wantErrMsg:       nil,
 		},
 		{
 			name:       "no-fields",
@@ -178,17 +142,11 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			assert.NotNil(t, t1)
 
 			updateFields := &JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-				CycleDeadline:          tt.CycleDeadline,
-				CycleFrequency:         tt.CycleFrequency,
-				GoalQuantity:           tt.GoalQuantity,
-				CurScorableItems:       tt.CurScorableItems,
-				CurBoxesAwarded:        tt.CurBoxesAwarded,
-				CurGoalStreak:          tt.CurGoalStreak,
-				MaxGoalStreak:          tt.MaxGoalStreak,
-				MaxCycleItemsCompleted: tt.MaxCycleItemsCompleted,
-				TotalItemsCompleted:    tt.TotalItemsCompleted,
-				TotalBoxesAwarded:      tt.TotalBoxesAwarded,
-				FirstCompleted:         tt.FirstCompleted,
+				CycleDeadline:    tt.CycleDeadline,
+				CycleFrequency:   tt.CycleFrequency,
+				GoalQuantity:     tt.GoalQuantity,
+				CurScorableItems: tt.CurScorableItems,
+				CurBoxesAwarded:  tt.CurBoxesAwarded,
 			}}
 			updateTracker, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(), updateFields)
 			if len(tt.wantErrMsg) > 0 {
@@ -206,12 +164,6 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			assert.Equal(t, *tt.GoalQuantity, updateTracker.GoalQuantity)
 			assert.Equal(t, *tt.CurScorableItems, updateTracker.CurScorableItems)
 			assert.Equal(t, *tt.CurBoxesAwarded, updateTracker.CurBoxesAwarded)
-			assert.Equal(t, *tt.CurGoalStreak, updateTracker.CurGoalStreak)
-			assert.Equal(t, *tt.MaxGoalStreak, updateTracker.MaxGoalStreak)
-			assert.Equal(t, *tt.MaxCycleItemsCompleted, updateTracker.MaxCycleItemsCompleted)
-			assert.Equal(t, *tt.TotalItemsCompleted, updateTracker.TotalItemsCompleted)
-			assert.Equal(t, *tt.TotalBoxesAwarded, updateTracker.TotalBoxesAwarded)
-			assert.Equal(t, tt.FirstCompleted, updateTracker.FirstCompleted)
 
 			// test subsequent update -- happy path
 			newQuantity := *tt.GoalQuantity + 50
@@ -242,21 +194,6 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			assert.Equal(t, moreItems, updateTracker2_5.CurScorableItems)
 			assert.Equal(t, newQuantity, updateTracker2_5.GoalQuantity)
 
-			// expect validation errors
-			wantErr := []string{maxGoalStreakField, maxCycleItemsCompletedField, totalItemsCompletedField, totalBoxesAwardedField, firstCompletedField}
-			newFirstCompleted := tt.FirstCompleted.Add(100 * time.Hour)
-			updateTracker3, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(),
-				&JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-					MaxGoalStreak:          intPtr(*tt.MaxGoalStreak - 1),
-					MaxCycleItemsCompleted: intPtr(*tt.MaxCycleItemsCompleted - 1),
-					TotalItemsCompleted:    intPtr(*tt.TotalItemsCompleted - 1),
-					TotalBoxesAwarded:      intPtr(*tt.TotalBoxesAwarded - 1),
-					FirstCompleted:         &newFirstCompleted,
-				}})
-			assert.Nil(t, updateTracker3)
-			for _, e := range wantErr {
-				assert.ErrorContains(t, err, e)
-			}
 		})
 	}
 }

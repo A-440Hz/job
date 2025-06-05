@@ -17,6 +17,8 @@ const (
 	curScorableItemsField       = "cur_scorable_items"
 	curBoxesAwardedField        = "cur_boxes_awarded"
 	missedGoalPenaltyField      = "missed_goal_penalty"
+	curDailyStreakField         = "cur_daily_streak"
+	isHotDailyStreakField       = "is_hot_daily_streak"
 	curGoalStreakField          = "cur_goal_streak"
 	maxGoalStreakField          = "max_goal_streak"
 	curCycleItemsCompleted      = "cur_cycle_items_completed"
@@ -24,6 +26,7 @@ const (
 	maxCycleItemsCompletedField = "max_cycle_items_completed"
 	totalBoxesAwardedField      = "total_boxes_awarded"
 	firstCompletedField         = "first_completed"
+	lastCompletedField          = "last_completed"
 )
 
 // chatgpt says:
@@ -61,13 +64,16 @@ type UnderlyingTracker struct {
 	MissedGoalPenalty bool                `gorm:"default:false"` // if enabled, enacts a reward penalty on missed goal cycle
 
 	// stats
-	CurGoalStreak          int `gorm:"default:0"`
-	MaxGoalStreak          int `gorm:"default:0"`
-	CurCycleItemsCompleted int `gorm:"default:0"`
-	TotalItemsCompleted    int `gorm:"default:0"`
-	MaxCycleItemsCompleted int `gorm:"default:0"`
-	TotalBoxesAwarded      int `gorm:"default:0"`
+	CurDailyStreak         int  `gorm:"default:0"`
+	IsHotDailyStreak       bool `gorm:"default:false"`
+	CurGoalStreak          int  `gorm:"default:0"`
+	MaxGoalStreak          int  `gorm:"default:0"`
+	CurCycleItemsCompleted int  `gorm:"default:0"`
+	TotalItemsCompleted    int  `gorm:"default:0"`
+	MaxCycleItemsCompleted int  `gorm:"default:0"`
+	TotalBoxesAwarded      int  `gorm:"default:0"`
 	FirstCompleted         *time.Time
+	LastCompleted          *time.Time
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
 	DeletedAt              gorm.DeletedAt `gorm:"index"`
@@ -81,13 +87,17 @@ type JobAppTracker struct {
 }
 
 // TrackerStats is a json object for UnderlyingTracker to return
+// TODO: probably get rid of this.. actually how would i do AvgDailyCompleted then?
 type TrackerStats struct {
-	CurGoalStreak          int     `json:"curGoalStreak"`
-	MaxGoalStreak          int     `json:"maxGoalStreak"`
-	MaxCycleItemsCompleted int     `json:"maxCycleItemsCompleted"`
-	TotalItemsCompleted    int     `json:"totalItemsCompleted"`
-	TotalBoxesAwarded      int     `json:"totalBoxesAwarded"`
-	AvgDailyCompleted      float64 `json:"avgDailyCompleted"`
+	CurDailyStreak         int        `json:"curDailyStreak"`
+	CurGoalStreak          int        `json:"curGoalStreak"`
+	MaxGoalStreak          int        `json:"maxGoalStreak"`
+	MaxCycleItemsCompleted int        `json:"maxCycleItemsCompleted"`
+	TotalItemsCompleted    int        `json:"totalItemsCompleted"`
+	TotalBoxesAwarded      int        `json:"totalBoxesAwarded"`
+	AvgDailyCompleted      float64    `json:"avgDailyCompleted"`
+	FirstCompleted         *time.Time `json:"firstCompleted"`
+	LastCompleted          *time.Time `json:"lastCompleted"`
 	// What about AvgCycleCompleted? i think that's too difficult to accurately track given how every time the user
 	// updates CycleDeadline it counts as a new cycle
 }
@@ -120,18 +130,11 @@ type UnderlyingTrackerUpdateFields struct {
 	CycleDeadline     *time.Time `json:"cycleDeadline,omitempty"`
 	CycleFrequency    *string    `json:"cycleFrequency,omitempty"`
 	GoalQuantity      *int       `json:"goalQuantity,omitempty"`
-	CurScorableItems  *int       `json:"curScorableItems,omitempty"`
-	CurBoxesAwarded   *int       `json:"curBoxesAwarded,omitempty"`
 	MissedGoalPenalty *bool      `json:"missedGoalPenalty,omitempty"`
 
-	//stats
-	CurGoalStreak          *int       `json:"curGoalStreak,omitempty"`
-	MaxGoalStreak          *int       `json:"maxGoalStreak,omitempty"`
-	CurCycleItemsCompleted *int       `json:"curCycleItemsCompleted,omitempty"`
-	TotalItemsCompleted    *int       `json:"totalItemsCompleted,omitempty"`
-	MaxCycleItemsCompleted *int       `json:"maxCycleItemsCompleted,omitempty"`
-	TotalBoxesAwarded      *int       `json:"totalBoxesAwarded,omitempty"`
-	FirstCompleted         *time.Time `json:"firstCompleted,omitempty"`
+	// TODO: I think these can get refactored out too
+	CurScorableItems *int `json:"curScorableItems,omitempty"`
+	CurBoxesAwarded  *int `json:"curBoxesAwarded,omitempty"`
 }
 
 func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []string, error) {
@@ -164,34 +167,6 @@ func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []
 	if uf.MissedGoalPenalty != nil {
 		t.MissedGoalPenalty = *uf.MissedGoalPenalty
 		fields = append(fields, missedGoalPenaltyField)
-	}
-	if uf.CurGoalStreak != nil {
-		t.CurGoalStreak = *uf.CurGoalStreak
-		fields = append(fields, curGoalStreakField)
-	}
-	if uf.MaxGoalStreak != nil {
-		t.MaxGoalStreak = *uf.MaxGoalStreak
-		fields = append(fields, maxGoalStreakField)
-	}
-	if uf.CurCycleItemsCompleted != nil {
-		t.CurCycleItemsCompleted = *uf.CurCycleItemsCompleted
-		fields = append(fields, curCycleItemsCompleted)
-	}
-	if uf.TotalItemsCompleted != nil {
-		t.TotalItemsCompleted = *uf.TotalItemsCompleted
-		fields = append(fields, totalItemsCompletedField)
-	}
-	if uf.MaxCycleItemsCompleted != nil {
-		t.MaxCycleItemsCompleted = *uf.MaxCycleItemsCompleted
-		fields = append(fields, maxCycleItemsCompletedField)
-	}
-	if uf.TotalBoxesAwarded != nil {
-		t.TotalBoxesAwarded = *uf.TotalBoxesAwarded
-		fields = append(fields, totalBoxesAwardedField)
-	}
-	if uf.FirstCompleted != nil {
-		t.FirstCompleted = uf.FirstCompleted
-		fields = append(fields, firstCompletedField)
 	}
 	return t, fields, nil
 }

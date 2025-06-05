@@ -1,6 +1,12 @@
 package db
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"errors"
+
+	"golang.org/x/crypto/bcrypt"
+)
+
+var GenericLoginError = errors.New("username and password do not match")
 
 func HashPassword(password string) ([]byte, error) {
 	p, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

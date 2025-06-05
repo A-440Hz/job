@@ -75,9 +75,7 @@ func (uf *UserUpdateFields) formatForRepo() (*User, []string, error) {
 		fields = append(fields, registeredField)
 	}
 	if uf.Username != nil {
-		// trim username
-		uname := strings.TrimSpace(*uf.Username)
-		u.Username = &uname
+		u.Username = uf.Username
 		fields = append(fields, usernameField)
 	}
 	if uf.Email != nil {

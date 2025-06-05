@@ -6,16 +6,16 @@ import (
 	"net/http"
 )
 
-func getUserID(r *http.Request) (string, error) {
-	var req struct {
-		ID string `json:"id"`
-	}
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		return "", err
-	}
-	return req.ID, nil
-}
+// func getUserID(r *http.Request) (string, error) {
+// 	var req struct {
+// 		ID string `json:"id"`
+// 	}
+// 	err := json.NewDecoder(r.Body).Decode(&req)
+// 	if err != nil {
+// 		return "", err
+// 	}
+// 	return req.ID, nil
+// }
 
 func getUserUpdateFields(r *http.Request) (*user.UserUpdateFields, error) {
 	var fields user.UserUpdateFields
@@ -24,6 +24,25 @@ func getUserUpdateFields(r *http.Request) (*user.UserUpdateFields, error) {
 		return nil, err
 	}
 	return &fields, nil
+}
+
+func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
+	uuid, err := getUserIdFromCookie(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	user, err := h.UserService.LookupUser(uuid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	uInv, err := h.CollectionService.LookupUserInventory(uuid)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"user":           user,
+		"user_inventory": uInv,
+	})
 }
 
 func (h *Handler) RegisterBaseUser(w http.ResponseWriter, r *http.Request) {
@@ -47,6 +66,22 @@ func (h *Handler) RegisterBaseUser(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	// do i return this? idk what react needs yet
 	json.NewEncoder(w).Encode(u)
+}
+
+func (h *Handler) HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
+	uf, err := getUserUpdateFields(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	user, err := h.UserService.LoginUser(uf)
+	if err != nil {
+		// the service returns safe errors
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	setUserCookie(w, user.ID)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	// json.NewEncoder(w).Encode(user)
 }
 
 func (h *Handler) UpdateUserFields(w http.ResponseWriter, r *http.Request) {

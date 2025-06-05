@@ -59,6 +59,7 @@ func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request)
 		err = setUserCookie(w, user.GetID())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			// TODO: probably just send alert for user to manually delete the cookie?
 			clearUserCookie(w)
 			return
 		}
