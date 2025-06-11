@@ -36,6 +36,20 @@ func (s *Service) CreateNewUser(t *scheduler.Timezone) (*User, error) {
 	return u, nil
 }
 
+func (s *Service) CreateNewSession(userID string) (*Session, error) {
+	sn, err := s.repo.createSession(userID)
+	if err != nil {
+		return nil, err
+	}
+	return sn, nil
+}
+
+func (s *Service) UpdateSessionExpiry(sn *Session) (*Session, error) {
+	next := scheduler.GetCurrentServerDay().AddDate(0, 0, 30)
+	sn.ExpiresAt = next
+	return s.repo.updateSession(sn)
+}
+
 // should this refactor to a updateUserFields function which is called in the handler layer?
 func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, error) {
 	u, err := s.repo.lookupUser(id)
@@ -62,6 +76,8 @@ func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, erro
 		}
 		return nil, err
 	}
+
+	// sn, err := s.repo.createSession(id)
 	t := true
 	uf.Registered = &t
 	// TODO: use a repo function and prevent the exported function from updating passwords
@@ -174,6 +190,8 @@ func (s *Service) DeleteUser(id string) error {
 	if err != nil {
 		return err
 	}
+
+	// s.repo.deleteSession()
 	return s.repo.deleteUser(&User{ID: id})
 }
 

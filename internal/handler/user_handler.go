@@ -27,8 +27,10 @@ func getUserUpdateFields(r *http.Request) (*user.UserUpdateFields, error) {
 }
 
 func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
-	uuid, err := getUserIdFromCookie(r)
+	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
 	if err != nil {
+		// TODO: do I create a new user here? I hope not.
+		// perhaps lead back to main tracker page
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -47,7 +49,7 @@ func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) RegisterBaseUser(w http.ResponseWriter, r *http.Request) {
 	// parse request info
-	uuid, err := getUserIdFromCookie(r)
+	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -78,14 +80,15 @@ func (h *Handler) HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
 		// the service returns safe errors
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
-	setUserCookie(w, user.ID)
+
+	h.UserService.SetUserCookie(w, user.ID)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	// json.NewEncoder(w).Encode(user)
 }
 
 func (h *Handler) UpdateUserFields(w http.ResponseWriter, r *http.Request) {
-	uuid, err := getUserIdFromCookie(r)
+	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

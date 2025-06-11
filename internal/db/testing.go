@@ -19,7 +19,7 @@ func CleanDB(db gorm.DB, structs ...any) {
 	// TRUNCATE - efficient delete
 	// RESTART IDENTITY - Automatically restart sequences owned by columns of the truncated table(s)
 	// CASCADE - Automatically truncate all tables that have foreign-key references to any of the named tables, or to any tables added to the group due to CASCADE
-	db.Exec("TRUNCATE TABLE users, job_app_trackers, job_app_items, user_inventories RESTART IDENTITY CASCADE")
+	db.Exec("TRUNCATE TABLE users, job_app_trackers, job_app_items, user_inventories, sessions RESTART IDENTITY CASCADE")
 }
 
 // https://intellij-support.jetbrains.com/hc/en-us/community/posts/360009685279-Go-test-working-directory-keeps-changing-to-dir-of-the-test-file-instead-of-value-in-template

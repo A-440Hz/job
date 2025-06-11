@@ -4,6 +4,7 @@ import (
 	"errors"
 	"job/internal/db"
 	"job/internal/scheduler"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -72,10 +73,52 @@ func (r *Repository) deleteUser(u *User) error {
 	if res.RowsAffected == 0 {
 		return errors.New("user not found")
 	}
-	if res.Error != nil {
-		return res.Error
+	return res.Error
+}
+
+func (r *Repository) createSession(userID string) (*Session, error) {
+	sID, err := generateSessionID()
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	e := time.Now().AddDate(0, 0, 30)
+	s := &Session{
+		ID:        sID,
+		UserID:    userID,
+		ExpiresAt: e,
+	}
+	res := r.db.Create(s)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return s, nil
+}
+
+func (r *Repository) lookupSession(sID string) (*Session, error) {
+	s := &Session{ID: sID}
+	res := r.db.First(s)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return s, nil
+}
+
+// updateSession performs a gorm.Save operation so it should always be used on lookuped sessions that have all fields
+func (r *Repository) updateSession(sn *Session) (*Session, error) {
+	res := r.db.Save(sn)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return sn, nil
+}
+
+func (r *Repository) deleteSession(sID string) error {
+	if sID == "" {
+		return nil
+	}
+	s := &Session{ID: sID}
+	res := r.db.Delete(s)
+	return res.Error
 }
 
 func (r *Repository) selectAll() ([]User, error) {

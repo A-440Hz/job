@@ -48,7 +48,7 @@ func (h *Handler) ServeMainPage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request) {
 	// get user from cookie or create user
 	var user *user.User
-	uuid, err := getUserIdFromCookie(r)
+	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
 	if err != nil {
 		// check error type(?); create and store new user in cookie and db if not found
 		user, err = h.UserService.CreateNewUser(PollUserTimezone(r))
@@ -56,19 +56,19 @@ func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		err = setUserCookie(w, user.GetID())
+		s, err := h.UserService.CreateNewSession(user.GetID())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			// TODO: probably just send alert for user to manually delete the cookie?
-			clearUserCookie(w)
 			return
 		}
+		h.UserService.SetUserCookie(w, s.ID)
 	} else {
 		user, err = h.UserService.LookupUser(uuid)
 		if err != nil {
 			// should I clear the cookie if the user is not found? I don't see why not
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			clearUserCookie(w)
+			h.UserService.ClearUserCookie(w, "")
 			return
 		}
 	}
@@ -94,7 +94,7 @@ func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handler) UpdateJobAppTrackerFields(w http.ResponseWriter, r *http.Request) {
-	uuid, err := getUserIdFromCookie(r)
+	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -123,7 +123,7 @@ func (h *Handler) DeleteUserRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {
-	uuid, err := getUserIdFromCookie(r)
+	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -152,7 +152,7 @@ func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateJobAppItemFields(w http.ResponseWriter, r *http.Request) {
-	uuid, err := getUserIdFromCookie(r)
+	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -176,7 +176,7 @@ func (h *Handler) UpdateJobAppItemFields(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handler) DeleteJobAppItem(w http.ResponseWriter, r *http.Request) {
-	uuid, err := getUserIdFromCookie(r)
+	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
