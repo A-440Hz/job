@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -33,6 +34,11 @@ func (r *Repository) importCollectables() error {
 	}
 	res := r.db.Create(&collectables)
 	return res.Error
+}
+
+func (u *UserInventory) BeforeCreate(tx *gorm.DB) error {
+	u.LastCompleted = time.Time{} // set to zero value
+	return nil
 }
 
 func (r *Repository) createUserInventory(u *UserInventory) (*UserInventory, error) {

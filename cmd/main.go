@@ -28,6 +28,7 @@ func main() {
 		panic(err)
 	}
 	// use AutoMigrate instead of CleanDB to perserve models
+	// db.CleanDB(*dBase, user.User{}, user.Session{}, collection.UserInventory{}, tracker.JobAppTracker{}, tracker.JobAppItem{}, collection.Collectable{})
 	dBase.AutoMigrate(user.User{}, user.Session{}, collection.UserInventory{}, tracker.JobAppTracker{}, tracker.JobAppItem{}, collection.Collectable{})
 
 	collectionService := collection.NewService(collection.NewRepository(dBase))
@@ -39,7 +40,7 @@ func main() {
 		CollectionService: collectionService,
 	}
 	h.TrackerService.Start()
-	h.UserService.StartSessionCron()
+	h.UserService.StartCleanupCron()
 
 	http.HandleFunc("/careers", h.ServeMainPage)
 	http.HandleFunc("/careers/test", h.SelectEverything)

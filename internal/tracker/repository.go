@@ -98,6 +98,17 @@ func (r *Repository) deleteJobAppTracker(t *JobAppTracker) error {
 	return nil
 }
 
+func (r *Repository) deleteJobAppTrackerByUserID(t *JobAppTracker) error {
+	res := r.db.Where("user_id = ?", t.UserID).Delete(t)
+	if res.RowsAffected == 0 {
+		return errors.New("tracker not found")
+	}
+	if res.Error != nil {
+		return res.Error
+	}
+	return nil
+}
+
 // getScorableJobAppItems returns scorable (StatusComplete && !IsAttributed) tracker items created within the goal timeframe which are
 // returning list instead of pointers because of small expected return size and faster field access
 func (r *Repository) getScorableJobAppItems(t *JobAppTracker) ([]JobAppItem, error) {

@@ -1,6 +1,7 @@
 package user
 
 import (
+	"job/internal/collection"
 	"job/internal/db"
 	"job/internal/scheduler"
 	"strings"
@@ -34,6 +35,7 @@ type User struct {
 
 	// potentially add every tracker type as foreign keys
 	// JobAppTracker tracker.JobAppTracker `gorm:"foreignKey:UserID"`
+	Inventory *collection.UserInventory `gorm:"foreignKey:UserID;references:ID" json:"inventory,omitempty"`
 }
 
 func (u *User) GetID() string {

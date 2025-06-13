@@ -9,11 +9,11 @@ import (
 
 const (
 	sessionCookieName   = "sessionCookie"
-	sessionCookieExpiry = 3600 * 24 * 30 // 30 days
+	sessionCookieExpiry = 3600 * 24 * 365 // 1 year, but it refreshes every happy get request
 )
 
 // GetUserIDFromCookie attempts to return the User ID from Session ID, clearing the cookie upon failure.
-// it lookups the current day and updates session expiry every successful call.
+// it lookups the current day and updates session and cookie expiry every successful call.
 // it clears the cookie on lookup failure
 func (s *Service) GetUserIDFromCookie(r *http.Request, w http.ResponseWriter) (string, error) {
 	// https://www.alexedwards.net/blog/working-with-cookies-in-go
@@ -45,6 +45,8 @@ func (s *Service) getUserIDFromSession(sID string, w http.ResponseWriter) (strin
 	}
 	// update repo session expiry
 	s.UpdateSessionExpiry(sn)
+	// update cookie expiry
+	s.SetSessionCookie(w, sn.ID)
 	return sn.UserID, nil
 }
 
@@ -52,6 +54,8 @@ func (s *Service) SetSessionCookie(w http.ResponseWriter, sessionID string) {
 	cookie := http.Cookie{
 		Name:     sessionCookieName,
 		Value:    sessionID,
+		MaxAge:   sessionCookieExpiry,
+		Path:     "/",
 		Secure:   true,
 		HttpOnly: true, // prevents client-side JS from accessing the cookie
 		SameSite: http.SameSiteStrictMode,
@@ -65,6 +69,7 @@ func (s *Service) ClearSessionCookie(w http.ResponseWriter) {
 		Name:     sessionCookieName,
 		Value:    "",
 		MaxAge:   -1,
+		Path:     "/",
 		Secure:   true,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,

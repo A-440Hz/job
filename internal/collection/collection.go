@@ -33,6 +33,7 @@ const (
 	earnedAtField        = "earned_at"
 	numLootboxesField    = "num_lootboxes"
 	employmentCoinsField = "employment_coins"
+	lastCompletedField   = "last_completed"
 )
 
 type Collectable struct {
@@ -62,11 +63,14 @@ type UserInventory struct {
 	UserID          string `gorm:"primaryKey"`
 	NumLootboxes    int    `gorm:"default:0"`
 	EmploymentCoins int    `gorm:"default:0"`
+	LastCompleted   time.Time
 }
 
+// TODO: I dont think i need this struct
 type UserInventoryUpdateFields struct {
-	NumLootboxes    *int `json:"numLootboxes,omitempty"`
-	EmploymentCoins *int `json:"employmentCoins,omitempty"`
+	NumLootboxes    *int //`json:"numLootboxes,omitempty"`
+	EmploymentCoins *int //`json:"employmentCoins,omitempty"`
+	LastCompleted   *time.Time
 }
 
 func (uf *UserInventoryUpdateFields) formatForRepo() (*UserInventory, []string, error) {
@@ -78,12 +82,18 @@ func (uf *UserInventoryUpdateFields) formatForRepo() (*UserInventory, []string, 
 			badFields[numLootboxesField] = fmt.Sprintf("cannot be less than 0: %v", *uf.NumLootboxes)
 		}
 		i.NumLootboxes = *uf.NumLootboxes
+		fields = append(fields, numLootboxesField)
 	}
 	if uf.EmploymentCoins != nil {
 		if *uf.EmploymentCoins < 0 {
 			badFields[employmentCoinsField] = fmt.Sprintf("cannot be less than 0: %v", *uf.EmploymentCoins)
 		}
 		i.EmploymentCoins = *uf.EmploymentCoins
+		fields = append(fields, employmentCoinsField)
+	}
+	if uf.LastCompleted != nil {
+		i.LastCompleted = *uf.LastCompleted
+		fields = append(fields, lastCompletedField)
 	}
 	if len(badFields) > 0 {
 		err := errors.New("validation error:")

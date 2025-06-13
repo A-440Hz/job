@@ -28,23 +28,25 @@ func getUserUpdateFields(r *http.Request) (*user.UserUpdateFields, error) {
 
 func (h *Handler) GetUserAndUserInventory(w http.ResponseWriter, r *http.Request) {
 	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
-	if err != nil {
-		// TODO: do I create a new user here? I hope not.
-		// perhaps lead back to main tracker page
-		// TODO: add error message about "session token not found: try enabling cookies" etc
+	if err == http.ErrNoCookie {
+		http.Error(w, "no session cookie found -- try enabling cookies, logging in, or returning to the main page", http.StatusBadRequest)
+		// TODO: remember to lead back to main tracker page
+		// return
+	} else if err != nil {
+		// TODO: remember to lead back to main tracker page
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	user, err := h.UserService.LookupUser(uuid)
+	user, err := h.UserService.GetUserAndUserInventory(uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	uInv, err := h.CollectionService.LookupUserInventory(uuid)
+	// uInv, err := h.CollectionService.LookupUserInventory(uuid)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"user":           user,
-		"user_inventory": uInv,
+		"user": user,
+		// "user_inventory": uInv,
 	})
 }
 
@@ -141,6 +143,27 @@ func (h *Handler) UpdateUserFields(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(u)
+}
+
+// TODO: do cascade gorm delete or series of delete calls here
+func (h *Handler) DeleteUserRequest(w http.ResponseWriter, r *http.Request) {
+	// after delete hook
+	// https://stackoverflow.com/questions/76762629/how-to-cascade-a-delete-in-gorm
+
+	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// TODO: delete all kinds of trackers, fancily or by hand
+	h.TrackerService.DeleteJobAppTrackerByUserID(uuid)
+	// deletes User and UserInventory from repo
+	h.UserService.DeleteUser(uuid)
+	// clears session cookie
+	h.UserService.ClearSessionCookie(w)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {

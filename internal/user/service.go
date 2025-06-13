@@ -36,7 +36,7 @@ func (s *Service) CreateNewUser(t *scheduler.Timezone) (*User, error) {
 	if err != nil {
 		return nil, err
 	}
-	return u, nil
+	return s.repo.getUserAndUserInventory(u.GetID())
 }
 
 func (s *Service) CreateNewSession(userID string) (*Session, error) {
@@ -122,7 +122,7 @@ func (s *Service) LoginUser(uf *UserUpdateFields) (*User, error) {
 		}
 		return nil, err
 	}
-	repoUser, err := s.repo.lookupUserByUsername(loginReq.Username)
+	repoUser, err := s.repo.lookupUserByUsername(*loginReq.Username)
 	if err != nil {
 		// i could put better logs here to identify attacks
 		// TODO: i should remember to put a liability note somehow hAha
@@ -193,46 +193,85 @@ func (s *Service) UpdateUserFields(id string, fields *UserUpdateFields) (*User, 
 	return s.repo.lookupUser(id)
 }
 
+func (s *Service) GetUserAndUserInventory(id string) (*User, error) {
+	return s.repo.getUserAndUserInventory(id)
+}
+
 func (s *Service) LookupUser(id string) (*User, error) {
 	return s.repo.lookupUser(id)
 }
 
 func (s *Service) DeleteUser(id string) error {
+	badFields := map[string]string{}
 	i, err := s.collection.LookupUserInventory(id)
 	if err != nil {
-		return err
-	}
-	err = s.collection.DeleteUserInventory(i)
-	if err != nil {
-		return err
+		badFields["user inventory"] = err.Error()
+	} else if err = s.collection.DeleteUserInventory(i); err != nil {
+		badFields["user inventory"] = err.Error()
 	}
 
-	// s.repo.deleteSession()
-	return s.repo.deleteUser(&User{ID: id})
+	// TODO: delete user collectables here
+
+	err = s.repo.deleteUserSessions(id)
+	if err != nil {
+		badFields["session"] = err.Error()
+	}
+	err = s.repo.deleteUser(&User{ID: id})
+	if err != nil {
+		badFields["user"] = err.Error()
+	}
+
+	if len(badFields) > 0 {
+		err := errors.New("delete error:")
+		for id, v := range badFields {
+			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
+		}
+		return err
+	}
+	return nil
 }
 
-// StartSessionCron starts as a goroutine
-func (s *Service) StartSessionCron() {
+// StartCleanupCron starts as a goroutine
+func (s *Service) StartCleanupCron() {
 	var start = func() {
 		timer := time.NewTimer(0)
 		for {
 			select {
 			case <-timer.C:
 				timer.Reset(sessionCronFrequency)
-				sessions, err := s.repo.getExpiredSessions()
-				if err != nil {
-					log.Print(err)
-					continue
-				}
-				for _, sn := range sessions {
-					if err := s.repo.deleteSession(sn.ID); err != nil {
-						log.Print(err)
-					}
-				}
+				s.cleanupExpiredSessions()
+				s.cleanupExpiredDemoUsers()
 			}
 		}
 	}
 	go start()
+}
+
+func (s *Service) cleanupExpiredSessions() {
+	sessions, err := s.repo.getExpiredSessions()
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	for _, sn := range sessions {
+		if err := s.repo.deleteSession(sn.ID); err != nil {
+			log.Print(err)
+		}
+	}
+}
+
+func (s *Service) cleanupExpiredDemoUsers() {
+	users, err := s.repo.getExpiredDemoUsers()
+	log.Printf("demo user count: %v", len(users))
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	for _, ex := range users {
+		if err := s.DeleteUser(ex.GetID()); err != nil {
+			log.Print(err)
+		}
+	}
 }
 
 func (s *Service) SelectAllUsers() ([]User, error) {

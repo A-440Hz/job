@@ -40,6 +40,7 @@ func (s *Service) UpdateUserInventoryFields(userID string, fields *UserInventory
 	if err != nil {
 		return nil, err
 	}
+	updateInventory.UserID = userID
 	_, err = s.repo.updateUserInventoryFields(updateInventory, updateFields)
 	if err != nil {
 		return nil, err

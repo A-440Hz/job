@@ -64,7 +64,7 @@ func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request)
 		}
 		h.UserService.SetSessionCookie(w, s.ID)
 	} else {
-		user, err = h.UserService.LookupUser(uuid)
+		user, err = h.UserService.GetUserAndUserInventory(uuid)
 		if err != nil {
 			// should I clear the cookie if the user is not found? I don't see why not
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -114,27 +114,6 @@ func (h *Handler) UpdateJobAppTrackerFields(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(t)
-}
-
-// TODO: do cascade gorm delete or series of delete calls here
-func (h *Handler) DeleteUserRequest(w http.ResponseWriter, r *http.Request) {
-	// after delete hook
-	// https://stackoverflow.com/questions/76762629/how-to-cascade-a-delete-in-gorm
-
-	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	// TODO: delete all kinds of trackers, fancily or by hand
-	h.TrackerService.DeleteJobAppTrackerByUserID(uuid)
-	// deletes User and UserInventory from repo
-	h.UserService.DeleteUser(uuid)
-	// clears session cookie
-	h.UserService.ClearSessionCookie(w)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {

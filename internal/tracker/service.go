@@ -136,7 +136,7 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 }
 
 func (s *Service) DeleteJobAppTrackerByUserID(userID string) error {
-	return s.repo.deleteJobAppTracker(&JobAppTracker{UnderlyingTracker: UnderlyingTracker{UserID: userID}})
+	return s.repo.deleteJobAppTrackerByUserID(&JobAppTracker{UnderlyingTracker: UnderlyingTracker{UserID: userID}})
 }
 
 func (s *Service) DeleteJobAppTracker(id string) error {
@@ -386,12 +386,26 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 	}
 	t.LastCompleted = &n
 	fields = append(fields, lastCompletedField)
-
-	_, err := s.repo.updateJobAppTrackerFields(t, fields)
+	badFields := map[string]string{}
+	_, err := s.collection.UpdateUserInventoryFields(t.GetUserID(), &collection.UserInventoryUpdateFields{LastCompleted: &n})
 	if err != nil {
-		return nil, err
+		badFields["user inventory"] = err.Error()
 	}
-	return s.updateTrackerState(t.GetID())
+	_, err = s.repo.updateJobAppTrackerFields(t, fields)
+	if err != nil {
+		badFields["tracker"] = err.Error()
+	}
+	repoTracker, err := s.updateTrackerState(t.GetID())
+	if err != nil {
+		badFields["tracker state"] = err.Error()
+	}
+	if len(badFields) > 0 {
+		err = errors.New("internal error:")
+		for id, v := range badFields {
+			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
+		}
+	}
+	return repoTracker, err
 }
 
 // subOneScorableItem decrements the CurScorableItems count for the tracker
@@ -539,7 +553,7 @@ func (s *Service) clearTrackerItems(tg *scheduler.TrackerGoal, newCycleStartTime
 }
 
 // MigrateTrackersIntoScheduler converts repo trackers into tracker goals and loads them into the scheduler.
-// The purpose of this function is to allow tracker resets to keep working after taking down the server and spinning it back up, without user input
+// The purpose of this function is to allow tracker cycles to keep working after taking down the server and spinning it back up, without user input
 func (s *Service) MigrateTrackersIntoScheduler() {
 	// before deploying to production I should to decide on the scope of trackers I will pull
 	// or look into having a cron job to delete expired users/trackers
