@@ -8,11 +8,14 @@ import (
 	"job/internal/scheduler"
 	"log"
 	"slices"
+	"time"
 
 	"gorm.io/gorm"
 )
 
 // TODO: figure out the business logic for updating password/changing email; should require verification
+
+var sessionCronFrequency = time.Hour * 24 * 7 // 7 days
 
 type Service struct {
 	repo       *Repository
@@ -44,20 +47,24 @@ func (s *Service) CreateNewSession(userID string) (*Session, error) {
 	return sn, nil
 }
 
+// UpdateSessionExpiry adds 30 days to the session expiry
 func (s *Service) UpdateSessionExpiry(sn *Session) (*Session, error) {
-	next := scheduler.GetCurrentServerDay().AddDate(0, 0, 30)
-	sn.ExpiresAt = next
+	sn.ExpiresAt = scheduler.GetCurrentServerDay().AddDate(0, 0, 30)
 	return s.repo.updateSession(sn)
+}
+
+func (s *Service) DeleteSession(sID string) error {
+	return s.repo.deleteSession(sID)
 }
 
 // should this refactor to a updateUserFields function which is called in the handler layer?
 func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, error) {
-	u, err := s.repo.lookupUser(id)
+	repoUser, err := s.repo.lookupUser(id)
 	if err != nil {
 		return nil, err
 	}
 	badFields := map[string]string{}
-	if u.IsRegistered() {
+	if repoUser.IsRegistered() {
 		badFields[registeredField] = "user already registered"
 	}
 	if uf.Username == nil {
@@ -76,15 +83,26 @@ func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, erro
 		}
 		return nil, err
 	}
+	uf.sanitizeFields()
+	hashedPass, err := db.HashPassword(*uf.Password)
+	if err != nil {
+		return nil, err
+	}
 
 	// sn, err := s.repo.createSession(id)
-	t := true
-	uf.Registered = &t
+	repoUser.Registered = true
+	repoUser.Username = uf.Username
+	repoUser.Email = uf.Email
+	repoUser.Password = &hashedPass
 	// TODO: use a repo function and prevent the exported function from updating passwords
-	return s.UpdateUserFields(id, uf)
+	_, err = s.repo.updateUserFields(repoUser, []string{registeredField, usernameField, passwordField, emailField})
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.lookupUser(id)
 }
 
-// LoginUser handles a user's login request
+// LoginUser handles a user's login request and returns the repo User
 func (s *Service) LoginUser(uf *UserUpdateFields) (*User, error) {
 	loginReq, fields, err := uf.formatForRepo()
 	if err != nil {
@@ -104,7 +122,6 @@ func (s *Service) LoginUser(uf *UserUpdateFields) (*User, error) {
 		}
 		return nil, err
 	}
-
 	repoUser, err := s.repo.lookupUserByUsername(loginReq.Username)
 	if err != nil {
 		// i could put better logs here to identify attacks
@@ -112,15 +129,14 @@ func (s *Service) LoginUser(uf *UserUpdateFields) (*User, error) {
 		log.Print(err)
 		return nil, db.GenericLoginError
 	}
-
+	log.Print(repoUser)
 	if !db.PasswordMatchesHash(*uf.Password, *repoUser.Password) {
 		return nil, db.GenericLoginError
 	}
-
 	return repoUser, nil
 }
 
-func (s *Service) validateUpdateUserFields(u User) error {
+func (s *Service) validateUniqueUsernameEmail(u User) error {
 	badFields := map[string]string{}
 	if u.Username != nil {
 		res := s.repo.db.Where("username = ?", *u.Username).First(&User{})
@@ -163,7 +179,7 @@ func (s *Service) UpdateUserFields(id string, fields *UserUpdateFields) (*User, 
 	if len(updateFields) == 0 {
 		return nil, errors.New("no fields to update")
 	}
-	if err := s.validateUpdateUserFields(*updateUser); err != nil {
+	if err := s.validateUniqueUsernameEmail(*updateUser); err != nil {
 		return nil, err
 	}
 
@@ -195,6 +211,34 @@ func (s *Service) DeleteUser(id string) error {
 	return s.repo.deleteUser(&User{ID: id})
 }
 
+// StartSessionCron starts as a goroutine
+func (s *Service) StartSessionCron() {
+	var start = func() {
+		timer := time.NewTimer(0)
+		for {
+			select {
+			case <-timer.C:
+				timer.Reset(sessionCronFrequency)
+				sessions, err := s.repo.getExpiredSessions()
+				if err != nil {
+					log.Print(err)
+					continue
+				}
+				for _, sn := range sessions {
+					if err := s.repo.deleteSession(sn.ID); err != nil {
+						log.Print(err)
+					}
+				}
+			}
+		}
+	}
+	go start()
+}
+
 func (s *Service) SelectAllUsers() ([]User, error) {
-	return s.repo.selectAll()
+	return s.repo.selectAllUsers()
+}
+
+func (s *Service) SelectAllSessions() ([]Session, error) {
+	return s.repo.selectAllSessions()
 }

@@ -48,7 +48,7 @@ func (h *Handler) ServeMainPage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request) {
 	// get user from cookie or create user
 	var user *user.User
-	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
+	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
 	if err != nil {
 		// check error type(?); create and store new user in cookie and db if not found
 		user, err = h.UserService.CreateNewUser(PollUserTimezone(r))
@@ -62,13 +62,13 @@ func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request)
 			// TODO: probably just send alert for user to manually delete the cookie?
 			return
 		}
-		h.UserService.SetUserCookie(w, s.ID)
+		h.UserService.SetSessionCookie(w, s.ID)
 	} else {
 		user, err = h.UserService.LookupUser(uuid)
 		if err != nil {
 			// should I clear the cookie if the user is not found? I don't see why not
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			h.UserService.ClearUserCookie(w, "")
+			h.UserService.ClearSessionCookie(w)
 			return
 		}
 	}
@@ -94,7 +94,7 @@ func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handler) UpdateJobAppTrackerFields(w http.ResponseWriter, r *http.Request) {
-	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
+	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -120,10 +120,25 @@ func (h *Handler) UpdateJobAppTrackerFields(w http.ResponseWriter, r *http.Reque
 func (h *Handler) DeleteUserRequest(w http.ResponseWriter, r *http.Request) {
 	// after delete hook
 	// https://stackoverflow.com/questions/76762629/how-to-cascade-a-delete-in-gorm
+
+	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// TODO: delete all kinds of trackers, fancily or by hand
+	h.TrackerService.DeleteJobAppTrackerByUserID(uuid)
+	// deletes User and UserInventory from repo
+	h.UserService.DeleteUser(uuid)
+	// clears session cookie
+	h.UserService.ClearSessionCookie(w)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {
-	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
+	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -152,7 +167,7 @@ func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) UpdateJobAppItemFields(w http.ResponseWriter, r *http.Request) {
-	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
+	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -176,7 +191,7 @@ func (h *Handler) UpdateJobAppItemFields(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handler) DeleteJobAppItem(w http.ResponseWriter, r *http.Request) {
-	uuid, err := h.UserService.GetUserIdFromCookie(r, w)
+	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

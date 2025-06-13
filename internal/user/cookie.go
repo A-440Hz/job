@@ -1,30 +1,46 @@
 package user
 
 import (
+	"errors"
 	"net/http"
+
+	"gorm.io/gorm"
 )
 
 const (
-	userCookieName   = "userCookie"
-	userCookieExpiry = 3600 * 24 * 30 // 30 days
+	sessionCookieName   = "sessionCookie"
+	sessionCookieExpiry = 3600 * 24 * 30 // 30 days
 )
 
-// GetUserIdFromCookie attempts to return the User ID from Session ID, clearing the cookie upon failure.
-// it lookups the current day and updates session expiry every call.
-func (s *Service) GetUserIdFromCookie(r *http.Request, w http.ResponseWriter) (string, error) {
+// GetUserIDFromCookie attempts to return the User ID from Session ID, clearing the cookie upon failure.
+// it lookups the current day and updates session expiry every successful call.
+// it clears the cookie on lookup failure
+func (s *Service) GetUserIDFromCookie(r *http.Request, w http.ResponseWriter) (string, error) {
 	// https://www.alexedwards.net/blog/working-with-cookies-in-go
-	cookie, err := r.Cookie(userCookieName)
+	cookie, err := r.Cookie(sessionCookieName)
 	if err != nil {
-		s.ClearUserCookie(w, "")
+		s.ClearSessionCookie(w)
 		return "", err
 	}
 	return s.getUserIDFromSession(cookie.Value, w)
 }
 
+// GetSessionIDFromCookie just returns the session id from the cookie and does nothing otherwise
+func (s *Service) GetSessionIDFromCookie(r *http.Request, w http.ResponseWriter) string {
+	cookie, err := r.Cookie(sessionCookieName)
+	if err != nil {
+		return ""
+	}
+	return cookie.Value
+}
+
 func (s *Service) getUserIDFromSession(sID string, w http.ResponseWriter) (string, error) {
 	sn, err := s.repo.lookupSession(sID)
-	if err != nil {
-		s.ClearUserCookie(w, sID)
+	if err == gorm.ErrRecordNotFound {
+		s.ClearSessionCookie(w)
+		return "", errors.New("session expired -- please try logging in again")
+	} else if err != nil {
+		s.ClearSessionCookie(w)
 		return "", err
 	}
 	// update repo session expiry
@@ -32,11 +48,10 @@ func (s *Service) getUserIDFromSession(sID string, w http.ResponseWriter) (strin
 	return sn.UserID, nil
 }
 
-func (s *Service) SetUserCookie(w http.ResponseWriter, sessionID string) {
+func (s *Service) SetSessionCookie(w http.ResponseWriter, sessionID string) {
 	cookie := http.Cookie{
-		Name:  userCookieName,
-		Value: sessionID,
-		// MaxAge:   userCookieExpiry,
+		Name:     sessionCookieName,
+		Value:    sessionID,
 		Secure:   true,
 		HttpOnly: true, // prevents client-side JS from accessing the cookie
 		SameSite: http.SameSiteStrictMode,
@@ -44,11 +59,10 @@ func (s *Service) SetUserCookie(w http.ResponseWriter, sessionID string) {
 	http.SetCookie(w, &cookie)
 }
 
-// ClearUserCookie clears the user cookie and optionally, session, from the response
-// TODO: make it make sense
-func (s *Service) ClearUserCookie(w http.ResponseWriter, prevSession string) {
+// ClearSessionCookie clears the session cookie
+func (s *Service) ClearSessionCookie(w http.ResponseWriter) {
 	cookie := http.Cookie{
-		Name:     userCookieName,
+		Name:     sessionCookieName,
 		Value:    "",
 		MaxAge:   -1,
 		Secure:   true,
@@ -56,5 +70,4 @@ func (s *Service) ClearUserCookie(w http.ResponseWriter, prevSession string) {
 		SameSite: http.SameSiteStrictMode,
 	}
 	http.SetCookie(w, &cookie)
-	s.repo.deleteSession(prevSession)
 }

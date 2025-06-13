@@ -22,10 +22,16 @@ func (h *Handler) SelectEverything(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 
+	sessions, err := h.UserService.SelectAllSessions()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
 		"users":        users,
 		"trackers":     trackers,
 		"collectables": collectables,
+		"sessions":     sessions,
 	})
 }

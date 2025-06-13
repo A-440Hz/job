@@ -27,7 +27,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	db.CleanDB(*dBase, user.User{}, user.Session{}, collection.UserInventory{}, tracker.JobAppTracker{}, tracker.JobAppItem{}, collection.Collectable{})
+	// use AutoMigrate instead of CleanDB to perserve models
+	dBase.AutoMigrate(user.User{}, user.Session{}, collection.UserInventory{}, tracker.JobAppTracker{}, tracker.JobAppItem{}, collection.Collectable{})
 
 	collectionService := collection.NewService(collection.NewRepository(dBase))
 	userService := user.NewService(user.NewRepository(dBase), collectionService)
@@ -38,9 +39,14 @@ func main() {
 		CollectionService: collectionService,
 	}
 	h.TrackerService.Start()
+	h.UserService.StartSessionCron()
 
 	http.HandleFunc("/careers", h.ServeMainPage)
 	http.HandleFunc("/careers/test", h.SelectEverything)
+	http.HandleFunc("/careers/profile", h.ServeUserMainPage)
+	http.HandleFunc("/careers/login", h.HandleLoginRequest)
+	http.HandleFunc("/careers/logout", h.HandleLogoutRequest)
+	http.HandleFunc("/careers/register", h.RegisterBaseUser)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)

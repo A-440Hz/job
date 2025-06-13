@@ -53,6 +53,7 @@ type UserUpdateFields struct {
 	Timezone   *int64  `json:"timezone,omitempty"`
 }
 
+// sanitizeFields trims leading and trailing whitespaces in the username and email, and lowercases the email
 func (uf *UserUpdateFields) sanitizeFields() {
 	if uf.Username != nil {
 		// trim username
@@ -66,6 +67,7 @@ func (uf *UserUpdateFields) sanitizeFields() {
 	}
 }
 
+// formatForRepo extracts and sanitizes the fields from the json struct, and hashes the password
 func (uf *UserUpdateFields) formatForRepo() (*User, []string, error) {
 	u := &User{}
 	fields := []string{}

@@ -135,6 +135,10 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 	return t, nil
 }
 
+func (s *Service) DeleteJobAppTrackerByUserID(userID string) error {
+	return s.repo.deleteJobAppTracker(&JobAppTracker{UnderlyingTracker: UnderlyingTracker{UserID: userID}})
+}
+
 func (s *Service) DeleteJobAppTracker(id string) error {
 	return s.repo.deleteJobAppTracker(&JobAppTracker{UnderlyingTracker: UnderlyingTracker{ID: id}})
 }

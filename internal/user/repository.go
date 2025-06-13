@@ -47,8 +47,8 @@ func (r *Repository) lookupUser(id string) (*User, error) {
 }
 
 func (r *Repository) lookupUserByUsername(uname *string) (*User, error) {
-	u := &User{Username: uname}
-	res := r.db.First(u)
+	u := &User{}
+	res := r.db.Where("username = ?", *uname).First(u)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -121,11 +121,30 @@ func (r *Repository) deleteSession(sID string) error {
 	return res.Error
 }
 
-func (r *Repository) selectAll() ([]User, error) {
+func (r *Repository) getExpiredSessions() ([]Session, error) {
+	sessions := []Session{}
+	today := scheduler.GetCurrentServerDay()
+	res := r.db.Where("expires_at < ?", today).Find(&sessions)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return sessions, nil
+}
+
+func (r *Repository) selectAllUsers() ([]User, error) {
 	users := []User{}
 	res := r.db.Find(&users)
 	if res.Error != nil {
 		return nil, res.Error
 	}
 	return users, nil
+}
+
+func (r *Repository) selectAllSessions() ([]Session, error) {
+	sessions := []Session{}
+	res := r.db.Find(&sessions)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return sessions, nil
 }
