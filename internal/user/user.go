@@ -33,8 +33,8 @@ type User struct {
 	Email    *string `gorm:"uniqueIndex" json:"email,omitempty"`
 	Password *[]byte `gorm:"size:60" json:"-"` // bcrypt hash is 60 bytes
 
-	// potentially add every tracker type as foreign keys
-	// JobAppTracker tracker.JobAppTracker `gorm:"foreignKey:UserID"`
+	// potentially add every tracker type as foreign keys. I think there's no need that I can think of though
+	// JobAppTracker *tracker.JobAppTracker `gorm:"foreignKey:UserID;references:ID"`
 	Inventory *collection.UserInventory `gorm:"foreignKey:UserID;references:ID" json:"inventory,omitempty"`
 }
 

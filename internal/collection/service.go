@@ -1,5 +1,12 @@
 package collection
 
+import (
+	"math/rand"
+	"time"
+
+	"gorm.io/gorm"
+)
+
 type Service struct {
 	repo *Repository
 }
@@ -54,6 +61,27 @@ func (s *Service) LookupUserInventory(userID string) (*UserInventory, error) {
 
 func (s *Service) DeleteUserInventory(i *UserInventory) error {
 	return s.repo.deleteUserInventory(i)
+}
+
+func (s *Service) AwardRandomCollectable(userID string) (*UserCollectable, error) {
+	// make them 1-indexed like pokemon
+	cID := rand.Intn(s.repo.size) + 1
+	repoColl, err := s.repo.lookupUserCollectable(userID, cID)
+	if err == gorm.ErrRecordNotFound {
+		return s.repo.createUserCollectable(&UserCollectable{
+			UserID:        userID,
+			CollectableID: cID,
+			Quantity:      1,
+			IsNew:         true,
+			EarnedAt:      time.Now(),
+		})
+	} else if err != nil {
+		return nil, err
+	}
+	repoColl.IsNew = true
+	repoColl.Quantity += 1
+	s.repo.updateUserCollectableFields(repoColl, []string{isNewField, quantityField})
+	return s.repo.lookupUserCollectable(userID, cID)
 }
 
 func (s *Service) UpdateUserCollectableFields(userID string, collecatbleID int, fields *UserCollectableUpdateFields) (*UserCollectable, error) {

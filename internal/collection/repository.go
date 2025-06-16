@@ -12,7 +12,8 @@ import (
 const seedFile = "data/collectables.json"
 
 type Repository struct {
-	db *gorm.DB
+	db   *gorm.DB
+	size int
 }
 
 func NewRepository(d *gorm.DB) *Repository {
@@ -32,6 +33,7 @@ func (r *Repository) importCollectables() error {
 	if err != nil {
 		return err
 	}
+	r.size = len(collectables)
 	res := r.db.Create(&collectables)
 	return res.Error
 }
@@ -94,8 +96,11 @@ func (r *Repository) updateUserCollectableFields(u *UserCollectable, fields []st
 }
 
 func (r *Repository) lookupUserCollectable(userId string, collectableID int) (*UserCollectable, error) {
-	u := &UserCollectable{UserID: userId, CollectableID: collectableID}
-	res := r.db.First(u)
+	u := &UserCollectable{}
+	res := r.db.Where("user_id = ?", userId).
+		Where("collectable_id = ?", collectableID).
+		Preload("Collectable").
+		First(u)
 	if res.Error != nil {
 		return nil, res.Error
 	}

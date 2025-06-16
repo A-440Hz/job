@@ -46,11 +46,12 @@ type Collectable struct {
 
 type UserCollectable struct {
 	UserID        string `gorm:"primaryKey"`
-	CollectableID int    `gorm:"foreignKey"`
-	Quantity      int    // represents how many collectables this user owns. Expected collecable size: 20-300
-	IsNew         bool   `gorm:"default:false"`
+	CollectableID int    `gorm:"index"`
+	Quantity      int    // represents how many of this collectables this user owns
+	IsNew         bool   `gorm:"default:false"` // sticker goes away on user mouseover or expand action?
 	EarnedAt      time.Time
 	// Variant/UpgradeLevel
+	Collectable Collectable `gorm:"foreignKey:CollectableID;references:ID"`
 }
 
 type UserCollectableUpdateFields struct {

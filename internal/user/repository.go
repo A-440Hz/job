@@ -176,16 +176,31 @@ func (r *Repository) getExpiredSessions() ([]Session, error) {
 	return sessions, nil
 }
 
-// getExpiredDemoUsers selects unregistered users with 0 created items created before the grace period of (2) days
+// getExpiredDemoUsers selects unregistered (demo) users with 0 created items created before the grace period of (2) days,
+// demo users whose last created item was over 60 days ago,
+// and registered users with 0 created items, account age > 60 days.
 func (r *Repository) getExpiredDemoUsers() ([]User, error) {
-	cutoff := scheduler.GetCurrentServerDay().AddDate(0, 0, -2)
+	today := scheduler.GetCurrentServerDay()
+	twoDayCutoff := today.AddDate(0, 0, -2)
+	sixtyDayCutoff := today.AddDate(0, 0, -60)
 	users := []User{}
 	res := r.db.Joins("JOIN user_inventories ON user_inventories.user_id = users.id").
-		Where("registered = ?", false).
-		Where("user_inventories.last_completed = ?", time.Time{}).
-		Where("users.created_at < ?", cutoff).
-		Find(&users)
-
+		Where(
+			// demo users with 0 created items, account age > 2 days
+			r.db.Where("registered = ?", false).
+				Where("user_inventories.last_completed = ?", time.Time{}).
+				Where("users.created_at < ?", twoDayCutoff)).
+		Or(
+			// demo users whose last created item was over 60 days ago
+			r.db.Where("OR registered = ?", false).
+				Where("users.last_completed < ?", sixtyDayCutoff),
+		).
+		Or(
+			// registered users with 0 created items, account age > 60 days
+			r.db.Where("OR registered = ?", true).
+				Where("user_inventories.last_completed = ?", time.Time{}).
+				Where("users.created_at < ?", sixtyDayCutoff),
+		).Find(&users)
 	if res.Error != nil {
 		return nil, res.Error
 	}
