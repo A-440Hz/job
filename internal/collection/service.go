@@ -1,6 +1,7 @@
 package collection
 
 import (
+	"errors"
 	"math/rand"
 	"time"
 
@@ -63,25 +64,54 @@ func (s *Service) DeleteUserInventory(i *UserInventory) error {
 	return s.repo.deleteUserInventory(i)
 }
 
-func (s *Service) AwardRandomCollectable(userID string) (*UserCollectable, error) {
+func (s *Service) AwardOneRandomCollectable(userID string) (*UserCollectable, error) {
+	ui, err := s.LookupUserInventory(userID)
+	if err != nil {
+		return nil, err
+	}
+	if ui.NumLootboxes < 1 {
+		return nil, errors.New("user has no lootboxes to open")
+	}
 	// make them 1-indexed like pokemon
 	cID := rand.Intn(s.repo.size) + 1
 	repoColl, err := s.repo.lookupUserCollectable(userID, cID)
 	if err == gorm.ErrRecordNotFound {
-		return s.repo.createUserCollectable(&UserCollectable{
+		errs := []error{}
+		// try create new collectable in repo
+		_, err := s.repo.createUserCollectable(&UserCollectable{
 			UserID:        userID,
 			CollectableID: cID,
 			Quantity:      1,
 			IsNew:         true,
 			EarnedAt:      time.Now(),
 		})
+		errs = append(errs, err)
+		// try decrement user lootbox count
+		oneLess := ui.NumLootboxes - 1
+		_, err = s.UpdateUserInventoryFields(userID, &UserInventoryUpdateFields{NumLootboxes: &oneLess})
+		errs = append(errs, err)
+		// do a lookup so it returns with preloaded collectable
+		col, err := s.repo.lookupUserCollectable(userID, cID)
+		errs = append(errs, err)
+		return col, errors.Join(errs...)
 	} else if err != nil {
 		return nil, err
 	}
 	repoColl.IsNew = true
 	repoColl.Quantity += 1
-	s.repo.updateUserCollectableFields(repoColl, []string{isNewField, quantityField})
-	return s.repo.lookupUserCollectable(userID, cID)
+
+	errs := []error{}
+	// try update new collectable fields in repo
+	_, err = s.repo.updateUserCollectableFields(repoColl, []string{isNewField, quantityField})
+	errs = append(errs, err)
+	// try decrement user lootbox count
+	oneLess := ui.NumLootboxes - 1
+	_, err = s.UpdateUserInventoryFields(userID, &UserInventoryUpdateFields{NumLootboxes: &oneLess})
+	errs = append(errs, err)
+	// try lookup of new collectable from repo
+	col, err := s.repo.lookupUserCollectable(userID, cID)
+	errs = append(errs, err)
+	return col, errors.Join(errs...)
 }
 
 func (s *Service) UpdateUserCollectableFields(userID string, collecatbleID int, fields *UserCollectableUpdateFields) (*UserCollectable, error) {
@@ -95,6 +125,10 @@ func (s *Service) UpdateUserCollectableFields(userID string, collecatbleID int, 
 		return nil, err
 	}
 	return s.repo.lookupUserCollectable(userID, collecatbleID)
+}
+
+func (s *Service) GetAllCollectablesForUser(userID string) ([]UserCollectable, error) {
+	return s.repo.getAllCollectablesForUser(userID)
 }
 
 func (s *Service) SelectAllCollectables() ([]Collectable, error) {

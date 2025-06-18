@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"job/internal/user"
 	"net/http"
+
+	"gorm.io/gorm"
 )
 
 // func getUserID(r *http.Request) (string, error) {
@@ -43,9 +45,16 @@ func (h *Handler) GetUserAndUserInventory(w http.ResponseWriter, r *http.Request
 		return
 	}
 	// uInv, err := h.CollectionService.LookupUserInventory(uuid)
+	coll, err := h.CollectionService.GetAllCollectablesForUser(uuid)
+
+	if err != nil && err != gorm.ErrRecordNotFound {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"user": user,
+		"user":         user,
+		"collectables": coll,
 		// "user_inventory": uInv,
 	})
 }
@@ -177,4 +186,20 @@ func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func (h *Handler) HandleAwardCollectableRequest(w http.ResponseWriter, r *http.Request) {
+	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	col, err := h.CollectionService.AwardOneRandomCollectable(uuid)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(col)
 }

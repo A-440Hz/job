@@ -192,12 +192,13 @@ func (r *Repository) getExpiredDemoUsers() ([]User, error) {
 				Where("users.created_at < ?", twoDayCutoff)).
 		Or(
 			// demo users whose last created item was over 60 days ago
-			r.db.Where("OR registered = ?", false).
-				Where("users.last_completed < ?", sixtyDayCutoff),
+			r.db.Where("registered = ?", false).
+				Where("user_inventories.last_completed != ?", time.Time{}).
+				Where("user_inventories.last_completed < ?", sixtyDayCutoff),
 		).
 		Or(
 			// registered users with 0 created items, account age > 60 days
-			r.db.Where("OR registered = ?", true).
+			r.db.Where("registered = ?", true).
 				Where("user_inventories.last_completed = ?", time.Time{}).
 				Where("users.created_at < ?", sixtyDayCutoff),
 		).Find(&users)

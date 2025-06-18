@@ -88,7 +88,7 @@ func (r *Repository) createUserCollectable(u *UserCollectable) (*UserCollectable
 }
 
 func (r *Repository) updateUserCollectableFields(u *UserCollectable, fields []string) (*UserCollectable, error) {
-	res := r.db.Model(u).Select(fields).Updates(u)
+	res := r.db.Model(u).Where("user_id = ? AND collectable_id = ?", u.UserID, u.CollectableID).Select(fields).Updates(u)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -101,6 +101,15 @@ func (r *Repository) lookupUserCollectable(userId string, collectableID int) (*U
 		Where("collectable_id = ?", collectableID).
 		Preload("Collectable").
 		First(u)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return u, nil
+}
+
+func (r *Repository) getAllCollectablesForUser(userId string) ([]UserCollectable, error) {
+	u := []UserCollectable{}
+	res := r.db.Where("user_id = ?", userId).Preload("Collectable").Find(&u)
 	if res.Error != nil {
 		return nil, res.Error
 	}

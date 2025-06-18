@@ -114,10 +114,12 @@ func Test_AssignBoxes(t *testing.T) {
 					repoTracker, err = tSvc.CreateJobAppItem(user.GetID(), newItem)
 					require.NoError(t, err)
 				}
+				// delete all items
 				for _, i := range repoTracker.Items {
 					err = tSvc.DeleteJobAppItem(user.GetID(), i.GetID())
 					require.NoError(t, err)
 				}
+				// numLootboxes should not decrease
 				return tSvc.collection.LookupUserInventory(user.GetID())
 			},
 		},

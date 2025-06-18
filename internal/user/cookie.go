@@ -9,7 +9,7 @@ import (
 
 const (
 	sessionCookieName   = "sessionCookie"
-	sessionCookieExpiry = 3600 * 24 * 365 // 1 year, but it refreshes every happy get request
+	sessionCookieExpiry = 3600 * 24 * 365 // 1 year, but it refreshes every happy lookup
 )
 
 // GetUserIDFromCookie attempts to return the User ID from Session ID, clearing the cookie upon failure.

@@ -262,7 +262,7 @@ func (s *Service) cleanupExpiredSessions() {
 
 func (s *Service) cleanupExpiredDemoUsers() {
 	users, err := s.repo.getExpiredDemoUsers()
-	log.Printf("demo user count: %v", len(users))
+	log.Printf("expired demo user count: %v", len(users))
 	if err != nil {
 		log.Print(err)
 		return

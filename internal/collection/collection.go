@@ -45,8 +45,9 @@ type Collectable struct {
 }
 
 type UserCollectable struct {
+	// https://gorm.io/docs/composite_primary_key.html
 	UserID        string `gorm:"primaryKey"`
-	CollectableID int    `gorm:"index"`
+	CollectableID int    `gorm:"primaryKey"`
 	Quantity      int    // represents how many of this collectables this user owns
 	IsNew         bool   `gorm:"default:false"` // sticker goes away on user mouseover or expand action?
 	EarnedAt      time.Time
