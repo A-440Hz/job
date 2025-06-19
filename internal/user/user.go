@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"job/internal/collection"
 	"job/internal/db"
 	"job/internal/scheduler"
@@ -101,6 +102,8 @@ func (uf *UserUpdateFields) formatForRepo() (*User, []string, error) {
 		u.Timezone = scheduler.NewTimezoneWithOffset(*uf.Timezone)
 		fields = append(fields, timezoneField)
 	}
-
+	if len(fields) == 0 {
+		return nil, nil, errors.New("no fields to update")
+	}
 	return u, fields, nil
 }

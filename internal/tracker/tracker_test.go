@@ -136,7 +136,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			// a constant tracker to test against
 			dummyUser := user.User{ID: "usr_12345678"}
 			t1, err := svc.CreateNewJobAppTracker(&dummyUser)
-			defer dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
+			defer db.CleanDB(*dBase, &JobAppTracker{})
 
 			require.NoError(t, err)
 			assert.NotNil(t, t1)
@@ -291,12 +291,14 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{})
-	repo := NewRepository(dBase)
-	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{}, &user.User{})
+	cSvc := collection.NewService(collection.NewRepository(dBase))
+	svc := NewService(NewRepository(dBase), scheduler.NewScheduler(), cSvc)
+	uSvc := user.NewService(user.NewRepository(dBase), cSvc)
 
-	dummyUser := user.User{ID: "usr_99999999"}
-	tracker, err := svc.CreateNewJobAppTracker(&dummyUser)
+	dummyUser, err := uSvc.CreateNewUser(nil)
+	require.NoError(t, err)
+	tracker, err := svc.CreateNewJobAppTracker(dummyUser)
 	require.NoError(t, err)
 	require.NotNil(t, tracker)
 
@@ -370,9 +372,9 @@ func Test_Scheduler(t *testing.T) {
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
 	t0 := time.Now().Round(time.Second)
-	t1 := t0.Add(time.Second * 4)
-	t2 := t1.Add(time.Second * 4)
-	t3 := t2.Add(time.Second * 4)
+	t1 := t0.Add(time.Second * 1)
+	t2 := t1.Add(time.Second * 1)
+	t3 := t2.Add(time.Second * 1)
 
 	u0 := user.User{ID: "usr_00000000"}
 	u1 := user.User{ID: "usr_11111111"}
@@ -421,7 +423,7 @@ func Test_Scheduler(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.NotEqual(t, jt3, jt33)
-	time.Sleep(time.Second * 28)
+	time.Sleep(time.Second * 4)
 
 	jt000, err := svc.LookupJobAppTrackerFromUserID(u0.GetID())
 	require.NoError(t, err)
@@ -452,12 +454,14 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	db.CleanDB(*dBase, JobAppTracker{})
-	repo := NewRepository(dBase)
-	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{}, &user.User{}, &collection.UserInventory{})
+	cSvc := collection.NewService(collection.NewRepository(dBase))
+	svc := NewService(NewRepository(dBase), scheduler.NewScheduler(), cSvc)
+	uSvc := user.NewService(user.NewRepository(dBase), cSvc)
 
-	dummyUser := user.User{ID: "usr_12345678"}
-	t1, err := svc.CreateNewJobAppTracker(&dummyUser)
+	dummyUser, err := uSvc.CreateNewUser(nil)
+	require.NoError(t, err)
+	t1, err := svc.CreateNewJobAppTracker(dummyUser)
 	require.NoError(t, err)
 	require.NotNil(t, t1)
 
@@ -540,8 +544,9 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 	assert.Equal(t, 3, t1.CurBoxesAwarded)
 
 	// test behavior when decreasing GoalQuantity to a lower number than current items
-	dummyUser2 := user.User{ID: "usr_23456789"}
-	t2, err := svc.CreateNewJobAppTracker(&dummyUser2)
+	dummyUser2, err := uSvc.CreateNewUser(nil)
+	require.NoError(t, err)
+	t2, err := svc.CreateNewJobAppTracker(dummyUser2)
 	require.NoError(t, err)
 	require.NotNil(t, t2)
 	for i := 0; i < 4; i++ {
@@ -563,5 +568,5 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 	assert.Equal(t, 0, t2.CurScorableItems)
 	assert.Equal(t, 2, t2.CurBoxesAwarded)
 
-	dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
+	db.CleanDB(*dBase, &JobAppTracker{}, &JobAppItem{}, &user.User{}, &collection.UserInventory{})
 }

@@ -35,7 +35,7 @@ func Test_AwardRandomCollectable(t *testing.T) {
 
 				uSvc.collection.AssignBoxes(user.GetID(), 20)
 				require.NoError(t, err)
-				for _ = range 20 {
+				for range 20 {
 					col, err := uSvc.collection.AwardOneRandomCollectable(user.GetID())
 					assert.NotNil(t, col)
 					assert.NoError(t, err)
@@ -65,12 +65,12 @@ func Test_AwardRandomCollectable(t *testing.T) {
 
 				uSvc.collection.AssignBoxes(user.GetID(), 3)
 				require.NoError(t, err)
-				for _ = range 3 {
+				for range 3 {
 					col, err := uSvc.collection.AwardOneRandomCollectable(user.GetID())
 					assert.NotNil(t, col)
 					assert.NoError(t, err)
 				}
-				for _ = range 2 {
+				for range 2 {
 					col, err := uSvc.collection.AwardOneRandomCollectable(user.GetID())
 					assert.Nil(t, col)
 					assert.ErrorContains(t, err, "no lootboxes to open")

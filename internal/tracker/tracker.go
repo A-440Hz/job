@@ -1,6 +1,7 @@
 package tracker
 
 import (
+	"errors"
 	"fmt"
 	"job/internal/scheduler"
 	"reflect"
@@ -206,6 +207,9 @@ func (uf *JobAppTrackerUpdateFields) formatForRepo() (*JobAppTracker, []string, 
 		}
 		t.UnderlyingTracker = *ut
 		fields = append(fields, f...)
+	}
+	if len(fields) == 0 {
+		return nil, nil, errors.New("no fields to update")
 	}
 	return t, fields, nil
 }

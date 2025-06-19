@@ -70,9 +70,10 @@ func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, erro
 	if uf.Username == nil {
 		badFields[usernameField] = "missing username for registration request"
 	}
-	if uf.Email == nil {
-		badFields[emailField] = "missing email for registration request"
-	}
+	// I don't want to force users to add emails
+	// if uf.Email == nil {
+	// 	badFields[emailField] = "missing email for registration request"
+	// }
 	if uf.Password == nil {
 		badFields[passwordField] = "missing password for registration request"
 	}
@@ -89,13 +90,20 @@ func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, erro
 		return nil, err
 	}
 
-	// sn, err := s.repo.createSession(id)
+	updateFields := []string{registeredField, usernameField, passwordField}
+	if uf.Email != nil {
+		repoUser.Email = uf.Email
+		updateFields = append(updateFields, emailField)
+	}
 	repoUser.Registered = true
 	repoUser.Username = uf.Username
-	repoUser.Email = uf.Email
 	repoUser.Password = &hashedPass
-	// TODO: use a repo function and prevent the exported function from updating passwords
-	_, err = s.repo.updateUserFields(repoUser, []string{registeredField, usernameField, passwordField, emailField})
+
+	err = s.validateUniqueUsernameEmail(*repoUser)
+	if err != nil {
+		return nil, err
+	}
+	_, err = s.repo.updateUserFields(repoUser, updateFields)
 	if err != nil {
 		return nil, err
 	}
@@ -175,9 +183,6 @@ func (s *Service) UpdateUserFields(id string, fields *UserUpdateFields) (*User, 
 	updateUser, updateFields, err := fields.formatForRepo()
 	if err != nil {
 		return nil, err
-	}
-	if len(updateFields) == 0 {
-		return nil, errors.New("no fields to update")
 	}
 	if err := s.validateUniqueUsernameEmail(*updateUser); err != nil {
 		return nil, err

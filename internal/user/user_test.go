@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func init() {
@@ -35,7 +36,6 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
 	db.CleanDB(*dBase, User{})
-
 	svc := NewService(NewRepository(dBase), collection.NewService(collection.NewRepository(dBase)))
 
 	tests := []struct {
@@ -79,10 +79,10 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 			wantErrMsg: []string{"missing username"},
 		},
 		{
-			name:       "missing-email",
-			Username:   strPtr("u2"),
-			Password:   strPtr("p2"),
-			wantErrMsg: []string{"missing email"},
+			name:     "missing-email",
+			Username: strPtr("u2"),
+			Password: strPtr("p2"),
+			// wantErrMsg: []string{"missing email"},
 		},
 		{
 			name:       "missing-password",
@@ -92,12 +92,13 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 		},
 		{
 			name:       "missing-all",
-			wantErrMsg: []string{"missing username", "missing email", "missing password"},
+			wantErrMsg: []string{"missing username", "missing password"},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// a constant user to test against
+			defer db.CleanDB(*dBase, &User{})
 			u1, err := svc.CreateNewUser(nil)
 			require.NoError(t, err)
 			u1, err = svc.RegisterBaseUser(u1.GetID(), &UserUpdateFields{
@@ -125,7 +126,6 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 				assert.NotEqual(t, u1.GetID(), u2.GetID())
 				assert.NotNil(t, u2)
 			}
-			dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 		})
 	}
 }
@@ -265,7 +265,7 @@ func Test_DeleteUser(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	db.CleanDB(*dBase, User{})
+	db.CleanDB(*dBase, User{}, Session{}, &collection.UserInventory{})
 	svc := NewService(NewRepository(dBase), collection.NewService(collection.NewRepository(dBase)))
 
 	u1, err := svc.CreateNewUser(nil)
@@ -277,6 +277,12 @@ func Test_DeleteUser(t *testing.T) {
 	u3, err := svc.CreateNewUser(nil)
 	require.NoError(t, err)
 	require.NotNil(t, u3)
+	ss, err := svc.CreateNewSession(u1.GetID())
+	require.NoError(t, err)
+	require.NotNil(t, ss)
+	_, err = svc.CreateNewSession(u2.GetID())
+	require.NoError(t, err)
+	// leave u3 without a session
 
 	// delete 1 2 3 once
 	id3 := u3.GetID()
@@ -290,6 +296,14 @@ func Test_DeleteUser(t *testing.T) {
 	err = svc.DeleteUser(u1.GetID())
 	assert.NoError(t, err)
 
+	// lookup user inventory, session
+	ui, err := svc.collection.LookupUserInventory(u2.GetID())
+	assert.Nil(t, ui)
+	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
+	sn, err := svc.repo.lookupSession(ss.ID)
+	assert.Nil(t, sn)
+	assert.ErrorIs(t, err, gorm.ErrRecordNotFound)
+
 	// delete 3 again
 	err = svc.DeleteUser(id3)
 	assert.Error(t, err)
@@ -301,5 +315,5 @@ func Test_DeleteUser(t *testing.T) {
 	u, err = svc.UpdateUserFields(id3, &UserUpdateFields{Username: strPtr("test")})
 	assert.ErrorContains(t, err, "record not found")
 	assert.Nil(t, u)
-	dBase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
+	db.CleanDB(*dBase, &User{}, &Session{}, &collection.UserInventory{})
 }
