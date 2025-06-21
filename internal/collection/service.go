@@ -9,12 +9,17 @@ import (
 )
 
 type Service struct {
-	repo *Repository
+	repo            *Repository
+	AllCollectables []Collectable // cache the immutable collectables
 }
 
 func NewService(r *Repository) *Service {
 	s := &Service{repo: r}
 	err := s.repo.importCollectables()
+	if err != nil {
+		panic(err)
+	}
+	s.AllCollectables, err = s.repo.selectAllCollectables()
 	if err != nil {
 		panic(err)
 	}
@@ -131,6 +136,10 @@ func (s *Service) GetAllCollectablesForUser(userID string) ([]UserCollectable, e
 	return s.repo.getAllCollectablesForUser(userID)
 }
 
+func (s *Service) DeleteUserCollectables(userID string) error {
+	return s.repo.deleteAllUserCollectables(userID)
+}
+
 func (s *Service) SelectAllCollectables() ([]Collectable, error) {
-	return s.repo.selectAllCollectables()
+	return s.AllCollectables, nil
 }

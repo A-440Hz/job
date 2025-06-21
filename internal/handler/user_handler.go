@@ -51,11 +51,18 @@ func (h *Handler) GetUserAndUserInventory(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	aColl, err := h.CollectionService.SelectAllCollectables()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"user":         user,
-		"collectables": coll,
-		// "user_inventory": uInv,
+		"user":                user,
+		"earned_collectables": coll,
+		"all_collectables":    aColl,
 	})
 }
 

@@ -116,6 +116,12 @@ func (r *Repository) getAllCollectablesForUser(userId string) ([]UserCollectable
 	return u, nil
 }
 
+func (r *Repository) deleteAllUserCollectables(userId string) error {
+	u := []UserCollectable{}
+	res := r.db.Where("user_id = ?", userId).Preload("Collectable").Delete(&u)
+	return res.Error
+}
+
 func (r *Repository) deleteUserCollectable(u *UserCollectable) error {
 	res := r.db.Delete(u)
 	if res.RowsAffected == 0 {

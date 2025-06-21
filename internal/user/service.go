@@ -214,8 +214,10 @@ func (s *Service) DeleteUser(id string) error {
 	} else if err = s.collection.DeleteUserInventory(i); err != nil {
 		badFields["user inventory"] = err.Error()
 	}
-
-	// TODO: delete user collectables here
+	err = s.collection.DeleteUserCollectables(id)
+	if err != nil {
+		badFields["user collectables"] = err.Error()
+	}
 
 	err = s.repo.deleteUserSessions(id)
 	if err != nil {
