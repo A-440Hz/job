@@ -1,12 +1,14 @@
 /* App.css is for styles specific to elements in App.tsx */
 
 root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
   text-align: center;
+  justify-self: center;
+  display: flex;
 }
-
+/* 
 .logo {
   height: 6em;
   padding: 1.5em;
@@ -41,4 +43,4 @@ root {
 
 .read-the-docs {
   color: #888;
-}
+} */

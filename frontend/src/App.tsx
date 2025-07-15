@@ -1,39 +1,43 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+// import { useEffect, useState } from 'react'
+// import { fetchTrackerData } from './api/tracker'
+import { useTrackerData } from './JobAppTrackerDataContext';
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  // const [count, setCount] = useState(0)
+  // const [data, setData] = useState<any>(null);
+  // const [error, setError] = useState<string | null>(null);
+
+  // useEffect(() => {
+  //   useTrackerData()
+  //     .then(setData)
+  //     // .catch((err) => setError(err.message));
+  // }, []);
+
+  const { data, error } = useTrackerData();
+  if (error) return <div>Error: {error}</div>;
+  if (!data) return <div>Loading...</div>;
+
+  if (error) return <p className="text-red-500">Error: {error}</p>;
+  if (!data) return <p>Loading...</p>;
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-      <br></br>
-      <h1 className="text-4xl font-bold text-pink-600">
-        hello wORLD
+    <div className="p-8">
+      <h1 className="text-2xl font-bold text-indigo-700 mb-4">
+        Hellooo, {data.user?.ID ?? 'user'}!
       </h1>
-    </>
-  )
+      <h2 className="text-xl mb-2">Your Job Applications:</h2>
+      <ul className="space-y-2">
+        {data.tracker?.Items?.map((item: any) => (
+          <li key={item.ID} className="p-4 rounded bg-white shadow">
+            <p className="font-semibold text-blue-600">{item.Title}</p>
+            <p className="text-sm text-gray-500">{item.Body}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+
 }
 
 export default App

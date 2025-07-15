@@ -28,6 +28,8 @@ func getJobAppItemUpdateFields(r *http.Request) (*tracker.JobAppItemUpdateFields
 }
 
 func (h *Handler) ServeMainPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	switch r.Method {
 	case http.MethodGet:
 		h.GetUserAndTrackerItems(w, r)
@@ -123,19 +125,13 @@ func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := h.TrackerService.LookupJobAppTrackerFromUserID(uuid)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	uf, err := getJobAppItemUpdateFields(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	t, err = h.TrackerService.CreateJobAppItem(uuid, uf)
+	t, err := h.TrackerService.CreateJobAppItem(uuid, uf)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
