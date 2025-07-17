@@ -4,12 +4,21 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"time"
 
 	"gorm.io/gorm"
 )
 
 const seedFile = "data/collectables.json"
+
+func getSeedFilePath() string {
+	exePath, err := os.Executable()
+	if err != nil {
+		return seedFile
+	}
+	return filepath.ToSlash(filepath.Join(filepath.Dir(exePath), "../", seedFile))
+}
 
 type Repository struct {
 	db   *gorm.DB
@@ -23,7 +32,7 @@ func NewRepository(d *gorm.DB) *Repository {
 // importCollectables deletes the collectables table and re-imports it from the json seedFile
 func (r *Repository) importCollectables() error {
 	r.db.Exec("TRUNCATE TABLE collectables RESTART IDENTITY CASCADE")
-	f, err := os.Open(seedFile)
+	f, err := os.Open(getSeedFilePath())
 	defer f.Close()
 	if err != nil {
 		return err
