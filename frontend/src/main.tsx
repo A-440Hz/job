@@ -5,10 +5,12 @@ import { createRoot } from 'react-dom/client'
 import App from './App'
 import { TrackerDataProvider } from './JobAppTrackerDataContext';
 import './index.css'
+import Topbar from './Topbar';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <TrackerDataProvider>
+      <Topbar />
       <App />
     </TrackerDataProvider>
   </StrictMode>,

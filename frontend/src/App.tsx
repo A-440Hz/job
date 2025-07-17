@@ -22,7 +22,7 @@ function App() {
   if (!data) return <p>Loading...</p>;
 
   return (
-    <div className="p-8">
+    <div className="p-8 border-blue-200 border mt-20">
       <h1 className="text-2xl font-bold text-indigo-700 mb-4">
         Hellooo, {data.user?.ID ?? 'user'}!
       </h1>
