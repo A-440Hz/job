@@ -90,7 +90,7 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 	}
 
 	// the front end should also avoid sending update reqs for identical deadlines and frequencies
-	if repoTracker.CycleDeadline == updateTracker.CycleDeadline {
+	if repoTracker.CycleDeadline.Equal(updateTracker.CycleDeadline) {
 		updateFields = slices.DeleteFunc(updateFields, func(f string) bool {
 			return f == cycleDeadlineField
 		})

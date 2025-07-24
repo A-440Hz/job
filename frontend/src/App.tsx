@@ -1,43 +1,20 @@
-// import { useEffect, useState } from 'react'
-// import { fetchTrackerData } from './api/tracker'
-import { useTrackerData } from './JobAppTrackerDataContext';
-import './App.css'
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import JobAppTrackerPage from './JobAppTrackerPage';
+import Topbar from './Topbar';
+
+const About = () => <h2 className='justify-self-center text-4xl'>About Page</h2>;
 
 function App() {
-  // const [count, setCount] = useState(0)
-  // const [data, setData] = useState<any>(null);
-  // const [error, setError] = useState<string | null>(null);
 
-  // useEffect(() => {
-  //   useTrackerData()
-  //     .then(setData)
-  //     // .catch((err) => setError(err.message));
-  // }, []);
-
-  const { data, error } = useTrackerData();
-  if (error) return <div>Error: {error}</div>;
-  if (!data) return <div>Loading...</div>;
-
-  if (error) return <p className="text-red-500">Error: {error}</p>;
-  if (!data) return <p>Loading...</p>;
 
   return (
-    <div className="p-8 border-blue-200 border mt-20">
-      <h1 className="text-2xl font-bold text-indigo-700 mb-4">
-        Hellooo, {data.user?.ID ?? 'user'}!
-      </h1>
-      <h2 className="text-xl mb-2">Your Job Applications:</h2>
-      <ul className="space-y-2">
-        {data.tracker?.Items?.map((item: any) => (
-          <li key={item.ID} className="p-4 rounded bg-white shadow">
-            <p className="font-semibold text-blue-600">{item.Title}</p>
-            <p className="text-sm text-gray-500">{item.Body}</p>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <BrowserRouter>
+      <Topbar />
+      <Routes>
+        <Route path="/" element={<JobAppTrackerPage />} />
+        <Route path="/About" element={<About />} />
+      </Routes>
+    </BrowserRouter>
   );
-
 }
-
-export default App
+export default App;

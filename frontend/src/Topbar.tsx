@@ -1,24 +1,57 @@
 import { useState } from 'react';
+import { NavLink } from 'react-router-dom';
+
 function Glyph() {
-  const [source, setSource] = useState("src/assets/sb1rb.png");
-  const handleMouseDown = () => {setSource("src/assets/sb2rb.png")};
-  const handleMouseUp = () => {setSource("src/assets/sb1rb.png")};
-  return <img className="flex select-none min-w-12 max-w-24 mr-0" id="glyph" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} src={source}/> 
+  const [source, setSource] = useState("/src/assets/sb1rb.png");
+  const handleMouseDown: React.MouseEventHandler<HTMLImageElement> = (event) => {
+    event.preventDefault();
+    setSource("/src/assets/sb2rb.png");
+  };
+  const handleMouseUp: React.MouseEventHandler<HTMLImageElement> = (event) => {
+    event.preventDefault();
+    setSource("/src/assets/sb1rb.png");
+  };
+  const handleMouseClick = () => {
+    window.location.href = "/";
+  }
+  return <img className="flex select-none min-w-12 max-w-24 mr-0 hover:cursor-pointer" id="glyph" 
+    onMouseEnter={handleMouseDown} 
+    onMouseLeave={handleMouseUp}
+    onClick={handleMouseClick} 
+    src={source}
+    draggable="false"
+  /> 
 }
 
 export function Navbar() {
-  return <span className='border-2 justify-self-end'>
-    <a className='text-sm/6' href='user'>
-      some links this should be an a actually
-    </a>
-    <span>
-      some links
-    </span>
-    <span>
-      some links
-    </span>
-  </span>;
+  const navClass = "m-1 text-m/6 hover:opacity-60 "
+  return <nav className='border-2 justify-self-end pl-3 pr-3'>
+    <NavLink to='/' className={({ isActive }) =>
+        isActive ? navClass + "text-amber-300" : navClass
+      }>
+      Tracker
+    </NavLink>
+    <NavLink to='/Collection' className={({ isActive }) =>
+        isActive ? navClass+ "text-amber-300" : navClass
+      }>
+      Collection
+    </NavLink>
+    <NavLink to='/Lootbox' className={({ isActive }) =>
+        isActive ? navClass + "text-amber-300" : navClass
+      }>
+      Open Lootbox
+    </NavLink>
+    <NavLink to='/About' className={({ isActive }) =>
+        isActive ? navClass + "text-amber-300" : navClass
+      }>
+      About
+    </NavLink>
+  </nav>;
 } 
+
+export function Login() {
+  return <a className="text-text-secondary pr-3" id="navbar_sign_in_button" href="/login">Log in</a>
+}
 
 export default function Topbar() {
     return (
@@ -26,6 +59,7 @@ export default function Topbar() {
       <span> <Glyph /> </span>
       <span className="flex border select-none text-4xl ml-0"> Hi this is a topbar </span>
       <Navbar />
+      <Login />
     </div>);
 }
 
