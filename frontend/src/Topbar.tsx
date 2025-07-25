@@ -50,7 +50,7 @@ export function Navbar() {
 } 
 
 export function Login() {
-  return <a className="text-text-secondary pr-3" id="navbar_sign_in_button" href="/login">Log in</a>
+  return <a className="text-text-secondary pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/login">Log in</a>
 }
 
 export default function Topbar() {
