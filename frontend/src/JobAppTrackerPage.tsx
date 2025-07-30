@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-// import { fetchTrackerData } from './api/tracker'
+import { updateTrackerItem } from './api/tracker'
 import { useTrackerData } from './JobAppTrackerDataContext';
 import './App.css'
 
@@ -10,18 +10,9 @@ function formatDate(raw: string) {
 }
 
 function JobAppTrackerPage() {
-  // const [count, setCount] = useState(0)
-  // const [data, setData] = useState<any>(null);
-  // const [error, setError] = useState<string | null>(null);
-
-  // useEffect(() => {
-  //   useTrackerData()  //     .then(setData)
-  //     // .catch((err) => setError(err.message));
-  // }, []);
-
-  const { data, error, refreshData } = useTrackerData();
+  const { user, tracker, error } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
-  if (!data) return <div></div>;
+  if ( !user || !tracker ) return <div>???</div>;
 
   return (
     <div className="p-8 w-8/10 justify-self-center border-blue-200 border mt-8">
@@ -35,19 +26,22 @@ function JobAppTrackerPage() {
 }
 
 function ItemsList() {
-  const { data, error, refreshData } = useTrackerData();
+  const { user, tracker, error, setTracker } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
-  const [items, setItems] = useState(data.tracker?.Items ?? []);
+  // const [items, setItems] = useState(data.tracker?.Items ?? []);
 
-  const handleEdit = (id: string, newTitle: string, newBody: string) => {
-    setItems((items: any[]) =>
-      items.map(item =>
-        item.ID === id ? { ...item, Title: newTitle, Body: newBody } : item
-      )
-    );
-    // Optionally, call API to persist changes
-  };
-  
+  const handleEdit = async (id: string, newTitle: string, newBody: string) => {
+    try {
+      const newData = await updateTrackerItem(id, newTitle, newBody);
+      // TODO: dont have this;
+      (newData.tracker? setTracker(newData.tracker) : null);
+      (newData.t? setTracker(newData.t) : null);
+      // TODO: error handling
+      ;
+    } catch (error: any) {
+        console.log(error.message);
+    } 
+  };  
 
   function Item({ item }: { item: any }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -55,16 +49,16 @@ function ItemsList() {
     const [body, setBody] = useState(item.Body);
 
     return (
-      <li key={item.ID} className="p-4 rounded bg-orange-200 shadow">
+      <li key={item.ID} className={`p-4 rounded bg-orange-200 shadow ${isEditing ? 'item-editing': ''}`}>
         {isEditing ? (
           <>
             <input className="item-title input-box " value={title} onChange={e => setTitle(e.target.value)} />
             <br></br>
-            <input className="item-body input-box" value={body} onChange={e => setBody(e.target.value)} />
+            <textarea className="item-body input-box " value={body} rows={5} onChange={e => setBody(e.target.value)} />
             <p className='text-xs text-gray-900'> Created - {formatDate(item.CreatedAt)} </p>
 
             <button onClick={() => { handleEdit(item.ID, title, body); setIsEditing(false); }}>Save</button>
-            <button onClick={() => setIsEditing(false)}>Cancel</button>
+            <button onClick={() => {setIsEditing(false); setTitle(item.Title); setBody(item.Body)}}>Cancel</button>
           </>
         ) : (
           <>
@@ -79,11 +73,14 @@ function ItemsList() {
   }
 
   return (
+    <>
     <ul className='space-y-2'>
-      {items.map((item: any) => (
-        <Item key={item.ID} item={item} />
+      {tracker?.Items.map((item: any) => (
+        <Item item={item} />
       ))}
     </ul>
+    <p> user: {user?.ID}</p>
+    </>
   );
 }
 

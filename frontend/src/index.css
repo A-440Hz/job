@@ -3,7 +3,9 @@
 @import "tailwindcss";
 
 html {
-  overflow-y: hidden;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
 }
 
 :root {

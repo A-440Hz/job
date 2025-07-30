@@ -30,7 +30,11 @@ func getJobAppItemUpdateFields(r *http.Request) (*tracker.JobAppItemUpdateFields
 func (h *Handler) ServeMainPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, UPDATE, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	switch r.Method {
+	case http.MethodOptions:
+		w.WriteHeader(http.StatusOK)
 	case http.MethodGet:
 		h.GetUserAndTrackerItems(w, r)
 	case http.MethodPatch:
@@ -162,7 +166,9 @@ func (h *Handler) UpdateJobAppItemFields(w http.ResponseWriter, r *http.Request)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(t)
+	json.NewEncoder(w).Encode(map[string]any{
+		"tracker": t,
+	})
 }
 
 func (h *Handler) DeleteJobAppItem(w http.ResponseWriter, r *http.Request) {

@@ -18,6 +18,7 @@ root {
 }
 
 .item-body {
+  text-wrap: wrap;
   font-size: var(--text-sm) /* 0.875rem = 14px */;
   line-height: var(--tw-leading, var(--text-sm--line-height) /* calc(1.25 / 0.875) ≈ 1.4286 */);
   color: var(--color-gray-500)
@@ -34,8 +35,15 @@ root {
   border-style: var(--tw-border-style);
   border-width: 2px;
   border-color: var(--color-blue-200);
+  resize: vertical;
+  overflow-y: auto;
+  line-height: 1.5;
 }
 
+.item-editing {
+  border-width: 3px;
+  border-color: var(--color-amber-400);
+}
 /* 
 .logo {
   height: 6em;
