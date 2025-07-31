@@ -3,11 +3,11 @@ import { NavLink } from 'react-router-dom';
 
 function Glyph() {
   const [source, setSource] = useState("/src/assets/sb1rb.png");
-  const handleMouseDown: React.MouseEventHandler<HTMLImageElement> = (event) => {
+  const handleMouseAway: React.MouseEventHandler<HTMLImageElement> = (event) => {
     event.preventDefault();
     setSource("/src/assets/sb2rb.png");
   };
-  const handleMouseUp: React.MouseEventHandler<HTMLImageElement> = (event) => {
+  const handleMouseOver: React.MouseEventHandler<HTMLImageElement> = (event) => {
     event.preventDefault();
     setSource("/src/assets/sb1rb.png");
   };
@@ -15,8 +15,8 @@ function Glyph() {
     window.location.href = "/";
   }
   return <img className="flex select-none min-w-12 max-w-24 mr-0 hover:cursor-pointer" id="glyph" 
-    onMouseEnter={handleMouseDown} 
-    onMouseLeave={handleMouseUp}
+    onMouseEnter={handleMouseAway} 
+    onMouseLeave={handleMouseOver}
     onClick={handleMouseClick} 
     src={source}
     draggable="false"
@@ -55,9 +55,9 @@ export function Login() {
 
 export default function Topbar() {
     return (
-    <div className='flex h-[62px] items-center border justify-between select-none'>
+    <div className='flex h-[62px] items-center border justify-between select-none z50'>
       <span> <Glyph /> </span>
-      <span className="flex border select-none text-4xl ml-0"> Hi this is a topbar </span>
+      <span className="hidden md:flex border select-none text-4xl ml-0"> Hi this is a topbar </span>
       <Navbar />
       <Login />
     </div>);

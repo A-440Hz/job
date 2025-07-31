@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { updateTrackerItem } from './api/tracker'
 import { useTrackerData } from './JobAppTrackerDataContext';
 import './App.css'
@@ -28,11 +28,13 @@ function JobAppTrackerPage() {
 function ItemsList() {
   const { user, tracker, error, setTracker } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
-  // const [items, setItems] = useState(data.tracker?.Items ?? []);
 
-  const handleEdit = async (id: string, newTitle: string, newBody: string) => {
+  const handleEdit = async (item: any, newTitle: string, newBody: string) => {
+    if (item.Title == newTitle && item.Body == newBody) {
+      return
+    }
     try {
-      const newData = await updateTrackerItem(id, newTitle, newBody);
+      const newData = await updateTrackerItem(item.ID, newTitle, newBody);
       // TODO: dont have this;
       (newData.tracker? setTracker(newData.tracker) : null);
       (newData.t? setTracker(newData.t) : null);
@@ -48,27 +50,48 @@ function ItemsList() {
     const [title, setTitle] = useState(item.Title);
     const [body, setBody] = useState(item.Body);
 
+    function exitEditing() {
+      setIsEditing(false);
+      setTitle(item.Title);
+      setBody(item.Body);
+    }
+
+    function submitChanges(item: any, title: string, body: string) {
+      handleEdit(item, title, body);
+      setIsEditing(false);
+    }
+
     return (
-      <li key={item.ID} className={`p-4 rounded bg-orange-200 shadow ${isEditing ? 'item-editing': ''}`}>
+      <>
+        {isEditing && (
+          <div className='item-modal' onClick={() => exitEditing()}/>
+        )}
+      <li key={item.ID} className={`p-4 rounded bg-orange-200 shadow relative ${isEditing ? 'item-editing': ''}`} onClick={() => { isEditing? submitChanges(item, title, body): setIsEditing(true) }}>
         {isEditing ? (
           <>
+          <div onClick={e => e.stopPropagation()}>
             <input className="item-title input-box " value={title} onChange={e => setTitle(e.target.value)} />
             <br></br>
             <textarea className="item-body input-box " value={body} rows={5} onChange={e => setBody(e.target.value)} />
+          </div>
             <p className='text-xs text-gray-900'> Created - {formatDate(item.CreatedAt)} </p>
-
-            <button onClick={() => { handleEdit(item.ID, title, body); setIsEditing(false); }}>Save</button>
-            <button onClick={() => {setIsEditing(false); setTitle(item.Title); setBody(item.Body)}}>Cancel</button>
+            <span className="float-right m-2">
+              <button className="mr-2" onClick={() => submitChanges(item, title, body) }>Save</button>
+              <button className="ml-2" onClick={() => exitEditing() }>Cancel</button>
+            </span>
           </>
         ) : (
           <>
-            <p className="item-title">{item.Title}</p>
+            <span className='flex justify-between items-center'>
+              <p className="item-title">{item.Title}</p>
+              <button className="rounded-[2vw] bg-amber-500" onClick={() => setIsEditing(true)}>Edit</button>
+            </span>
             <p className="item-body">{item.Body}</p>
             <p className='item-timestamp'> Created - {formatDate(item.CreatedAt)} </p>
-            <button className="rounded-[2vw] bg-amber-500" onClick={() => setIsEditing(true)}>Edit</button>
           </>
         )}
       </li>
+    </>
     );
   }
 
@@ -76,7 +99,7 @@ function ItemsList() {
     <>
     <ul className='space-y-2'>
       {tracker?.Items.map((item: any) => (
-        <Item item={item} />
+        <Item key={item.ID} item={item} />
       ))}
     </ul>
     <p> user: {user?.ID}</p>

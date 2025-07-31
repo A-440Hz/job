@@ -49,7 +49,9 @@ func (r *Repository) lookupJobAppTrackerFromUserID(uuid string) (*JobAppTracker,
 
 func (r *Repository) getJobAppTrackerWithItemsFromTrackerID(id string) (*JobAppTracker, error) {
 	t := &JobAppTracker{UnderlyingTracker: UnderlyingTracker{ID: id}}
-	res := r.db.Preload("Items").First(t)
+	res := r.db.Preload("Items", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at DESC")
+	}).First(t)
 	if res.Error != nil {
 		return nil, res.Error
 	}
@@ -58,7 +60,9 @@ func (r *Repository) getJobAppTrackerWithItemsFromTrackerID(id string) (*JobAppT
 
 func (r *Repository) getJobAppTrackerWithItemsFromUserID(uuid string) (*JobAppTracker, error) {
 	t := &JobAppTracker{}
-	res := r.db.Preload("Items").Where("user_id = ?", uuid).First(t)
+	res := r.db.Preload("Items", func(db *gorm.DB) *gorm.DB {
+		return db.Order("created_at DESC")
+	}).Where("user_id = ?", uuid).First(t)
 	if res.Error != nil {
 		return nil, res.Error
 	}
