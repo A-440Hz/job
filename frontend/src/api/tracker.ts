@@ -19,7 +19,7 @@ export async function createTrackerItem(title: string, body: string): Promise<an
         title: title,
         body: body,
         status: "complete",
-        is_attriuted: false,
+        isAttributed: false,
     };
     const res = await fetch(url, {
         method: 'POST',

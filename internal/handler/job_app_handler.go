@@ -119,7 +119,9 @@ func (h *Handler) UpdateJobAppTrackerFields(w http.ResponseWriter, r *http.Reque
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(t)
+	json.NewEncoder(w).Encode(map[string]any{
+		"tracker": t,
+	})
 }
 
 func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {
@@ -142,7 +144,9 @@ func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(t)
+	json.NewEncoder(w).Encode(map[string]any{
+		"tracker": t,
+	})
 }
 
 func (h *Handler) UpdateJobAppItemFields(w http.ResponseWriter, r *http.Request) {

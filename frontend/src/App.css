@@ -14,7 +14,8 @@ root {
   font-weight: var(--font-weight-semibold) /* 600 */;
   font-size: var(--text-lg) /* 1.125rem = 18px */;
   line-height: var(--tw-leading, var(--text-lg--line-height) /* calc(1.75 / 1.125) ≈ 1.5556 */);
-  color: var(--color-yellow-700)
+  color: var(--color-yellow-700);
+  /* margin-bottom: 1rem; */
 }
 
 .item-body {
@@ -32,7 +33,7 @@ root {
 
 .input-box {
   width: 100%;
-  border-style: var(--tw-border-style);
+  border-style: dashed solid;
   border-width: 2px;
   border-color: var(--color-blue-200);
   resize: vertical;
@@ -43,13 +44,17 @@ root {
 
 .item-editing {
   border-width: 3px;
-  border-color: var(--color-amber-400);
+  border-style: groove solid;
+  border-color: var(--color-rose-500);
   z-index: 20;
 }
 
 .item-editing:hover {
-  border-width: 3px;
-  border-color: var(--color-green-300);
+  border-color: var(--color-emerald-600);
+}
+
+.item-editing::marker {
+  content: "";
 }
 
 /* https://www.w3schools.com/howto/howto_css_modals.asp */
@@ -67,40 +72,9 @@ root {
   background-color: rgba(0,0,0,0); /* Black w/ opacity */
 }
 
-
-/* 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
-
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
+.vp-mid {
+  /* display: none; */
+  @media (min-width >= 768) {
+    display: block;
   }
 }
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-} */
