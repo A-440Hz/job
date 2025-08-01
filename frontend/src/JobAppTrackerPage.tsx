@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { createTrackerItem, updateTrackerItem } from './api/tracker'
+import { createTrackerItem, deleteTrackerItem, updateTrackerItem } from './api/tracker'
 import { useTrackerData } from './JobAppTrackerDataContext';
 import { useScreenSize } from './ScreenSizeProvider';
 import './App.css'
@@ -18,11 +18,10 @@ function JobAppTrackerPage() {
 
   return (
     <div className=" px-8 pt-4 w-8/10 justify-self-center border-blue-200 border mt-3">
-      {/* TODO: use CSS to refactor out isDesktop effect */}
       <h1 className="vp-mid text-5xl font-bold select-none text-indigo-700 mb-4 text-center text-shadow-2xs text-shadow-blue-300">
         {isDesktop? 'Job App Tracker With Lootbox Technology + Agentic Functionality' : 'Job App Tracker'}
       </h1>
-      <div className="text-xl mb-2 bg-blue-400 border-x-violet-300 border-4 text-center">maybe this is a topbar for options and sort order</div>
+      <div className="text-xl mb-1 bg-blue-400 border-x-violet-300 border-4 text-center">maybe this is a topbar for options and sort order</div>
       <ItemsList />
     </div>
   );
@@ -30,7 +29,7 @@ function JobAppTrackerPage() {
 
 function ItemsList() {
   const isDesktop = useScreenSize();
-  const { user, tracker, error, setTracker } = useTrackerData();
+  const { user, tracker, error, refreshData, setTracker } = useTrackerData();
   const [ isNewItem, setIsNewItem ] = useState(false);
   if (error) return <div>Error loading backend: {error}</div>;
 
@@ -43,14 +42,11 @@ function ItemsList() {
   const handleNew = async(newTitle: string, newBody: string) => {
     try {
       const newData = await createTrackerItem(newTitle, newBody);
-      // TODO: dont have this;
-      console.log(newData);
-      console.log("tracker:", newData.tracker);
-      console.log("t:", newData.t);
-      (newData.tracker? setTracker(newData.tracker) : null);
-      (newData.t? setTracker(newData.t) : null);
+      // console.log(newData);
+      // console.log("tracker:", newData.tracker);
+      (newData.tracker? setTracker(newData.tracker) : console.error("Error finding data from Backend"));
     } catch (error: any) {
-      console.log(error.message);
+      console.error(error.message);
     }
   };
 
@@ -60,19 +56,22 @@ function ItemsList() {
     }
     try {
       const newData = await updateTrackerItem(item.ID, newTitle, newBody);
-      // TODO: dont have this;
-      
-      console.log(newData);
-      console.log("tracker:", newData.tracker);
-      console.log("t:", newData.t);
-      (newData.tracker? setTracker(newData.tracker) : null);
-      (newData.t? setTracker(newData.t) : null);
-      // TODO: error handling
-      ;
+      // console.log(newData);
+      // console.log("tracker:", newData.tracker);
+      (newData.tracker? setTracker(newData.tracker) : console.error("Error finding data from Backend"));
     } catch (error: any) {
-      console.log(error.message);
+      console.error(error.message);
     } 
-  };  
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTrackerItem(id);
+    } catch (error: any) {
+      console.error(error.message);
+    }
+    refreshData();
+  }
 
   function Item({ item }: { item: any }) {
     const [isEditing, setIsEditing] = useState(false);
@@ -105,7 +104,7 @@ function ItemsList() {
     }
 
     function submitNew(title: string, body: string) {
-      if (title === undefined) {
+      if (title === undefined || title === '') {
         // flash red and don't submit
         return;
       }
@@ -122,18 +121,24 @@ function ItemsList() {
         {isEditing && (
           <div className='item-modal' onClick={() => exitEditing()}/>
         )}
-      <li key={item.ID} className={`py-4 pl-6 pr-9 rounded bg-orange-200 shadow relative ${isEditing ? 'item-editing': ''}`} onClick={() => { isEditing? submitChanges(item, title, body): setIsEditing(true) }}>
+      <li key={item.ID} className={`py-4 pl-6 pr-6 rounded bg-orange-200 shadow relative ${isEditing ? 'item-editing': ''}`} onClick={() => { isEditing? submitChanges(item, title, body): setIsEditing(true) }}>
         {isEditing ? (
           <>
           <div onClick={e => e.stopPropagation()}>
-            <input className="item-title input-box " value={title} onChange={e => setTitle(e.target.value)} placeholder={"*Company - Position"}/>
+            <span className='flex items-center justify-between'>
+              <input className="item-title input-box " value={title} onChange={e => setTitle(e.target.value)} placeholder={"*Company - Position"}/>
+              <button className={`rounded-[2vw] text-sm bg-blue-100 border-rose-600 border-2 px-1 text-amber-800 hover:bg-rose-400 ${isNewItem? 'hidden' : ''}`} onClick={() => handleDelete(item.ID)}>Delete</button>
+            </span>
             <textarea className="item-body input-box " value={body} rows={5} onChange={e => setBody(e.target.value)} placeholder="notes" />
           </div>
-            <p className={`text-xs flex text-gray-900 ${isNewItem? 'hidden' : ''}`}> Created - {formatDate(item.CreatedAt)} </p>
-            <span className="float-right flex m-2">
-              <button className="mr-2" onClick={(e) => {e.stopPropagation(); submitChanges(item, title, body) }}>Save</button>
+          <div className='flex items-baseline justify-between'>
+            <p className={`text-xs text-gray-900 ${isNewItem? 'hidden' : ''}`}> Created - {formatDate(item.CreatedAt)} </p>
+            <span className="float-right flex border-1 border-amber-500">
+              <button className="mr-2 " onClick={(e) => {e.stopPropagation(); submitChanges(item, title, body) }}>Save</button>
               <button className="ml-2" onClick={(e) => {e.stopPropagation(); exitEditing() }}>Cancel</button>
             </span>
+          </div>
+            
           </>
         ) : (
           <>
@@ -158,7 +163,7 @@ function ItemsList() {
     <>
     {/* <p className='text-blue-300'> HIHIHIHIH {isNewItem == true? 'treu' : 'nop'} </p> */}
     {isNewItem? <Item item={blankItem}></Item> : <button 
-      className={`flex rounded-4xl py-1 px-3 mb-0.5 border-2 bg-blue-300 justify-self-center hover:bg-blue-400`}
+      className={`flex rounded-4xl mt-2 mb-1 py-1 px-3  border-2 bg-blue-300 justify-self-center text-md hover:bg-blue-400`}
       onClick={() => setIsNewItem(true)}>
       {isDesktop? 'new application' : '+'}
     </button>}
