@@ -104,7 +104,7 @@ const Item = React.memo(function Item({
               <span className="float-right flex border-1 border-amber-500">
                 <button
                   className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 ${
-                    saveHighlight ? "group-hover:bg-emerald-500" : ""
+                    saveHighlight ? "group-hover:bg-emerald-500 group-hover:opacity-35" : ""
                   }`}
                   onClick={(e) => {
                     e.stopPropagation();

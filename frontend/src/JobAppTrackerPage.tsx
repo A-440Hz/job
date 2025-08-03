@@ -61,7 +61,7 @@ function ItemsList() {
   };
 
   return (
-    <>
+    <div className='justify-self-center border-2 w-full max-w-170'>
       {isNewItem ? (
         <Item
           item={blankItem}
@@ -102,7 +102,7 @@ function ItemsList() {
         ))}
       </ul>
       <p>user: {user?.ID}</p>
-    </>
+    </div>
   );
 }
 
