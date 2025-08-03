@@ -72,6 +72,11 @@ root {
   background-color: rgba(0,0,0,0); /* Black w/ opacity */
 }
 
+.highlight-save-button:group-hover {
+  background-color: var(--color-emerald-500);
+  opacity: 35%;
+}
+
 .vp-mid {
   /* display: none; */
   @media (min-width >= 768) {

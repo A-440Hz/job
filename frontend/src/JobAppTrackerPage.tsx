@@ -75,6 +75,7 @@ function ItemsList() {
 
   function Item({ item }: { item: any }) {
     const [isEditing, setIsEditing] = useState(false);
+    const [saveHighlight, setSaveHighlight] = useState(true);
     const [title, setTitle] = useState(item.Title);
     const [body, setBody] = useState(item.Body);
 
@@ -121,21 +122,21 @@ function ItemsList() {
         {isEditing && (
           <div className='item-modal' onClick={() => exitEditing()}/>
         )}
-      <li key={item.ID} className={`py-4 pl-6 pr-6 rounded bg-orange-200 shadow relative ${isEditing ? 'item-editing': ''}`} onClick={() => { isEditing? submitChanges(item, title, body): setIsEditing(true) }}>
+      <li key={item.ID} className={`py-4 pl-6 pr-6 rounded bg-orange-200 shadow group relative ${isEditing ? 'item-editing': ''}`} onClick={() => { isEditing? submitChanges(item, title, body): setIsEditing(true) }}>
         {isEditing ? (
           <>
           <div onClick={e => e.stopPropagation()}>
             <span className='flex items-center justify-between'>
-              <input className="item-title input-box " value={title} onChange={e => setTitle(e.target.value)} placeholder={"*Company - Position"}/>
-              <button className={`rounded-[2vw] text-sm bg-blue-100 border-rose-600 border-2 px-1 text-amber-800 hover:bg-rose-400 ${isNewItem? 'hidden' : ''}`} onClick={() => handleDelete(item.ID)}>Delete</button>
+              <input className="item-title input-box " value={title} onChange={e => setTitle(e.target.value)} placeholder={"*Company - Position"} onMouseOver={() => {setSaveHighlight(false)}} onMouseLeave={() => setSaveHighlight(true)}/>
+              <button className={`rounded-[2vw] text-sm bg-blue-100 border-rose-600 border-2 px-1 text-amber-800 hover:bg-rose-400 ${isNewItem? 'hidden' : ''}`} onClick={() => handleDelete(item.ID)} onMouseOver={() => {setSaveHighlight(false)}} onMouseLeave={() => setSaveHighlight(true)}>Delete</button>
             </span>
-            <textarea className="item-body input-box " value={body} rows={5} onChange={e => setBody(e.target.value)} placeholder="notes" />
+            <textarea className="item-body input-box " value={body} rows={5} onChange={e => setBody(e.target.value)} placeholder="notes" onMouseOver={() => {setSaveHighlight(false)}} onMouseLeave={() => setSaveHighlight(true)}/>
           </div>
           <div className='flex items-baseline justify-between'>
             <p className={`text-xs text-gray-900 ${isNewItem? 'hidden' : ''}`}> Created - {formatDate(item.CreatedAt)} </p>
             <span className="float-right flex border-1 border-amber-500">
-              <button className="mr-2 " onClick={(e) => {e.stopPropagation(); submitChanges(item, title, body) }}>Save</button>
-              <button className="ml-2" onClick={(e) => {e.stopPropagation(); exitEditing() }}>Cancel</button>
+              <button className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 ${saveHighlight? 'group-hover:bg-emerald-500': ''}`} onClick={(e) => {e.stopPropagation(); submitChanges(item, title, body) }}>Save</button>
+              <button className="ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 bg-rose-400 opacity-35 group-hover:bg-orange-200 group-hover:opacity-100 hover:bg-rose-400 hover:opacity-35" onClick={(e) => {e.stopPropagation(); exitEditing() }} onMouseOver={() => {setSaveHighlight(false)}} onMouseLeave={() => setSaveHighlight(true)}>Cancel</button>
             </span>
           </div>
             
