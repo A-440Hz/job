@@ -150,7 +150,7 @@ type UnderlyingTrackerUpdateFields struct {
 	GoalQuantity      *int       `json:"goalQuantity,omitempty"`
 	MissedGoalPenalty *bool      `json:"missedGoalPenalty,omitempty"`
 
-	// TODO: I think these can get refactored out too
+	// Non-user settable fields:
 	CurScorableItems *int `json:"curScorableItems,omitempty"`
 	CurBoxesAwarded  *int `json:"curBoxesAwarded,omitempty"`
 }

@@ -19,7 +19,7 @@ export async function createTrackerItem(title: string, body: string): Promise<an
         title: title,
         body: body,
         status: "complete",
-        is_attriuted: false,
+        isAttributed: false,
     };
     const res = await fetch(url, {
         method: 'POST',
@@ -50,5 +50,16 @@ export async function updateTrackerItem(id: string, title?: string, body?: strin
         throw new Error(`Failed to Fetch tracker: ${res.statusText}`);
     }
 
+    return await res.json();
+}
+
+export async function deleteTrackerItem(id: string): Promise<any> {
+    const res = await fetch(url + '?id=' + id, {
+        method: 'DELETE',
+        credentials: 'include',
+    });
+    if (!res.ok) {
+        throw new Error(`Failed to Fetch tracker: ${res.statusText}`);
+    }
     return await res.json();
 }

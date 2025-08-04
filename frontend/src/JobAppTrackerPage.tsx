@@ -1,111 +1,111 @@
-import { useState } from 'react'
-import { updateTrackerItem } from './api/tracker'
+import { useState, useEffect } from 'react'
+import Item from './Item';
+import { createTrackerItem, deleteTrackerItem, updateTrackerItem } from './api/tracker'
 import { useTrackerData } from './JobAppTrackerDataContext';
+import { useScreenSize } from './ScreenSizeProvider';
 import './App.css'
 
-
-function formatDate(raw: string) {
-  const d = new Date(raw);
-  return d.toLocaleDateString();
-}
-
 function JobAppTrackerPage() {
-  const { user, tracker, error } = useTrackerData();
+  const isDesktop = useScreenSize();
+  const { user, tracker, error } = useTrackerData();  
   if (error) return <div>Error loading backend: {error}</div>;
   if ( !user || !tracker ) return <div>???</div>;
 
   return (
-    <div className="p-8 w-8/10 justify-self-center border-blue-200 border mt-8">
-      <h1 className="text-5xl font-bold text-indigo-700 mb-4 text-center ">
-        Job App Tracker With Lootbox Technology
+    <div className="px-8 pt-4 w-8/10 justify-self-center border-blue-200 border mt-3">
+      <h1 className="vp-mid text-5xl font-bold select-none text-indigo-700 mb-4 text-center text-shadow-2xs text-shadow-blue-300">
+        {isDesktop? 'Job App Tracker With Lootbox Technology + Agentic Functionality' : 'Job App Tracker'}
       </h1>
-      <div className="text-xl mb-2 bg-violet-500 border-x-violet-500 border-4 text-center">Your Job Applications:</div>
+      <div className="text-xl mb-1 bg-blue-400 border-x-violet-300 border-4 text-center">maybe this is a topbar for options and sort order</div>
       <ItemsList />
     </div>
   );
 }
 
 function ItemsList() {
-  const { user, tracker, error, setTracker } = useTrackerData();
+  const isDesktop = useScreenSize();
+  const { user, tracker, error, refreshData, setTracker } = useTrackerData();
+  const [isNewItem, setIsNewItem] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   if (error) return <div>Error loading backend: {error}</div>;
 
-  const handleEdit = async (item: any, newTitle: string, newBody: string) => {
-    if (item.Title == newTitle && item.Body == newBody) {
-      return
+  const blankItem = { Title: "", Body: "" };
+
+  const handleNew = async (newTitle: string, newBody: string) => {
+    try {
+      const newData = await createTrackerItem(newTitle, newBody);
+      newData.tracker ? setTracker(newData.tracker) : console.error("Error finding data from Backend");
+    } catch (error: any) {
+      console.error(error.message);
     }
+  };
+
+  const handleEdit = async (item: any, newTitle: string, newBody: string) => {
+    if (item.Title === newTitle && item.Body === newBody) return;
     try {
       const newData = await updateTrackerItem(item.ID, newTitle, newBody);
-      // TODO: dont have this;
-      (newData.tracker? setTracker(newData.tracker) : null);
-      (newData.t? setTracker(newData.t) : null);
-      // TODO: error handling
-      ;
+      newData.tracker ? setTracker(newData.tracker) : console.error("Error finding data from Backend");
     } catch (error: any) {
-        console.log(error.message);
-    } 
-  };  
-
-  function Item({ item }: { item: any }) {
-    const [isEditing, setIsEditing] = useState(false);
-    const [title, setTitle] = useState(item.Title);
-    const [body, setBody] = useState(item.Body);
-
-    function exitEditing() {
-      setIsEditing(false);
-      setTitle(item.Title);
-      setBody(item.Body);
+      console.error(error.message);
     }
+  };
 
-    function submitChanges(item: any, title: string, body: string) {
-      handleEdit(item, title, body);
-      setIsEditing(false);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTrackerItem(id);
+    } catch (error: any) {
+      console.error(error.message);
     }
-
-    return (
-      <>
-        {isEditing && (
-          <div className='item-modal' onClick={() => exitEditing()}/>
-        )}
-      <li key={item.ID} className={`p-4 rounded bg-orange-200 shadow relative ${isEditing ? 'item-editing': ''}`} onClick={() => { isEditing? submitChanges(item, title, body): setIsEditing(true) }}>
-        {isEditing ? (
-          <>
-          <div onClick={e => e.stopPropagation()}>
-            <input className="item-title input-box " value={title} onChange={e => setTitle(e.target.value)} />
-            <br></br>
-            <textarea className="item-body input-box " value={body} rows={5} onChange={e => setBody(e.target.value)} />
-          </div>
-            <p className='text-xs text-gray-900'> Created - {formatDate(item.CreatedAt)} </p>
-            <span className="float-right m-2">
-              <button className="mr-2" onClick={() => submitChanges(item, title, body) }>Save</button>
-              <button className="ml-2" onClick={() => exitEditing() }>Cancel</button>
-            </span>
-          </>
-        ) : (
-          <>
-            <span className='flex justify-between items-center'>
-              <p className="item-title">{item.Title}</p>
-              <button className="rounded-[2vw] bg-amber-500" onClick={() => setIsEditing(true)}>Edit</button>
-            </span>
-            <p className="item-body">{item.Body}</p>
-            <p className='item-timestamp'> Created - {formatDate(item.CreatedAt)} </p>
-          </>
-        )}
-      </li>
-    </>
-    );
-  }
+    refreshData();
+  };
 
   return (
-    <>
-    <ul className='space-y-2'>
-      {tracker?.Items.map((item: any) => (
-        <Item key={item.ID} item={item} />
-      ))}
-    </ul>
-    <p> user: {user?.ID}</p>
-    </>
+    <div className='justify-self-center border-2 w-full max-w-170'>
+      {isNewItem ? (
+        <Item
+          item={blankItem}
+          isEditing={editingId === "new"}
+          isNewItem={true}
+          setIsNewItem={setIsNewItem}
+          editingId={editingId}
+          setEditingId={setEditingId}
+          handleEdit={handleEdit}
+          handleDelete={handleDelete}
+          handleNew={handleNew}
+        />
+      ) : (
+        <button
+          className="flex rounded-4xl mt-2 mb-1 py-1 px-3 border-2 bg-blue-300 justify-self-center text-md hover:bg-blue-400"
+          onClick={() => {
+            setIsNewItem(true);
+            setEditingId("new");
+          }}
+        >
+          {isDesktop ? "new application" : "+"}
+        </button>
+      )}
+      <ul className="space-y-2">
+        {tracker?.Items.map((item: any) => (
+          <Item
+            key={item.ID}
+            item={item}
+            isEditing={editingId === item.ID}
+            isNewItem={false}
+            setIsNewItem={setIsNewItem}
+            editingId={editingId}
+            setEditingId={setEditingId}
+            handleEdit={handleEdit}
+            handleDelete={handleDelete}
+            handleNew={handleNew}
+          />
+        ))}
+      </ul>
+      <p>user: {user?.ID}</p>
+    </div>
   );
 }
+
 
 
 export default JobAppTrackerPage

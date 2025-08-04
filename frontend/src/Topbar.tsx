@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTrackerData } from './JobAppTrackerDataContext';
 import { NavLink } from 'react-router-dom';
 
 function Glyph() {
@@ -46,20 +47,32 @@ export function Navbar() {
       }>
       About
     </NavLink>
+    <NavLink to='/profile' className={({ isActive }) =>
+        isActive ? navClass + "text-amber-300" : navClass
+      }>
+      Profile
+    </NavLink>
   </nav>;
 } 
 
 export function Login() {
-  return <a className="text-text-secondary pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/login">Log in</a>
+  return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/login">Login</a>
 }
 
 export default function Topbar() {
+  const {user, error} = useTrackerData();
+  if (error) return <div>Error loading backend: {error}</div>;
+  if (!user) return <div>???</div>; 
     return (
-    <div className='flex h-[62px] items-center border justify-between select-none z50'>
+    <div className='flex h-[62px] min-w-full items-center border justify-between select-none z50'>
       <span> <Glyph /> </span>
       <span className="hidden md:flex border select-none text-4xl ml-0"> Hi this is a topbar </span>
       <Navbar />
       <Login />
+      {/* TODO: scrolling banner; click to hide */}
+      <p className='flex absolute top-[60px] right-0 text-xs text-nowrap'> 
+        {user.Registered? '' : 'You are logged in as a demo user. Your progress will be lost after 60 days of inactivity or if you lose your session cookie. Register an account to persist your progress'}
+      </p>
     </div>);
 }
 

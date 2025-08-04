@@ -158,7 +158,9 @@ func (h *Handler) UpdateUserFields(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(u)
+	json.NewEncoder(w).Encode(map[string]any{
+		"user": u,
+	})
 }
 
 // TODO: do cascade gorm delete or series of delete calls here
@@ -180,10 +182,17 @@ func (h *Handler) DeleteUserRequest(w http.ResponseWriter, r *http.Request) {
 	h.UserService.ClearSessionCookie(w)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(nil)
 }
 
 func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, PATCH, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	switch r.Method {
+	case http.MethodOptions:
+		w.WriteHeader(http.StatusOK)
 	case http.MethodGet:
 		h.GetUserAndUserInventory(w, r)
 	case http.MethodPatch:
