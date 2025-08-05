@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import Item from './Item';
-import { createTrackerItem, deleteTrackerItem, updateTrackerItem } from './api/tracker'
+import { createTrackerItem, deleteTrackerItem, updateTrackerItem, formatDate } from './api/tracker'
 import { useTrackerData } from './JobAppTrackerDataContext';
 import { useScreenSize } from './ScreenSizeProvider';
 import './App.css'
@@ -16,10 +16,54 @@ function JobAppTrackerPage() {
       <h1 className="vp-mid text-5xl font-bold select-none text-indigo-700 mb-4 text-center text-shadow-2xs text-shadow-blue-300">
         {isDesktop? 'Job App Tracker With Lootbox Technology + Agentic Functionality' : 'Job App Tracker'}
       </h1>
-      <div className="text-xl mb-1 bg-blue-400 border-x-violet-300 border-4 text-center">maybe this is a topbar for options and sort order</div>
+      <TrackerBar />
       <ItemsList />
     </div>
   );
+}
+
+function ProgressTracker() {
+  const { tracker, error, setTracker } = useTrackerData();
+  if (error) return <div>Error loading backend: {error}</div>;
+  
+  // local timer:
+  // https://medium.com/create-a-clocking-in-system-on-react/create-a-react-app-displaying-the-current-date-and-time-using-hooks-21d946971556
+  const [date, setDate] = useState(new Date());
+  useEffect(() => {
+    // update the date every min
+    const interval = 60 * 1000
+    var timer = setInterval(() => setDate(new Date()), interval)
+    return function cleanup() {
+      clearInterval(timer)
+    }
+  })
+
+  const deadline = formatDate(tracker.CycleDeadline)
+  let deadlineMinutes = 60 * 24
+  if (tracker.CycleFrequency == 'weekly') {
+    deadlineMinutes = 60 * 24 * 7
+  }
+
+  let minsRemaining = Math.floor((deadline.valueOf() - date.valueOf())/ 1000 / 60)
+  return (
+    <span>
+      <p className='text-sm'> Remaining applications until next lootbox: {tracker.GoalQuantity - tracker.CurScorableItems} </p>
+      <p className='text-sm'> Time: {date.valueOf()} </p>
+      <p className='text-sm m-0 p-0'> Next deadline: {Math.floor((deadline.valueOf() - date.valueOf())/ 1000 / 60)} minutes </p>
+      <progress value={minsRemaining} max={deadlineMinutes}></progress>
+    </span>
+  );
+}
+
+function TrackerBar() {
+
+  return (
+      
+      <div className="text-xl mb-1 min-h-[79px] bg-blue-400 border-x-violet-300 border-4 text-center">
+        <ProgressTracker />
+      </div>
+    
+  )
 }
 
 function ItemsList() {
@@ -69,7 +113,7 @@ function ItemsList() {
           isNewItem={true}
           setIsNewItem={setIsNewItem}
           editingId={editingId}
-          setEditingId={setEditingId}
+        setEditingId={setEditingId}
           handleEdit={handleEdit}
           handleDelete={handleDelete}
           handleNew={handleNew}

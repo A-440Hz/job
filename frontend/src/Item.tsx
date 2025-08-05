@@ -1,9 +1,5 @@
 import React, { useEffect, useState } from 'react';
-
-function formatDate(raw: string) {
-  const d = new Date(raw);
-  return d.toLocaleDateString();
-}
+import { formatDate } from './api/tracker';
 
 const Item = React.memo(function Item({
   item,
@@ -100,7 +96,7 @@ const Item = React.memo(function Item({
             />
           </div>
             <div className="flex items-baseline justify-between">
-              {!isNewItem && <p className="text-xs text-gray-900">Created - {formatDate(item.CreatedAt)}</p>}
+              {!isNewItem && <p className="text-xs text-gray-900">Created - {formatDate(item.CreatedAt).toLocaleDateString()}</p>}
               <span className="float-right flex border-1 border-amber-500">
                 <button
                   className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 ${
@@ -139,7 +135,7 @@ const Item = React.memo(function Item({
               </button>
             </span>
             <p className="item-body">{item.Body}</p>
-            <p className="item-timestamp">Created - {formatDate(item.CreatedAt)}</p>
+            <p className="item-timestamp">Created - {formatDate(item.CreatedAt).toLocaleDateString()}</p>
           </div>
         )}
       </li>

@@ -63,3 +63,7 @@ export async function deleteTrackerItem(id: string): Promise<any> {
     }
     return await res.json();
 }
+
+export function formatDate(raw: string) {
+    return new Date(raw);
+}
