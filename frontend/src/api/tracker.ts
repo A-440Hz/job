@@ -13,6 +13,23 @@ export async function fetchTrackerData(): Promise<any> {
     return await res.json();
 }
 
+export async function updateTracker(frequency?:string, quantity?:number, penalty?:boolean): Promise<any> {
+    const updateTracker = {
+        cycleFrequency: frequency,
+        goalQuantity: quantity,
+        missedGoalPenalty: penalty,
+    };
+    const res = await fetch(url, {
+        method: 'PATCH',
+        credentials: 'include',
+        body: JSON.stringify(updateTracker)
+    });
+
+    if (!res.ok) {
+        throw new Error(`Failed to Fetch tracker: ${res.statusText}`);
+    }
+    return await res.json();
+}
 
 export async function createTrackerItem(title: string, body: string): Promise<any> {
     const item = {

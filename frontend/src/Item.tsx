@@ -32,6 +32,13 @@ const Item = React.memo(function Item({
     }
   }, [item.ID, setEditingId]);
 
+  useEffect(() => {
+  if (!isEditing) {
+    setTitle(item.Title);
+    setBody(item.Body);
+  }
+}, [item.Title, item.Body, isEditing]);
+
   const exitEditing = () => {
     setEditingId(null);
     if (item.ID === undefined) {
@@ -44,13 +51,12 @@ const Item = React.memo(function Item({
 
   const submitChanges = () => {
     if (item.ID === undefined) {
-      if (!title) return; // Prevent blank titles
+      if (!title) return; // Prevent blank titles. TODO:a flashing animation for the title input border 
       handleNew(title, body);
-      setIsNewItem(false);
     } else {
       handleEdit(item, title, body);
     }
-    setEditingId(null);
+    exitEditing();
   };
 
   return (
