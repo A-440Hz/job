@@ -57,7 +57,7 @@ const Item = React.memo(function Item({
     <>
       {isEditing && <div className="item-modal" onClick={exitEditing} />}
       <li
-        className={`py-4 pl-6 pr-6 rounded bg-orange-200 shadow group relative ${
+        className={`py-4 px-6 rounded bg-orange-200 shadow group relative ${
           isEditing ? "item-editing" : ""
         }`}
         onClick={() => (isEditing ? submitChanges() : setEditingId(item.ID || "new"))}
@@ -65,7 +65,7 @@ const Item = React.memo(function Item({
         {isEditing ? (
           <>
           <div onClick={(e) => e.stopPropagation()}>
-            <span className="flex items-center justify-between">
+            <span className="flex items-start justify-between">
               <input
                 className="item-title input-box"
                 value={title}
@@ -125,7 +125,7 @@ const Item = React.memo(function Item({
           </>
         ) : (
           <div className="select-none">
-            <span className="flex justify-between items-center">
+            <span className="flex justify-between items-start">
               <p className="item-title">{item.Title}</p>
               <button
                 className="rounded-[2vw] text-sm bg-blue-100 border-blue-300 border-2 px-1 text-amber-800 hover:bg-blue-200"

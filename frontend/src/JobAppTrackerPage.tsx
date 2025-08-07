@@ -5,6 +5,14 @@ import { useTrackerData } from './JobAppTrackerDataContext';
 import { useScreenSize } from './ScreenSizeProvider';
 import './App.css'
 
+function formatMinutes(minLeft:number) {
+  let d = Math.floor(minLeft/60/24)
+  let h = Math.floor(minLeft/60 - d * 24);
+  let m = (minLeft % 60);
+  console.log(d, h, m)
+  return ((d > 0)? d.toString() + "d ": "") + ((h > 0)? h.toString() + "h ": "") + ((m > 0)? m.toString() + "m ": "");
+}
+
 function JobAppTrackerPage() {
   const isDesktop = useScreenSize();
   const { user, tracker, error } = useTrackerData();  
@@ -22,8 +30,27 @@ function JobAppTrackerPage() {
   );
 }
 
-function ProgressTracker() {
+function ProgressBoxes() {
   const { tracker, error, setTracker } = useTrackerData();
+  if (error) return <div>Error loading backend: {error}</div>;
+
+  const gq = tracker.GoalQuantity;
+  const completed = tracker.CurScorableItems % gq;
+  const blocks = [];
+
+  for (let i = 0; i < gq; i++) {
+    console.log(i, completed)
+    blocks.push(
+    <li key={i} className={`min-h-2 min-w-3 flex-1 mx-1.5 rounded transition-colors duration-200 ${(i < completed)? "bg-lime-500" : "bg-slate-700"}`}> </li>);
+  };
+
+  return (
+    <ul className='flex items-center justify-between border min-h-2.5'>{blocks}</ul>
+  );
+}
+
+function ProgressTracker() {
+  const { tracker, error } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
   
   // local timer:
@@ -46,22 +73,47 @@ function ProgressTracker() {
 
   let minsRemaining = Math.floor((deadline.valueOf() - date.valueOf())/ 1000 / 60)
   return (
-    <span>
-      <p className='text-sm'> Remaining applications until next lootbox: {tracker.GoalQuantity - tracker.CurScorableItems} </p>
-      <p className='text-sm'> Time: {date.valueOf()} </p>
-      <p className='text-sm m-0 p-0'> Next deadline: {Math.floor((deadline.valueOf() - date.valueOf())/ 1000 / 60)} minutes </p>
-      <progress value={minsRemaining} max={deadlineMinutes}></progress>
+    <span className='px-2 pt-0.5 pb-2'>
+      <p className='text-xs text-left'> Remaining applications until next lootbox: {tracker.GoalQuantity - tracker.CurScorableItems} </p>
+      <ProgressBoxes />
+      <label htmlFor="remTime" className='text-xs'> Time remaining: {formatMinutes(minsRemaining)}</label>
+      <progress id="remTime" value={minsRemaining} max={deadlineMinutes}></progress>
     </span>
   );
 }
 
 function TrackerBar() {
+  const { tracker, error, setTracker } = useTrackerData();
+  if (error) return <div>Error loading backend: {error}</div>;
+  const deadline = formatDate(tracker.CycleDeadline).toISOString()
 
+  const [isEditing, setIsEditing] = useState(false);
   return (
       
-      <div className="text-xl mb-1 min-h-[79px] bg-blue-400 border-x-violet-300 border-4 text-center">
-        <ProgressTracker />
+      <div className="min-h-[79px] bg-blue-400 border-x-violet-300 border-4 ">
+        <div className='flex justify-between px-1.5 mb-1 text-center'>
+          <ProgressTracker />
+          <p>Current lootboxes: {tracker.CurBoxesAwarded}</p>
+          <button className='text-xs align-right border-2 rounded-[2vw] max-h-6 mt-4' onClick={() => setIsEditing(!isEditing)}> settings </button>
+
+        </div>
+        {isEditing && <span>
+          <div> Set the target amount of applications to unlock a lootbox: </div>
+          <input type="number" defaultValue={tracker.GoalQuantity}></input>
+          <div> Set the deadline to reset your progress to a lootbox: </div>
+          
+          <input type='datetime-local' value={deadline.substring(0, deadline.indexOf('T')+6)}></input>
+          {/* https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Date_and_time_formats#local_date_and_time_strings */}
+          <div>{formatDate(tracker.CycleDeadline).toJSON()}</div>
+          <div>{formatDate(tracker.CycleDeadline).toLocaleString()}</div>
+          <div>{formatDate(tracker.CycleDeadline).toLocaleDateString()}</div>
+          <div>{formatDate(tracker.CycleDeadline).toLocaleTimeString()}</div>
+          <div>{formatDate(tracker.CycleDeadline).toISOString()}</div>
+          <div>GoalQuantity</div>
+          
+        </span>}
       </div>
+
     
   )
 }

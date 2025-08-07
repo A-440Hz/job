@@ -25,8 +25,8 @@ function Glyph() {
 }
 
 export function Navbar() {
-  const navClass = "m-1 text-m/6 hover:opacity-60 "
-  return <nav className='border-2 justify-self-end pl-3 pr-3'>
+  const navClass = "mx-1.5 text-m/6 hover:opacity-60 "
+  return <nav className='flex border-2 justify-between pl-3 pr-3'>
     <NavLink to='/' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass
       }>
@@ -66,7 +66,7 @@ export default function Topbar() {
     return (
     <div className='flex h-[62px] min-w-full items-center border justify-between select-none z50'>
       <span> <Glyph /> </span>
-      <span className="hidden md:flex border select-none text-4xl ml-0"> Hi this is a topbar </span>
+      {/* <span className="hidden md:flex border select-none text-4xl ml-0"> Hi this is a topbar </span> */}
       <Navbar />
       <Login />
       {/* TODO: scrolling banner; click to hide */}
