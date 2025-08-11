@@ -35,7 +35,7 @@ function JobAppTrackerPage() {
 }
 
 function ProgressBoxes() {
-  const { tracker, error, setTracker } = useTrackerData();
+  const { tracker, error } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
 
   const gq = tracker.GoalQuantity;
@@ -45,15 +45,26 @@ function ProgressBoxes() {
   for (let i = 0; i < gq; i++) {
     // console.log(i, completed)
     blocks.push(
-    <li key={i} className={`min-h-2 min-w-3 flex-1 mx-1.5 rounded transition-colors duration-200 ${(i < completed)? "bg-lime-500" : "bg-slate-700"}`}> </li>);
+    <li key={i} className={`min-h-2 min-w-3 max-w-13 flex-1 mx-1.5 rounded transition-colors duration-200 ${(i < completed)? "bg-lime-500 opacity-80 shadow-xs shadow-amber-50" : "bg-slate-700"}`}> </li>);
   };
 
-  return (
-    <ul className='flex items-center justify-between border min-h-2.5'>{blocks}</ul>
+  return (<div className='select-none'>
+    <div className='bg-lime-600 w-20 skew-[-6deg] flex my-1'>
+      <text className='text-left font-semibold indent-4 text-xl block skew-[6deg]'> Goal: </text>
+    </div>
+    <p className='text-xs text-left text-nowrap'> 
+      Complete 
+        <div className='bg-lime-600 inline-flex px-1 mx-0.5 skew-[6deg]'>
+          <text className='skew-[-6deg] font-semibold'> {tracker.GoalQuantity} </text>
+        </div>
+      application<text>{tracker.GoalQuantity > 1 && 's'}</text> to earn a lootbox
+    </p>
+    <ul className='flex mt-2.5 items-center justify-between min-h-2.5'>{blocks}</ul>
+  </div>
   );
 }
 
-function ProgressTracker() {
+function DeadlineBar() {
   const { tracker, error } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
   
@@ -76,13 +87,37 @@ function ProgressTracker() {
   }
 
   let minsRemaining = Math.floor((deadline.valueOf() - date.valueOf())/ 1000 / 60)
+
+  return (<div className='select-none flex-col justify-items-left'>
+  <div className='bg-amber-900 w-28 skew-[-3deg] flex my-1'>
+      <text className='text-left font-semibold indent-4 text-xl block skew-[3deg]'> Deadline: </text>
+    </div>
+    <label htmlFor="remTime" className='text-xs flex text-left text-nowrap'> Progress resets in: 
+      <div className='bg-amber-900 inline-flex px-1 mx-0.5 skew-[3deg]'>
+        <text className='skew-[-3deg] font-semibold'> {formatMinutes(minsRemaining)} </text>
+      </div>      
+    </label>
+    <progress id="remTime" className='mt-3 flex w-[100%]' value={minsRemaining} max={deadlineMinutes}></progress>
+  </div>)
+}
+
+function ProgressTracker() {
+  const isDesktop = useScreenSize()
   return (
+    (isDesktop)?
+      <>
     <span className='px-2 pt-0.5 pb-2'>
-      <p className='text-xs text-left'> Remaining applications until next lootbox: {tracker.GoalQuantity - tracker.CurScorableItems} </p>
       <ProgressBoxes />
-      <label htmlFor="remTime" className='text-xs'> Time remaining: {formatMinutes(minsRemaining)}</label>
-      <progress id="remTime" value={minsRemaining} max={deadlineMinutes}></progress>
     </span>
+    <span className='px-2 pt-0.5 pb-2 align-self-center block'>
+      <DeadlineBar />
+    </span>
+      </>:
+    <span className='px-2 pt-0.5 pb-2'>
+      <ProgressBoxes />
+      <DeadlineBar />
+    </span>
+    
   );
 }
 
@@ -100,23 +135,42 @@ function TrackerBar() {
   const penaltyRef = useRef<HTMLInputElement>(tracker.MissedGoalPenalty)
 
   const submitChanges = () => {
-    const newDeadline = deadlineRef.current.value;
+    const newDeadline = Number(deadlineRef.current.value);
     const newQuantity = Number(quantityRef.current.value);
     const newFrequency = frequencyRef.current.value;
     const newPenalty = Boolean(penaltyRef.current.value);
-    console.log(newPenalty)
+    console.log(newDeadline, newQuantity, newFrequency, newPenalty)
     handleEdit(
       newFrequency,
+      newDeadline,
       newQuantity,
       newPenalty,
     );
     setIsEditing(false);
   }
 
-  const handleEdit = async (frequency?:string, quantity?:number, penalty?:boolean) => {
-    if (tracker.CycleDeadline === deadline && tracker.CycleFrequency === frequency && tracker.GoalQuantity === quantity && tracker.MissedGoalPenalty === penalty) return;
+  const handleEdit = async (frequency?:string, deadline?:number, quantity?:number, penalty?:boolean) => {
+    const changes: {
+      frequency?: string;
+      deadline?: number;
+      quantity?: number;
+      penalty?: boolean;
+    } = {};
+
+    if (frequency !== tracker.CycleFrequency) {changes.frequency = frequency;}
+    if (deadline !== tracker.CycleDeadline.valueOf()) {changes.deadline = deadline;}
+    if (quantity !== tracker.GoalQuantity) {changes.quantity = quantity;}
+    if (penalty !== tracker.MissedGoalPenalty) {changes.penalty = penalty;}
+
+    if (Object.keys(changes).length === 0) return;
+
     try {
-      const newData = await updateTracker(frequency, quantity, penalty);
+      const newData = await updateTracker(
+        changes.frequency,
+        changes.deadline,
+        changes.quantity,
+        changes.penalty
+      );
       newData.tracker ? setTracker(newData.tracker) : console.error("Error finding data from Backend");
     } catch (error: any) {
       console.error(error.message);
@@ -127,7 +181,7 @@ function TrackerBar() {
       <div className="min-h-[79px] bg-blue-400 border-x-violet-300 border-4 ">
         <div className='flex justify-between px-1.5 mb-1 text-center'>
           <ProgressTracker />
-          <p>Current lootboxes: {tracker.CurBoxesAwarded}</p>
+          <p className='text-sm p-1'>Current lootboxes earned {(tracker.CycleFrequency === "weekly")? 'this week' : 'today'}: {tracker.CurBoxesAwarded}</p>
           <button className='text-xs align-right border-2 rounded-[2vw] max-h-6 mt-4' onClick={() => setIsEditing(!isEditing)}> settings </button>
 
         </div>
@@ -140,17 +194,18 @@ function TrackerBar() {
           {/* <input type='datetime-local' value={addOffsetSeconds(tracker.CycleDeadline, user.Timezone.Offset).toISOString().substring(0, deadline.indexOf('T')+6)} ref={deadlineRef}></input> */}
           {/* https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Date_and_time_formats#local_date_and_time_strings */}
           <div>{formatDate(tracker.CycleDeadline).toJSON()}</div>
+          <div>{formatDate(tracker.CycleDeadline).valueOf()}</div>
           <div>{formatDate(tracker.CycleDeadline).toLocaleString()}</div>
           <div>{formatDate(tracker.CycleDeadline).toLocaleDateString()}</div>
-          <div>{formatDate(tracker.CycleDeadline).toLocaleTimeString()}</div>
-          <div>{formatDate(tracker.CycleDeadline).toISOString()}</div>
+          <div>{deadline}</div>
+          <div>{deadline.substring(0, deadline.indexOf('T')+6)}</div>
           <div> Set the frequency at which your goal resets: </div>
           <select ref={frequencyRef} defaultValue={tracker.CycleFrequency}>
             <option value="weekly">weekly</option>
             <option value="daily">daily</option>
           </select>
           <input type="checkbox" ref={penaltyRef} defaultChecked={tracker.MissedGoalPenalty}></input>
-          <span className="float-right flex border-1 border-amber-500">
+          <span className="float-right flex border-1 border-amber-500 group">
                 <button
                   className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 ${
                     saveHighlight ? "group-hover:bg-emerald-500 group-hover:opacity-35" : ""
@@ -163,7 +218,7 @@ function TrackerBar() {
                   Save
                 </button>
                 <button
-                  className="ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 bg-rose-400 opacity-35 group-hover:bg-orange-200 group-hover:opacity-100 hover:bg-rose-400 hover:opacity-35"
+                  className="ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 bg-rose-400 opacity-35 group-hover:bg-blue-400 group-hover:opacity-100 hover:bg-rose-400 hover:opacity-35"
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsEditing(false);

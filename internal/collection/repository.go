@@ -3,6 +3,7 @@ package collection
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -11,13 +12,32 @@ import (
 )
 
 const seedFile = "data/collectables.json"
+const pathToCollectables = "pathToCollectables"
+
+func init() {
+	os.Setenv(pathToCollectables, "")
+}
+
+func SetEnvForTesting(dir string) {
+	os.Setenv(pathToCollectables, filepath.ToSlash(filepath.Join(dir, seedFile)))
+}
 
 func getSeedFilePath() string {
-	exePath, err := os.Executable()
+
+	if p := os.Getenv(pathToCollectables); p != "" {
+		return p
+	}
+
+	baseDir, err := os.Executable()
 	if err != nil {
 		return seedFile
 	}
-	return filepath.ToSlash(filepath.Join(filepath.Dir(exePath), "../", seedFile))
+	fmt.Println(baseDir)
+	for filepath.Base(baseDir) != "internal" && filepath.Base(baseDir) != "cmd" {
+		fmt.Println(baseDir)
+		baseDir = filepath.Clean(filepath.Join(baseDir, "../"))
+	}
+	return filepath.ToSlash(filepath.Join(filepath.Dir(baseDir), seedFile))
 }
 
 type Repository struct {

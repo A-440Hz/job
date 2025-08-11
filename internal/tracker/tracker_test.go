@@ -23,6 +23,10 @@ func intPtr(i int) *int {
 	return &i
 }
 
+func int64Ptr(i int64) *int64 {
+	return &i
+}
+
 func strPtr(s string) *string {
 	return &s
 }
@@ -37,10 +41,10 @@ func itemStatusPtr(s string) *ItemStatus {
 }
 
 func Test_formatForRepo(t *testing.T) {
-	n := time.Now()
+	n := time.Now().Unix()
 	tests := []struct {
 		name             string
-		CycleDeadline    *time.Time
+		CycleDeadline    *int64
 		CycleFrequency   *string
 		GoalQuantity     *int
 		CurScorableItems *int
@@ -90,7 +94,7 @@ func Test_formatForRepo(t *testing.T) {
 			assert.Equal(t, jaT.UnderlyingTracker, *underlyingTracker)
 
 			// validate fields
-			assert.Equal(t, *tt.CycleDeadline, underlyingTracker.CycleDeadline)
+			assert.Equal(t, *tt.CycleDeadline, underlyingTracker.CycleDeadline.Unix())
 			assert.Equal(t, *tt.CycleFrequency, string(underlyingTracker.CycleFrequency))
 			assert.Equal(t, *tt.GoalQuantity, underlyingTracker.GoalQuantity)
 			assert.Equal(t, *tt.CurScorableItems, underlyingTracker.CurScorableItems)
@@ -107,10 +111,10 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
-	n := time.Now().Round(time.Hour)
+	n := time.Now().Round(time.Hour).Unix()
 	tests := []struct {
 		name             string
-		CycleDeadline    *time.Time
+		CycleDeadline    *int64
 		CycleFrequency   *string
 		GoalQuantity     *int
 		CurScorableItems *int
@@ -159,7 +163,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, updateTracker)
 			}
-			assert.Equal(t, *tt.CycleDeadline, updateTracker.CycleDeadline)
+			assert.Equal(t, *tt.CycleDeadline, updateTracker.CycleDeadline.Unix())
 			assert.Equal(t, *tt.CycleFrequency, string(updateTracker.CycleFrequency))
 			assert.Equal(t, *tt.GoalQuantity, updateTracker.GoalQuantity)
 			assert.Equal(t, *tt.CurScorableItems, updateTracker.CurScorableItems)
@@ -178,11 +182,12 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 			assert.Equal(t, scheduler.FreqDaily, updateTracker2.CycleFrequency)
 
 			// test scheduler reassignment
-			newDeadline := tt.CycleDeadline.Add(time.Hour)
+			newDeadline := time.Unix(*tt.CycleDeadline, 0).Add(time.Hour)
 			moreItems := *tt.CurScorableItems + 10
+			ndu := newDeadline.Unix()
 			updateTracker2_5, err := svc.UpdateJobAppTrackerFields(t1.GetUserID(),
 				&JobAppTrackerUpdateFields{UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-					CycleDeadline:    &newDeadline,
+					CycleDeadline:    &ndu,
 					CycleFrequency:   strPtr("weekly"),
 					CurScorableItems: &moreItems,
 					GoalQuantity:     &newQuantity,
@@ -202,9 +207,11 @@ func Test_CreateJobAppItem(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
-	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{})
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{}, user.User{}, collection.UserInventory{})
 	repo := NewRepository(dBase)
-	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
+	cs := collection.NewService(collection.NewRepository(dBase))
+	svc := NewService(repo, scheduler.NewScheduler(), cs)
+	uSvc := user.NewService(user.NewRepository(dBase), cs)
 
 	defaultStatus := StatusComplete
 	n := time.Now().Round(time.Hour)
@@ -249,8 +256,10 @@ func Test_CreateJobAppItem(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dummyUser := user.User{ID: "user_12345678"}
-			t1, err := svc.CreateNewJobAppTracker(&dummyUser)
+			dummyUser, err := uSvc.CreateNewUser(scheduler.GetDefaultTimezone())
+			require.NoError(t, err)
+			assert.NotNil(t, dummyUser)
+			t1, err := svc.CreateNewJobAppTracker(dummyUser)
 			require.NoError(t, err)
 			assert.NotNil(t, t1)
 
@@ -280,7 +289,7 @@ func Test_CreateJobAppItem(t *testing.T) {
 			assert.Equal(t, *tt.Status, t1.Items[0].Status)
 			assert.Equal(t, *tt.IsAttributed, t1.Items[0].IsAttributed)
 			assert.Equal(t, tt.AttributionTime, t1.Items[0].AttributionTime)
-			dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
+			dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items, users, user_inventories RESTART IDENTITY CASCADE")
 		})
 	}
 
@@ -315,13 +324,15 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 	statusInProgress := StatusInProgress
 
 	// Create one completed item and ensure CurScorableItems is 1
-	_, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+	tracker, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
 		Title:        strPtr("Item 1"),
 		Body:         strPtr("Body 1"),
 		Status:       &statusComplete,
 		IsAttributed: boolPtr(false),
 	})
 	require.NoError(t, err)
+	item1 := tracker.Items[0]
+
 	tracker, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
 		Title:        strPtr("Item 2"),
 		Body:         strPtr("Body 2"),
@@ -334,9 +345,13 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 	assert.Equal(t, 1, tracker.CurScorableItems)
 	assert.Equal(t, 0, tracker.CurBoxesAwarded)
 
-	// assume the first item is the one that is created first; gorm sorting should ensure this
-	item1 := tracker.Items[0]
-	item2 := tracker.Items[1]
+	var item2 JobAppItem
+	for _, i := range tracker.Items {
+		if i == item1 {
+			continue
+		}
+		item2 = i
+	}
 
 	// Update item1 status from complete to in-progress and check that CurScorableItems has decremented
 	tracker, err = svc.UpdateJobAppItemFields(dummyUser.GetID(), item1.ID, &JobAppItemUpdateFields{
@@ -360,7 +375,7 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 	assert.Equal(t, 0, tracker.CurScorableItems)
 	assert.Equal(t, 1, tracker.CurBoxesAwarded)
 
-	dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items RESTART IDENTITY CASCADE")
+	dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items, users RESTART IDENTITY CASCADE")
 }
 
 func Test_Scheduler(t *testing.T) {
@@ -393,7 +408,7 @@ func Test_Scheduler(t *testing.T) {
 	require.NoError(t, err)
 	jt00, err := svc.UpdateJobAppTrackerFields(u0.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-			CycleDeadline:  &t0,
+			CycleDeadline:  int64Ptr(t0.Unix()),
 			CycleFrequency: strPtr("daily"),
 		},
 	})
@@ -401,7 +416,7 @@ func Test_Scheduler(t *testing.T) {
 	assert.NotEqual(t, jt0, jt00)
 	jt11, err := svc.UpdateJobAppTrackerFields(u1.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-			CycleDeadline:  &t1,
+			CycleDeadline:  int64Ptr(t1.Unix()),
 			CycleFrequency: strPtr("daily"),
 		},
 	})
@@ -409,7 +424,7 @@ func Test_Scheduler(t *testing.T) {
 	assert.NotEqual(t, jt1, jt11)
 	jt22, err := svc.UpdateJobAppTrackerFields(u2.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-			CycleDeadline:  &t2,
+			CycleDeadline:  int64Ptr(t2.Unix()),
 			CycleFrequency: strPtr("weekly"),
 		},
 	})
@@ -417,7 +432,7 @@ func Test_Scheduler(t *testing.T) {
 	assert.NotEqual(t, jt2, jt22)
 	jt33, err := svc.UpdateJobAppTrackerFields(u3.GetID(), &JobAppTrackerUpdateFields{
 		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
-			CycleDeadline:  &t3,
+			CycleDeadline:  int64Ptr(t3.Unix()),
 			CycleFrequency: strPtr("weekly"),
 		},
 	})

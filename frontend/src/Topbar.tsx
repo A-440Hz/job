@@ -25,6 +25,9 @@ function Glyph() {
 }
 
 export function Navbar() {
+  const {user, error} = useTrackerData();
+  if (error) return <div> ??? </div>;
+
   const navClass = "mx-1.5 text-m/6 hover:opacity-60 "
   return <nav className='flex border-2 justify-between pl-3 pr-3'>
     <NavLink to='/' className={({ isActive }) =>
@@ -40,7 +43,7 @@ export function Navbar() {
     <NavLink to='/Lootbox' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass
       }>
-      Open Lootbox
+       Lootbox {/*<text> {(user.inventory?.NumLootboxes > 0)? `(${user.inventory?.NumLootboxes})` : ''}</text> */}
     </NavLink>
     <NavLink to='/About' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass

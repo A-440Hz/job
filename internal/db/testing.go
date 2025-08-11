@@ -5,6 +5,8 @@ import (
 	"path"
 	"runtime"
 
+	"job/internal/collection"
+
 	"gorm.io/gorm"
 )
 
@@ -49,4 +51,5 @@ func ChdirGoTests() {
 	if err != nil {
 		panic(err)
 	}
+	collection.SetEnvForTesting(dir)
 }

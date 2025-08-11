@@ -39,7 +39,7 @@ type TrackerGoal struct {
 	TrackerType    string
 }
 
-func (tg *TrackerGoal) resetDeadline() {
+func (tg *TrackerGoal) resetDeadline(withRetry bool) {
 	now := time.Now()
 	// a loop should be fine as long as front end prevents setting a deadline a million years back
 	// for tg.CycleDeadline.Before(now) {
@@ -47,6 +47,22 @@ func (tg *TrackerGoal) resetDeadline() {
 	// }
 	if now.Before(tg.CycleDeadline) {
 		log.Printf("reset deadline passthrough on %v", tg.CycleDeadline)
+		return
+	}
+	// do not use time.Add in case of large deficits to try to avoid looping edge case.
+	// hard reset to current year and adjust fine deadline next loop in the scheduler.
+	if tg.CycleDeadline.Year()+1 < now.Year() {
+		log.Printf("deadline year deficit too large (%v vs %v): first resetting %v to current year", tg.CycleDeadline.Year(), now.Year(), tg.CycleDeadline)
+		tg.CycleDeadline = time.Date(now.Year(), tg.CycleDeadline.Month(), tg.CycleDeadline.Day(),
+			tg.CycleDeadline.Hour(), tg.CycleDeadline.Minute(), tg.CycleDeadline.Second(), tg.CycleDeadline.Nanosecond(), tg.CycleDeadline.Location())
+
+		// try returning this function again to avoid edge case where user is penalized 2 lootboxes instead of 1,
+		// from having scheduler report 2 deadline resets
+		if withRetry {
+			tg.resetDeadline(false)
+			return
+		}
+		log.Printf("the scheduler was unsuccessful in adjusting the deadline year to the current year: %v", tg)
 		return
 	}
 	prev := tg.CycleDeadline
@@ -193,7 +209,7 @@ func (s *Scheduler) Start() {
 			log.Printf("timer tick at %v", t)
 			tg := heap.Pop(s.g).(*TrackerGoal)
 			log.Printf("popped %v", tg.CycleDeadline)
-			tg.resetDeadline()
+			tg.resetDeadline(true)
 			s.OutputCh <- tg
 			heap.Push(s.g, tg)
 			s.updateTimer()
@@ -204,9 +220,4 @@ func (s *Scheduler) Start() {
 
 func (s *Scheduler) Stop() {
 	s.stopCh <- true
-}
-
-// Load reads all the trackers in the repo and loads them into the scheduler
-func (s *Scheduler) Load() {
-	// do the description
 }

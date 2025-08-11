@@ -1,8 +1,8 @@
 /* App.css is for styles specific to elements in App.tsx */
 
 :root {
-  --progress-color-true: var(--color-lime-700);
-  --progress-color-false: var(--color-slate-700);
+  --progress-color-main: var(--color-amber-900);
+  --progress-color-bg: var(--color-slate-300);
 }
 
 root {
@@ -50,12 +50,16 @@ root {
 .item-editing {
   border-width: 3px;
   border-style: groove solid;
-  border-color: var(--color-rose-500);
   z-index: 20;
 }
 
-.item-editing:hover {
-  border-color: var(--color-emerald-600);
+li:has(.delete:hover) {
+  border-color: var(--color-rose-600);
+}
+
+
+li:has(.cancel:hover) {
+  border-color: var(--color-rose-400);
 }
 
 .item-editing::marker {
@@ -89,15 +93,15 @@ root {
   https://stackoverflow.com/questions/18368202/how-can-i-set-the-color-for-the-progress-element
 */
 progress::-webkit-progress-bar {
-  background-color: var(--progress-color-false);
+  background-color: var(--progress-color-bg);
 }
 
-progress::-webkit-progress-value {background-color: var(--progress-color-true);}
-progress::-moz-progress-bar {background-color: var(--progress-color-true);}
+progress::-webkit-progress-value {background-color: var(--progress-color-main);}
+progress::-moz-progress-bar {background-color: var(--progress-color-main);}
 
 progress {
-  background-color: var(--progress-color-false);
-  color: var(--progress-color-true);
-  accent-color: var(--progress-color-true);
-  max-height: calc(var(--spacing) * 1);
+  background-color: var(--progress-color-bg);
+  color: var(--progress-color-main);
+  accent-color: var(--progress-color-main);
+  max-height: calc(var(--spacing) * 1.1);
 }

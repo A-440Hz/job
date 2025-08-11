@@ -489,8 +489,9 @@ func (s *Service) resetTrackerDeadline(poppedTg *scheduler.TrackerGoal) error {
 // getCycleUpdateFields extracts the updated Deadline and Frequency from a scheduler TrackerGoal,
 // returning it in the form of UpdateFields for an update function
 func getCycleUpdateFields(tg *scheduler.TrackerGoal) *UnderlyingTrackerUpdateFields {
+	tu := tg.CycleDeadline.Unix()
 	return &UnderlyingTrackerUpdateFields{
-		CycleDeadline:  &tg.CycleDeadline,
+		CycleDeadline:  &tu,
 		CycleFrequency: tg.CycleFrequency.StrPtr(),
 	}
 }

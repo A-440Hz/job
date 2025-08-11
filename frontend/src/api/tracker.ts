@@ -13,12 +13,14 @@ export async function fetchTrackerData(): Promise<any> {
     return await res.json();
 }
 
-export async function updateTracker(frequency?:string, quantity?:number, penalty?:boolean): Promise<any> {
-    const updateTracker = {
-        cycleFrequency: frequency,
-        goalQuantity: quantity,
-        missedGoalPenalty: penalty,
-    };
+export async function updateTracker(frequency?:string, deadline?:number, quantity?:number, penalty?:boolean): Promise<any> {
+    const updateTracker: Record<string, any> = {};
+
+    if (frequency !== undefined) updateTracker.cycleFrequency = frequency;
+    if (deadline !== undefined) updateTracker.cycleDeadline = deadline;
+    if (quantity !== undefined) updateTracker.goalQuantity = quantity;
+    if (frequency !== undefined) updateTracker.missedGoalPenalty = penalty;
+
     const res = await fetch(url, {
         method: 'PATCH',
         credentials: 'include',

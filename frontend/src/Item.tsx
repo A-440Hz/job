@@ -65,7 +65,9 @@ const Item = React.memo(function Item({
       <li
         className={`py-4 px-6 rounded bg-orange-200 shadow group relative ${
           isEditing ? "item-editing" : ""
-        }`}
+        } ${
+        saveHighlight? "hover:border-emerald-500" : "hover:border-blue-200"
+        } border-rose-400`}
         onClick={() => (isEditing ? submitChanges() : setEditingId(item.ID || "new"))}
       >
         {isEditing ? (
@@ -82,7 +84,7 @@ const Item = React.memo(function Item({
               />
               {!isNewItem && (
                 <button
-                  className="rounded-[2vw] text-sm bg-blue-100 border-rose-600 border-2 px-1 text-amber-800 hover:bg-rose-400"
+                  className="delete rounded-[2vw] text-sm bg-blue-100 border-rose-600 border-2 px-1 text-amber-800 hover:bg-rose-400"
                   onClick={() => handleDelete(item.ID)}
                   onMouseOver={() => setSaveHighlight(false)}
                   onMouseLeave={() => setSaveHighlight(true)}
@@ -116,7 +118,7 @@ const Item = React.memo(function Item({
                   Save
                 </button>
                 <button
-                  className="ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 bg-rose-400 opacity-35 group-hover:bg-orange-200 group-hover:opacity-100 hover:bg-rose-400 hover:opacity-35"
+                  className="cancel ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 bg-rose-400 opacity-35 group-hover:bg-orange-200 group-hover:opacity-100 hover:bg-rose-400 hover:opacity-35"
                   onClick={(e) => {
                     e.stopPropagation();
                     exitEditing();

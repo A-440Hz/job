@@ -145,10 +145,10 @@ func (t *UnderlyingTracker) ToTrackerGoal() *scheduler.TrackerGoal {
 }
 
 type UnderlyingTrackerUpdateFields struct {
-	CycleDeadline     *time.Time `json:"cycleDeadline,omitempty"`
-	CycleFrequency    *string    `json:"cycleFrequency,omitempty"`
-	GoalQuantity      *int       `json:"goalQuantity,omitempty"`
-	MissedGoalPenalty *bool      `json:"missedGoalPenalty,omitempty"`
+	CycleDeadline     *int64  `json:"cycleDeadline,omitempty"`
+	CycleFrequency    *string `json:"cycleFrequency,omitempty"`
+	GoalQuantity      *int    `json:"goalQuantity,omitempty"`
+	MissedGoalPenalty *bool   `json:"missedGoalPenalty,omitempty"`
 
 	// Non-user settable fields:
 	CurScorableItems *int `json:"curScorableItems,omitempty"`
@@ -159,7 +159,7 @@ func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []
 	t := &UnderlyingTracker{}
 	fields := []string{}
 	if uf.CycleDeadline != nil {
-		t.CycleDeadline = *uf.CycleDeadline
+		t.CycleDeadline = time.Unix(*uf.CycleDeadline, 0)
 		fields = append(fields, cycleDeadlineField)
 	}
 	if uf.CycleFrequency != nil {
