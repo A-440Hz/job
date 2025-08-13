@@ -16,11 +16,11 @@ export async function fetchTrackerData(): Promise<any> {
 export async function updateTracker(frequency?:string, deadline?:number, quantity?:number, penalty?:boolean): Promise<any> {
     const updateTracker: Record<string, any> = {};
 
-    if (frequency !== undefined) updateTracker.cycleFrequency = frequency;
-    if (deadline !== undefined) updateTracker.cycleDeadline = deadline;
-    if (quantity !== undefined) updateTracker.goalQuantity = quantity;
-    if (frequency !== undefined) updateTracker.missedGoalPenalty = penalty;
-
+    if (frequency) updateTracker.cycleFrequency = frequency;
+    if (deadline) updateTracker.cycleDeadline = deadline;
+    if (quantity) updateTracker.goalQuantity = quantity;
+    if (penalty) updateTracker.missedGoalPenalty = penalty;
+    console.log("updateTracker:", updateTracker)
     const res = await fetch(url, {
         method: 'PATCH',
         credentials: 'include',

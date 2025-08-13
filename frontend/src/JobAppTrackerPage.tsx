@@ -18,8 +18,8 @@ function addOffsetSeconds(date:Date, seconds:number) {
 }
 
 function JobAppTrackerPage() {
+  const { user, tracker, error } = useTrackerData();
   const isDesktop = useScreenSize();
-  const { user, tracker, error } = useTrackerData();  
   if (error) return <div>Error loading backend: {error}</div>;
   if ( !user || !tracker ) return <div>???</div>;
 
@@ -157,20 +157,23 @@ function TrackerBar() {
       penalty?: boolean;
     } = {};
 
-    if (frequency !== tracker.CycleFrequency) {changes.frequency = frequency;}
-    if (deadline !== tracker.CycleDeadline.valueOf()) {changes.deadline = deadline;}
-    if (quantity !== tracker.GoalQuantity) {changes.quantity = quantity;}
-    if (penalty !== tracker.MissedGoalPenalty) {changes.penalty = penalty;}
+    if (frequency && frequency !== tracker.CycleFrequency) {changes.frequency = frequency;}
+    // convert ms to s for backend
+    if (deadline && deadline * 100 !== tracker.CycleDeadline.valueOf()) {changes.deadline = deadline * 100;}
+    if (quantity && quantity !== tracker.GoalQuantity) {changes.quantity = quantity;}
+    if (penalty && penalty !== tracker.MissedGoalPenalty) {changes.penalty = penalty;}
 
     if (Object.keys(changes).length === 0) return;
 
     try {
+      console.log(changes)
       const newData = await updateTracker(
         changes.frequency,
         changes.deadline,
         changes.quantity,
         changes.penalty
       );
+      console.log(newData)
       newData.tracker ? setTracker(newData.tracker) : console.error("Error finding data from Backend");
     } catch (error: any) {
       console.error(error.message);
