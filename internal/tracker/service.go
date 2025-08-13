@@ -115,7 +115,10 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 			updateTracker.CycleFrequency = repoTracker.CycleFrequency
 		}
 		updateTracker.TrackerType = repoTracker.TrackerType
-		err = s.scheduler.ReplaceTrackerGoal(repoTracker.ToTrackerGoal(), updateTracker.ToTrackerGoal())
+		rg := repoTracker.ToTrackerGoal()
+		ug := updateTracker.ToTrackerGoal()
+		scheduler.AdjustNewDeadline(rg, ug)
+		err = s.scheduler.ReplaceTrackerGoal(rg, ug)
 		if err != nil {
 			// fail scheduler gracefully?
 			log.Print("scheduler replace failed:", err)

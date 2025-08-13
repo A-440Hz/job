@@ -16,6 +16,8 @@ const startingHeapCapacity = 32
 // other is to keep increasing the size
 const outputChannelSize = 50
 
+const curYear = 2025
+
 // Scheduler always lives in memory and manages when to trigger and reset TrackerGoals
 type Scheduler struct {
 	g        *GoalHeap
@@ -40,43 +42,43 @@ type TrackerGoal struct {
 }
 
 func (tg *TrackerGoal) resetDeadline(withRetry bool) {
-	now := time.Now()
-	// a loop should be fine as long as front end prevents setting a deadline a million years back
-	// for tg.CycleDeadline.Before(now) {
-	// 	tg.CycleDeadline = tg.CycleDeadline.Add(time.Duration(tg.CycleFrequency.NumDays()))
-	// }
-	if now.Before(tg.CycleDeadline) {
-		log.Printf("reset deadline passthrough on %v", tg.CycleDeadline)
-		return
-	}
-	// // do not use time.Add in case of large deficits to try to avoid looping edge case.
-	// // hard reset to current year and adjust fine deadline next loop in the scheduler.
-	// if tg.CycleDeadline.Year()+1 < now.Year() {
-	// 	log.Printf("tg year: %v, now year: %v", tg.CycleDeadline.Year(), now.Year())
-	// 	log.Printf("deadline year deficit too large (%v vs %v): first resetting %v to current year", tg.CycleDeadline.Year(), now.Year(), tg.CycleDeadline)
-	// 	tg.CycleDeadline = time.Date(now.Year(), tg.CycleDeadline.Month(), tg.CycleDeadline.Day(),
-	// 		tg.CycleDeadline.Hour(), tg.CycleDeadline.Minute(), tg.CycleDeadline.Second(), tg.CycleDeadline.Nanosecond(), tg.CycleDeadline.Location())
-
-	// 	// try returning this function again to avoid edge case where user is penalized 2 lootboxes instead of 1,
-	// 	// from having scheduler report 2 deadline resets
-	// 	if withRetry {
-	// 		tg.resetDeadline(false)
-	// 		return
-	// 	}
-	// 	log.Printf("the scheduler was unsuccessful in adjusting the deadline year to the current year: %v", tg)
+	// now := time.Now()
+	// // a loop should be fine as long as front end prevents setting a deadline a million years back
+	// // for tg.CycleDeadline.Before(now) {
+	// // 	tg.CycleDeadline = tg.CycleDeadline.Add(time.Duration(tg.CycleFrequency.NumDays()))
+	// // }
+	// if now.Before(tg.CycleDeadline) {
+	// 	log.Printf("reset deadline passthrough on %v", tg.CycleDeadline)
 	// 	return
 	// }
-	// TODO: refactor this numDays part out and prevent any newTg from having a nil CycleDeadline value
-	prev := tg.CycleDeadline
-	numDaysBetween := int64(now.Sub(tg.CycleDeadline).Round(time.Hour) / (time.Hour * 24))
-	if numDaysBetween > 100000 {
-		// ???? how does it reset to 0 and then bounce back and retain the
+	// // TODO: refactor this numDays part out and prevent any newTg from having a nil CycleDeadline value
+	// prev := tg.CycleDeadline
+	// numDaysBetween := int64(now.Sub(tg.CycleDeadline).Round(time.Hour) / (time.Hour * 24))
+	// log.Printf("numDaysBetween: %d, now: %v, prev: %v", numDaysBetween, now, prev)
+	// log.Printf("tg.CycleFrequency.NumDays(): %d", tg.CycleFrequency.NumDays())
+	// numDaysToNext := (int(numDaysBetween/int64(tg.CycleFrequency.NumDays())) + 1) * tg.CycleFrequency.NumDays()
+	// tg.CycleDeadline = tg.CycleDeadline.Add(time.Hour * 24 * time.Duration(numDaysToNext))
+	// log.Printf("reset %v to %v", prev, tg.CycleDeadline)
+	if tg.CycleDeadline.IsZero() || tg.CycleDeadline.Year() < curYear {
+		tg.CycleDeadline = time.Now()
 	}
-	log.Printf("numDaysBetween: %d, now: %v, prev: %v", numDaysBetween, now, prev)
-	log.Printf("tg.CycleFrequency.NumDays(): %d", tg.CycleFrequency.NumDays())
-	numDaysToNext := (int(numDaysBetween/int64(tg.CycleFrequency.NumDays())) + 1) * tg.CycleFrequency.NumDays()
-	tg.CycleDeadline = tg.CycleDeadline.Add(time.Hour * 24 * time.Duration(numDaysToNext))
-	log.Printf("reset %v to %v", prev, tg.CycleDeadline)
+	AdjustNewDeadline(tg, tg)
+}
+
+// AdjustNewDeadline mutates newTg deadline to account
+func AdjustNewDeadline(oldTg, newTg *TrackerGoal) {
+	now := time.Now()
+
+	if now.Before(oldTg.CycleDeadline) {
+		newTg.CycleDeadline = oldTg.CycleDeadline
+		return
+	}
+	prevDeadline := oldTg.CycleDeadline
+	numDaysBetween := int(now.Sub(prevDeadline).Round(time.Hour) / (time.Hour * 24))
+	log.Printf("numDaysBetween: %d, now: %v, prev: %v", numDaysBetween, now, prevDeadline)
+	numDayToNextDeadline := (int(numDaysBetween/newTg.CycleFrequency.NumDays()) + 1) * newTg.CycleFrequency.NumDays()
+	// log.Printf("math test: %v, %v", numDayToNextDeadline, (numDaysBetween + newTg.CycleFrequency.NumDays()))
+	newTg.CycleDeadline = oldTg.CycleDeadline.Add(time.Hour * 24 * time.Duration(numDayToNextDeadline))
 }
 
 func NewScheduler() *Scheduler {
