@@ -53,10 +53,10 @@ func NewRepository(d *gorm.DB) *Repository {
 func (r *Repository) importCollectables() error {
 	r.db.Exec("TRUNCATE TABLE collectables RESTART IDENTITY CASCADE")
 	f, err := os.Open(getSeedFilePath())
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	var collectables []Collectable
 	err = json.NewDecoder(f).Decode(&collectables)
 	if err != nil {

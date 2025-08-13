@@ -1,9 +1,14 @@
 const url = 'http://localhost:8080/careers';
 
+const timezoneOffset = new Date().getTimezoneOffset();
+
 export async function fetchTrackerData(): Promise<any> {
+    const headers = new Headers();
+    headers.append('X-Timezone-Offset', timezoneOffset.toString());
     const res = await fetch(url, {
         method: 'GET',
         credentials: 'include',
+        headers,
     });
 
     if (!res.ok) {

@@ -13,9 +13,9 @@ function formatMinutes(minLeft:number) {
   return ((d > 0)? d.toString() + "d ": "") + ((h > 0)? h.toString() + "h ": "") + ((m > 0)? m.toString() + "m ": "");
 }
 
-function addOffsetSeconds(date:Date, seconds:number) {
-  return new Date(date.valueOf()+seconds)
-}
+// function addOffsetSeconds(date:Date, seconds:number) {
+//   return new Date(date.valueOf()+seconds)
+// }
 
 function JobAppTrackerPage() {
   const { user, tracker, error } = useTrackerData();
@@ -54,9 +54,9 @@ function ProgressBoxes() {
     </div>
     <p className='text-xs text-left text-nowrap'> 
       Complete 
-        <div className='bg-lime-600 inline-flex px-1 mx-0.5 skew-[6deg]'>
+        <span className='bg-lime-600 inline-flex px-1 mx-0.5 skew-[6deg]'>
           <text className='skew-[-6deg] font-semibold'> {tracker.GoalQuantity} </text>
-        </div>
+        </span>
       application<text>{tracker.GoalQuantity > 1 && 's'}</text> to earn a lootbox
     </p>
     <ul className='flex mt-2.5 items-center justify-between min-h-2.5'>{blocks}</ul>
@@ -93,9 +93,9 @@ function DeadlineBar() {
       <text className='text-left font-semibold indent-4 text-xl block skew-[3deg]'> Deadline: </text>
     </div>
     <label htmlFor="remTime" className='text-xs flex text-left text-nowrap'> Progress resets in: 
-      <div className='bg-amber-900 inline-flex px-1 mx-0.5 skew-[3deg]'>
+      <span className='bg-amber-900 inline-flex px-1 mx-0.5 skew-[3deg]'>
         <text className='skew-[-3deg] font-semibold'> {formatMinutes(minsRemaining)} </text>
-      </div>      
+      </span>      
     </label>
     <progress id="remTime" className='mt-3 flex w-[100%]' value={minsRemaining} max={deadlineMinutes}></progress>
   </div>)
@@ -305,7 +305,7 @@ function ItemsList() {
         </div>
       )}
       <ul className="space-y-2">
-        {tracker?.Items.map((item: any) => (
+        {tracker?.Items?.map((item: any) => (
           <Item
             key={item.ID}
             item={item}
