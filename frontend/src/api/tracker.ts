@@ -24,7 +24,7 @@ export async function updateTracker(frequency?:string, deadline?:number, quantit
     if (frequency) updateTracker.cycleFrequency = frequency;
     if (deadline) updateTracker.cycleDeadline = deadline;
     if (quantity) updateTracker.goalQuantity = quantity;
-    if (penalty) updateTracker.missedGoalPenalty = penalty;
+    if (penalty !== undefined) updateTracker.missedGoalPenalty = penalty;
     console.log("updateTracker:", updateTracker)
     const res = await fetch(url, {
         method: 'PATCH',
@@ -88,6 +88,3 @@ export async function deleteTrackerItem(id: string): Promise<any> {
     return await res.json();
 }
 
-export function formatDate(raw: string) {
-    return new Date(raw);
-}

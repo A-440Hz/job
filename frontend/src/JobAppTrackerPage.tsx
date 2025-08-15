@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import Item from './Item';
-import { createTrackerItem, deleteTrackerItem, updateTrackerItem, updateTracker, formatDate } from './api/tracker'
+import { createTrackerItem, deleteTrackerItem, updateTrackerItem, updateTracker } from './api/tracker'
+import { formatDate, dateToInputString, inputStringToDate } from './api/datetime'
 import { useTrackerData } from './JobAppTrackerDataContext';
 import { useScreenSize } from './ScreenSizeProvider';
 import './App.css'
@@ -13,8 +14,10 @@ function formatMinutes(minLeft:number) {
   return ((d > 0)? d.toString() + "d ": "") + ((h > 0)? h.toString() + "h ": "") + ((m > 0)? m.toString() + "m ": "");
 }
 
-function adjustTimezoneOffset(date:Date, seconds:number) {
-  return new Date(date.valueOf()+seconds)
+function adjustTimezoneOffset(date:Date, seconds:number, add:boolean) {
+  let offset_ms = seconds * 1000
+  if (!add) {offset_ms = offset_ms * -1}
+  return new Date(date.valueOf()+(offset_ms))
 }
 
 function JobAppTrackerPage() {
@@ -50,15 +53,15 @@ function ProgressBoxes() {
 
   return (<div className='select-none'>
     <div className='bg-lime-600 w-20 skew-[-6deg] flex my-1'>
-      <text className='text-left font-semibold indent-4 text-xl block skew-[6deg]'> Goal: </text>
+      <span className='text-left font-semibold indent-4 text-xl block skew-[6deg]'> Goal: </span>
     </div>
-    <p className='text-xs text-left text-nowrap'> 
+    <div className='text-xs text-left text-nowrap'> 
       Complete 
         <span className='bg-lime-600 inline-flex px-1 mx-0.5 skew-[6deg]'>
-          <text className='skew-[-6deg] font-semibold'> {tracker.GoalQuantity} </text>
+          <span className='skew-[-6deg] font-semibold'> {tracker.GoalQuantity} </span>
         </span>
-      application<text>{tracker.GoalQuantity > 1 && 's'}</text> to earn a lootbox
-    </p>
+      application<span>{tracker.GoalQuantity > 1 && 's'}</span> to earn a lootbox
+    </div>
     <ul className='flex mt-2.5 items-center justify-between min-h-2.5'>{blocks}</ul>
   </div>
   );
@@ -90,11 +93,11 @@ function DeadlineBar() {
 
   return (<div className='select-none flex-col justify-items-left'>
   <div className='bg-amber-900 w-28 skew-[-3deg] flex my-1'>
-      <text className='text-left font-semibold indent-4 text-xl block skew-[3deg]'> Deadline: </text>
+      <span className='text-left font-semibold indent-4 text-xl block skew-[3deg]'> Deadline: </span>
     </div>
     <label htmlFor="remTime" className='text-xs flex text-left text-nowrap'> Progress resets in: 
       <span className='bg-amber-900 inline-flex px-1 mx-0.5 skew-[3deg]'>
-        <text className='skew-[-3deg] font-semibold'> {formatMinutes(minsRemaining)} </text>
+        <span className='skew-[-3deg] font-semibold'> {formatMinutes(minsRemaining)} </span>
       </span>      
     </label>
     <progress id="remTime" className='mt-3 flex w-[100%]' value={minsRemaining} max={deadlineMinutes}></progress>
@@ -124,44 +127,60 @@ function ProgressTracker() {
 function TrackerBar() {
   const { tracker, user, error, setTracker } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
-  const deadline = formatDate(tracker.CycleDeadline).toISOString()
-
+  
   const [isEditing, setIsEditing] = useState(false);
   const [saveHighlight, setSaveHighlight] = useState(true);
 
-  const deadlineRef = useRef<HTMLInputElement>(tracker.CycleDeadline)
-  const frequencyRef = useRef<HTMLSelectElement>(tracker.CycleFrequency)
-  const quantityRef = useRef<HTMLInputElement>(tracker.GoalQuantity)
-  const penaltyRef = useRef<HTMLInputElement>(tracker.MissedGoalPenalty)
+  useEffect(() => {
+    if (!isEditing) {
+      setDeadline(localizedDeadline);
+      setQuantity(tracker.GoalQuantity);
+      setFrequency(tracker.CycleFrequency);
+      setPenalty(tracker.MissedGoalPenalty);
+    }
+  })
 
-  const submitChanges = () => {
-    const newDeadline = Number(deadlineRef.current.value);
-    const newQuantity = Number(quantityRef.current.value);
-    const newFrequency = frequencyRef.current.value;
-    const newPenalty = Boolean(penaltyRef.current.value);
-    console.log(newDeadline, newQuantity, newFrequency, newPenalty)
-    handleEdit(
-      newFrequency,
-      newDeadline,
-      newQuantity,
-      newPenalty,
-    );
+  const now = new Date();
+  const localizedDeadline = dateToInputString(adjustTimezoneOffset(formatDate(tracker.CycleDeadline), user.Timezone.OffsetSeconds, true));
+  const [deadline, setDeadline] = useState(localizedDeadline);
+  const [quantity, setQuantity] = useState(Number(tracker.GoalQuantity));
+  const [frequency, setFrequency] = useState(tracker.CycleFrequency);
+  const [penalty, setPenalty] = useState(Boolean(tracker.MissedGoalPenalty));
+
+  const exitEditing = () => {
     setIsEditing(false);
   }
 
-  const handleEdit = async (frequency?:string, deadline?:number, quantity?:number, penalty?:boolean) => {
+  const submitChanges = () => {
+    const newDeadline = deadline;
+    const newQuantity = quantity;
+    const newFrequency = frequency;
+    const newPenalty = penalty;
+    // console.log(deadline)
+    console.log(newPenalty,  newFrequency, newDeadline, newQuantity)
+    
+    handleEdit(
+      newPenalty,
+      newFrequency,
+      newDeadline,
+      newQuantity,
+    );
+    exitEditing();
+  }
+
+  const handleEdit = async (penalty:boolean, frequency?:string, deadline?:string, quantity?:number) => {
     const changes: {
+      penalty?: boolean;
       frequency?: string;
       deadline?: number;
       quantity?: number;
-      penalty?: boolean;
     } = {};
 
     if (frequency && frequency !== tracker.CycleFrequency) {changes.frequency = frequency;}
     // convert ms to s for backend
-    if (deadline && deadline * 100 !== tracker.CycleDeadline.valueOf()) {changes.deadline = deadline * 100;}
+    if (deadline !== localizedDeadline) {changes.deadline = adjustTimezoneOffset(inputStringToDate(String(deadline)), user.Timezone.OffsetSeconds, false).valueOf() * 100;}
     if (quantity && quantity !== tracker.GoalQuantity) {changes.quantity = quantity;}
-    if (penalty && penalty !== tracker.MissedGoalPenalty) {changes.penalty = penalty;}
+    if (penalty !== tracker.MissedGoalPenalty) {changes.penalty = penalty;}
 
     if (Object.keys(changes).length === 0) return;
 
@@ -179,55 +198,48 @@ function TrackerBar() {
       console.error(error.message);
     }
   };
-
+  
   return (      
       <div className="min-h-[79px] bg-blue-400 border-x-violet-300 border-4 ">
         <div className='flex justify-between px-1.5 mb-1 text-center'>
           <ProgressTracker />
           <p className='text-sm p-1'>Current lootboxes earned {(tracker.CycleFrequency === "weekly")? 'this week' : 'today'}: {tracker.CurBoxesAwarded}</p>
-          <button className='text-xs align-right border-2 rounded-[2vw] max-h-6 mt-4' onClick={() => setIsEditing(!isEditing)}> settings </button>
-
+          <button className='text-xs align-right border-2 rounded-[2vw] max-h-6 mt-4' onClick={() => {isEditing? exitEditing(): setIsEditing(true)}}> settings </button>
         </div>
-        {/* look into <form> https://react.dev/reference/react-dom/components/input*/}
         {isEditing && <div className='flex-row bg-gray-500 opacity-70'>
         <div className='grid grid-cols-2 p-2 gap-4'>
-          <div className='border'>
-            <div> Set the goal for earning a lootbox:
-              <input className='bg-lime-500 w-10 ml-1' type="number" defaultValue={tracker.GoalQuantity} ref={quantityRef}></input>
-            </div>
+          <div className={`border-3 p-2 flex-col justify-between ${(quantity != tracker.GoalQuantity) && 'border-amber-300'}`}>
+            <div className='block'> Set the goal for earning a lootbox: </div>
+            <input className='bg-lime-500 w-10 ml-1 block justify-self-center' type="number" value={quantity} min={1} onChange={(e) => setQuantity(e.target.valueAsNumber)}></input>
           </div>
-          <div className='border'>
-            <div> Set the deadline to reset your progress to a lootbox: </div>
-            <input type='datetime-local' value={deadline.substring(0, deadline.indexOf('T')+6)} ref={deadlineRef}></input>
-            <input type='time' value={deadline.substring(0, deadline.indexOf('T')+6)} ref={deadlineRef}></input>
-            <input type='date' value={deadline.substring(0, deadline.indexOf('T')+6)} ref={deadlineRef}></input>
+          <div className={`border-3 p-2 ${(deadline !== localizedDeadline) && 'border-amber-300'}`}>
+            <label htmlFor="select-date"> Set goal deadline: </label>
+            <input className='border' id='select-date' type='datetime-local' value={deadline} min={dateToInputString(now)} onChange={(e) => setDeadline(e.target.value)}></input>
+            <p> {Math.floor(formatDate(tracker.CycleDeadline).valueOf()/ 1)} </p>
+            <p> {Math.floor(adjustTimezoneOffset(inputStringToDate(deadline), user.Timezone.OffsetSeconds, false).valueOf()/1)} </p>
+            <p> {adjustTimezoneOffset(inputStringToDate(deadline), user.Timezone.OffsetSeconds, false).toJSON()} </p>
+            <p> {formatDate(tracker.CycleDeadline).toJSON()} </p>
           </div>
           {/* <input type='datetime-local' value={addOffsetSeconds(tracker.CycleDeadline, user.Timezone.Offset).toISOString().substring(0, deadline.indexOf('T')+6)} ref={deadlineRef}></input> */}
           {/* https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Date_and_time_formats#local_date_and_time_strings */}
           {/* <div>{deadlineRef.current.value};</div> */}
-          <div className='border'> 
-            <div> Set the frequency the deadline resets itself: </div>
-            <select ref={frequencyRef} defaultValue={tracker.CycleFrequency}>
+          <div className={`border-3 p-2 ${(frequency !== tracker.CycleFrequency) && 'border-amber-300'}`}> 
+            <div> Set deadline reset frequency: </div>
+            <select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
               <option className='text-gray-300' value="daily">daily</option>
               <option className='text-gray-300' value="weekly">weekly</option>
             </select>
           </div>
-          <div className='border'> 
-            <div> Enable -1 lootbox penalty on failure to meet goal within deadline:
-            <input className='ml-1' type="checkbox" ref={penaltyRef} defaultChecked={tracker.MissedGoalPenalty}></input>
+          <div className={`border-3 p-2 ${(penalty !== tracker.MissedGoalPenalty) && 'border-amber-300'}`}>
+            <div> Enable goal failure penalty:
+            <input className='ml-1' type="checkbox" defaultChecked={penalty} onChange={() => setPenalty(!penalty)}></input>
             </div>
           </div>
-          <div>{formatDate(tracker.CycleDeadline).toJSON()}</div>
-          <div>{formatDate(tracker.CycleDeadline).valueOf()}</div>
-          <div>{formatDate(tracker.CycleDeadline).toLocaleString()}</div>
-          <div>{formatDate(tracker.CycleDeadline).toLocaleDateString()}</div>
-          <div>{deadline}</div>
-          <div>{deadline.substring(0, deadline.indexOf('T')+6)}</div>
         </div>
-        <span className="float-right flex border-1 border-amber-500 group">
+        <span className="float-right border-1">
           <button
             className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 ${
-              saveHighlight ? "group-hover:bg-emerald-500 group-hover:opacity-35" : ""
+              saveHighlight ? "hover:bg-emerald-500 hover:opacity-35" : ""
             }`}
             onClick={(e) => {
               e.stopPropagation();
@@ -237,7 +249,7 @@ function TrackerBar() {
             Save
           </button>
           <button
-            className="ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 bg-rose-400 opacity-35 group-hover:bg-blue-400 group-hover:opacity-100 hover:bg-rose-400 hover:opacity-35"
+            className="ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 bg-rose-400 opacity-35 hover:bg-blue-400 hover:opacity-100 hover:bg-rose-400 hover:opacity-35"
             onClick={(e) => {
               e.stopPropagation();
               setIsEditing(false);

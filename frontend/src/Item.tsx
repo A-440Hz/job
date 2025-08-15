@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { formatDate } from './api/tracker';
+import { formatDate } from './api/datetime';
 
 const Item = React.memo(function Item({
   item,
@@ -44,8 +44,8 @@ const Item = React.memo(function Item({
     if (item.ID === undefined) {
       setIsNewItem(false);
     } else {
-      setTitle(item.Title);
-      setBody(item.Body);
+      // setTitle(item.Title);
+      // setBody(item.Body);
     }
   };
 
