@@ -13,9 +13,9 @@ function formatMinutes(minLeft:number) {
   return ((d > 0)? d.toString() + "d ": "") + ((h > 0)? h.toString() + "h ": "") + ((m > 0)? m.toString() + "m ": "");
 }
 
-// function addOffsetSeconds(date:Date, seconds:number) {
-//   return new Date(date.valueOf()+seconds)
-// }
+function adjustTimezoneOffset(date:Date, seconds:number) {
+  return new Date(date.valueOf()+seconds)
+}
 
 function JobAppTrackerPage() {
   const { user, tracker, error } = useTrackerData();
@@ -189,50 +189,66 @@ function TrackerBar() {
 
         </div>
         {/* look into <form> https://react.dev/reference/react-dom/components/input*/}
-        {isEditing && <span>
-          <div> Set the target amount of applications to unlock a lootbox: </div>
-          <input type="number" defaultValue={tracker.GoalQuantity} ref={quantityRef}></input>
-          <div> Set the deadline to reset your progress to a lootbox: </div>
-          <input type='datetime-local' value={deadline.substring(0, deadline.indexOf('T')+6)} ref={deadlineRef}></input>
+        {isEditing && <div className='flex-row bg-gray-500 opacity-70'>
+        <div className='grid grid-cols-2 p-2 gap-4'>
+          <div className='border'>
+            <div> Set the goal for earning a lootbox:
+              <input className='bg-lime-500 w-10 ml-1' type="number" defaultValue={tracker.GoalQuantity} ref={quantityRef}></input>
+            </div>
+          </div>
+          <div className='border'>
+            <div> Set the deadline to reset your progress to a lootbox: </div>
+            <input type='datetime-local' value={deadline.substring(0, deadline.indexOf('T')+6)} ref={deadlineRef}></input>
+            <input type='time' value={deadline.substring(0, deadline.indexOf('T')+6)} ref={deadlineRef}></input>
+            <input type='date' value={deadline.substring(0, deadline.indexOf('T')+6)} ref={deadlineRef}></input>
+          </div>
           {/* <input type='datetime-local' value={addOffsetSeconds(tracker.CycleDeadline, user.Timezone.Offset).toISOString().substring(0, deadline.indexOf('T')+6)} ref={deadlineRef}></input> */}
           {/* https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Date_and_time_formats#local_date_and_time_strings */}
+          {/* <div>{deadlineRef.current.value};</div> */}
+          <div className='border'> 
+            <div> Set the frequency the deadline resets itself: </div>
+            <select ref={frequencyRef} defaultValue={tracker.CycleFrequency}>
+              <option className='text-gray-300' value="daily">daily</option>
+              <option className='text-gray-300' value="weekly">weekly</option>
+            </select>
+          </div>
+          <div className='border'> 
+            <div> Enable -1 lootbox penalty on failure to meet goal within deadline:
+            <input className='ml-1' type="checkbox" ref={penaltyRef} defaultChecked={tracker.MissedGoalPenalty}></input>
+            </div>
+          </div>
           <div>{formatDate(tracker.CycleDeadline).toJSON()}</div>
           <div>{formatDate(tracker.CycleDeadline).valueOf()}</div>
           <div>{formatDate(tracker.CycleDeadline).toLocaleString()}</div>
           <div>{formatDate(tracker.CycleDeadline).toLocaleDateString()}</div>
           <div>{deadline}</div>
           <div>{deadline.substring(0, deadline.indexOf('T')+6)}</div>
-          <div> Set the frequency at which your goal resets: </div>
-          <select ref={frequencyRef} defaultValue={tracker.CycleFrequency}>
-            <option value="weekly">weekly</option>
-            <option value="daily">daily</option>
-          </select>
-          <input type="checkbox" ref={penaltyRef} defaultChecked={tracker.MissedGoalPenalty}></input>
-          <span className="float-right flex border-1 border-amber-500 group">
-                <button
-                  className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 ${
-                    saveHighlight ? "group-hover:bg-emerald-500 group-hover:opacity-35" : ""
-                  }`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    submitChanges();
-                  }}
-                >
-                  Save
-                </button>
-                <button
-                  className="ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 bg-rose-400 opacity-35 group-hover:bg-blue-400 group-hover:opacity-100 hover:bg-rose-400 hover:opacity-35"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsEditing(false);
-                  }}
-                  onMouseOver={() => setSaveHighlight(false)}
-                  onMouseLeave={() => setSaveHighlight(true)}
-                >
-                  Cancel
-                </button>
-              </span>
-        </span>}
+        </div>
+        <span className="float-right flex border-1 border-amber-500 group">
+          <button
+            className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 ${
+              saveHighlight ? "group-hover:bg-emerald-500 group-hover:opacity-35" : ""
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              submitChanges();
+            }}
+          >
+            Save
+          </button>
+          <button
+            className="ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 bg-rose-400 opacity-35 group-hover:bg-blue-400 group-hover:opacity-100 hover:bg-rose-400 hover:opacity-35"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsEditing(false);
+            }}
+            onMouseOver={() => setSaveHighlight(false)}
+            onMouseLeave={() => setSaveHighlight(true)}
+          >
+            Cancel
+          </button>
+        </span>
+        </div>}
       </div>
 
     
