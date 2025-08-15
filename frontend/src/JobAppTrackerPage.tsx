@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import Item from './Item';
 import { createTrackerItem, deleteTrackerItem, updateTrackerItem, updateTracker } from './api/tracker'
-import { formatDate, dateToInputString, inputStringToDate } from './api/datetime'
+import { formatDate, dateToInputString, inputStringToDate, adjustTimezoneOffset, convertToBackendTime } from './api/datetime'
 import { useTrackerData } from './JobAppTrackerDataContext';
 import { useScreenSize } from './ScreenSizeProvider';
 import './App.css'
@@ -12,12 +12,6 @@ function formatMinutes(minLeft:number) {
   let m = (minLeft % 60);
   // console.log(d, h, m)
   return ((d > 0)? d.toString() + "d ": "") + ((h > 0)? h.toString() + "h ": "") + ((m > 0)? m.toString() + "m ": "");
-}
-
-function adjustTimezoneOffset(date:Date, seconds:number, add:boolean) {
-  let offset_ms = seconds * 1000
-  if (!add) {offset_ms = offset_ms * -1}
-  return new Date(date.valueOf()+(offset_ms))
 }
 
 function JobAppTrackerPage() {
@@ -177,8 +171,8 @@ function TrackerBar() {
     } = {};
 
     if (frequency && frequency !== tracker.CycleFrequency) {changes.frequency = frequency;}
-    // convert ms to s for backend
-    if (deadline !== localizedDeadline) {changes.deadline = adjustTimezoneOffset(inputStringToDate(String(deadline)), user.Timezone.OffsetSeconds, false).valueOf() * 100;}
+    // convert microseconds to seconds for backend
+    if (deadline !== localizedDeadline) {changes.deadline = convertToBackendTime(adjustTimezoneOffset(inputStringToDate(String(deadline)), user.Timezone.OffsetSeconds, false));}
     if (quantity && quantity !== tracker.GoalQuantity) {changes.quantity = quantity;}
     if (penalty !== tracker.MissedGoalPenalty) {changes.penalty = penalty;}
 

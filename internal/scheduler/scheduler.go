@@ -45,7 +45,8 @@ func (tg *TrackerGoal) resetDeadline() {
 	// the default time value 0001-01-01 and very early time values causes looping behavior with my scheduler algorithm.
 	// users will have to make do with a hard reset
 	n := time.Now()
-	if tg.CycleDeadline.IsZero() || n.Sub(tg.CycleDeadline) > deadlineResetCutoffDuration {
+	tDist := n.Sub(tg.CycleDeadline)
+	if tg.CycleDeadline.IsZero() || (tDist > time.Microsecond && tDist > deadlineResetCutoffDuration) || (tDist < time.Microsecond && tDist < -1*deadlineResetCutoffDuration) {
 		tg.CycleDeadline = n
 	}
 	AdjustNewDeadline(tg, tg)
