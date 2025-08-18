@@ -190,7 +190,12 @@ func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields
 	if i.IsScorable() {
 		return s.addOneScorableItem(t)
 	}
-	return s.repo.getJobAppTrackerWithItemsFromUserID(userID)
+	t, err = s.repo.getJobAppTrackerWithItemsFromUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+	t.CheckIfLit()
+	return t, nil
 }
 
 // TODO: remove this method if not needed
@@ -231,7 +236,12 @@ func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *Job
 		// increment it if this update makes the item scorable
 		return s.addOneScorableItem(t)
 	}
-	return s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
+	t, err = s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
+	if err != nil {
+		return nil, err
+	}
+	t.CheckIfLit()
+	return t, nil
 }
 
 func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
@@ -343,7 +353,12 @@ func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
 	if err != nil {
 		return nil, err
 	}
-	return s.repo.getJobAppTrackerWithItemsFromTrackerID(repoTracker.GetID())
+	repoTracker, err = s.repo.getJobAppTrackerWithItemsFromTrackerID(repoTracker.GetID())
+	if err != nil {
+		return nil, err
+	}
+	repoTracker.CheckIfLit()
+	return repoTracker, nil
 }
 
 func (s *Service) updateJobAppItemFields(t *JobAppTracker, itemID string, fields *JobAppItemUpdateFields) error {
@@ -385,7 +400,7 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 		// I think some coins is a better philosophy than lootboxes
 		// that way it makes more sense when there's multiple trackers too.
 	} else if !t.DailyStreakMet() {
-		t.CurDailyStreak = 0
+		t.CurDailyStreak = 1
 		fields = append(fields, curDailyStreakField)
 	}
 	t.LastCompleted = &n
@@ -409,6 +424,7 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
 		}
 	}
+	// no need for CheckIfLit() here because updateTrackerState includes it in the results
 	return repoTracker, err
 }
 

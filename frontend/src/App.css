@@ -1,7 +1,8 @@
 /* App.css is for styles specific to elements in App.tsx */
 
 :root {
-  --progress-color-main: var(--color-amber-900);
+  --progress-color-deadline: var(--color-amber-900);
+  --progress-color-streak: var(--color-orange-500);
   --progress-color-bg: var(--color-slate-300);
 }
 
@@ -96,12 +97,21 @@ progress::-webkit-progress-bar {
   background-color: var(--progress-color-bg);
 }
 
-progress::-webkit-progress-value {background-color: var(--progress-color-main);}
-progress::-moz-progress-bar {background-color: var(--progress-color-main);}
+progress::-webkit-progress-value {background-color: var(--progress-color-deadline);}
+progress::-moz-progress-bar {background-color: var(--progress-color-deadline);}
+progress.streak-bar::-webkit-progress-value {background-color: var(--progress-color-streak);}
+progress.streak-bar::-moz-progress-bar {background-color: var(--progress-color-streak);}
 
 progress {
   background-color: var(--progress-color-bg);
-  color: var(--progress-color-main);
-  accent-color: var(--progress-color-main);
+  color: var(--progress-color-deadline);
+  accent-color: var(--progress-color-deadline);
+  max-height: calc(var(--spacing) * 1.1);
+}
+
+progress.streak-bar {
+  background-color: var(--progress-color-bg);
+  color: var(--progress-color-streak);
+  accent-color: var(--progress-color-streak);
   max-height: calc(var(--spacing) * 1.1);
 }

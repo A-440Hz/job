@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, type ReactNode } from 'react'
 import Item from './Item';
 import { createTrackerItem, deleteTrackerItem, updateTrackerItem, updateTracker } from './api/tracker'
 import { formatDate, dateToInputString, inputStringToDate, adjustTimezoneOffset, convertToBackendTime } from './api/datetime'
@@ -7,6 +7,7 @@ import { useScreenSize } from './ScreenSizeProvider';
 import './App.css'
 
 function formatMinutes(minLeft:number) {
+  if (minLeft < 0) {return -1}
   let d = Math.floor(minLeft/60/24)
   let h = Math.floor(minLeft/60 - d * 24);
   let m = (minLeft % 60);
@@ -25,7 +26,10 @@ function JobAppTrackerPage() {
       <h1 className="vp-mid text-5xl font-bold select-none text-indigo-700 mb-4 text-center text-shadow-2xs text-shadow-blue-300">
         {isDesktop? 'Job App Tracker With Lootbox Technology + Agentic Functionality' : 'Job App Tracker'}
       </h1>
-      <TrackerBar />
+
+      <div className={`${isDesktop?'':'w-[90vw] relative left-1/2 right-1/2 -mx-[45vw]'} `}>
+        <TrackerBar />
+      </div>
       <ItemsList />
     </div>
   );
@@ -45,26 +49,80 @@ function ProgressBoxes() {
     <li key={i} className={`min-h-2 min-w-3 max-w-13 flex-1 mx-1.5 rounded transition-colors duration-200 ${(i < completed)? "bg-lime-500 opacity-80 shadow-xs shadow-amber-50" : "bg-slate-700"}`}> </li>);
   };
 
-  return (<div className='select-none'>
-    <div className='bg-lime-600 w-20 skew-[-6deg] flex my-1'>
-      <span className='text-left font-semibold indent-4 text-xl block skew-[6deg]'> Goal: </span>
+  return (<div className='select-none inline-block min-w-1/4 min-h-1/3'>
+    <div className='flex'>
+    <span className='bg-lime-600 pr-3 skew-[-8deg] flex my-1'>
+      <span className='text-left font-semibold indent-4 text-xl block skew-[8deg]'> Goal: </span>
+    </span>
+    <span className='ml-auto text-xs p-1 text-end align-text-bottom '> lootboxes earned {(tracker.CycleFrequency === "weekly")? 'this week' : 'today'}: {tracker.CurBoxesAwarded}</span>
     </div>
     <div className='text-xs text-left text-nowrap'> 
       Complete 
         <span className='bg-lime-600 inline-flex px-1 mx-0.5 skew-[6deg]'>
           <span className='skew-[-6deg] font-semibold'> {tracker.GoalQuantity} </span>
         </span>
-      application<span>{tracker.GoalQuantity > 1 && 's'}</span> to earn a lootbox
+      application<span>{tracker.GoalQuantity > 1 && 's'}</span> for a lootbox
     </div>
-    <ul className='flex mt-2.5 items-center justify-between min-h-2.5'>{blocks}</ul>
+    <ul className='flex mt-2.5 items-center justify-evenly min-h-2.5'>{blocks}</ul>
   </div>
   );
 }
 
-function DeadlineBar() {
+function DeadlineBar({date}: {date: Date}) {
   const { tracker, error } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
-  
+
+  const deadline = formatDate(tracker.CycleDeadline)
+  let deadlineMinutes = 60 * 24
+  if (tracker.CycleFrequency == 'weekly') {
+    deadlineMinutes = 60 * 24 * 7
+  }
+
+  let minsRemaining = Math.floor((deadline.valueOf() - date.valueOf())/ 1000 / 60)
+
+  return (<div className='select-none inline-block min-h-1/3 '>
+  <div className='bg-amber-900 w-28 skew-[-3deg] flex my-1'>
+      <span className='text-left font-semibold indent-4 text-xl block skew-[3deg]'> Deadline: </span>
+    </div>
+    <label htmlFor="remTime" className='text-xs block text-left text-nowrap'> Progress resets in: 
+      <span className='bg-amber-900 inline-block px-1 mx-0.5 skew-[3deg]'>
+        <span className='skew-[-3deg] inline-block font-semibold'> {formatMinutes(minsRemaining)} </span>
+      </span>      
+    </label>
+    <progress id="remTime" className='mt-3 flex w-auto' value={minsRemaining} max={deadlineMinutes}></progress>
+  </div>)
+}
+
+function DailyStreak({date}: {date: Date}) {
+  const { tracker, serverDay, error } = useTrackerData();
+  if (error) return <div>Error loading backend: {error}</div>;
+
+  // progress bar deadline is set to server's "today" + 25h
+  const deadline =  serverDay.valueOf() + 1000 * 60 * 25
+  let minsRemaining = Math.floor((deadline - date.valueOf())/ 1000 / 60)
+
+  return (<div className='select-none inline-block min-h-1/3 border'>
+  <div className='items-baseline inline-flex'>
+    <span>
+    <div className='bg-orange-500 pr-3.5 skew-[-2deg] my-1'>
+        <span className='text-left font-semibold indent-4 text-xl block skew-[2deg] text-nowrap'> Daily Streak: {tracker.IsLitDailyStreak === true && tracker.CurDailyStreak}</span>
+    </div>
+    </span>
+    <span className='text-orange-500 font-bold indent-2 text-xs text-nowrap'>
+      {(tracker.IsLitDailyStreak === true)? 'fire svg' : 'outline svg'}
+    </span>
+  </div>
+  <label htmlFor="remTime" className='text-xs flex text-left text-nowrap'> Progress resets in: 
+    <span className='bg-orange-500 inline-flex px-1 mx-0.5  skew-[2deg]'>
+      <span className='skew-[-3deg] font-semibold'> {formatMinutes(minsRemaining)} </span>
+    </span>      
+  </label>
+    <progress id="remTime" className='mt-3 streak-bar flex w-[100%]' value={minsRemaining} max={25 * 60}></progress>
+  </div>)
+}
+
+function ProgressTracker( {onSettingsClick}: {onSettingsClick: () => void }) {
+  const isDesktop = useScreenSize()
   // local timer:
   // https://medium.com/create-a-clocking-in-system-on-react/create-a-react-app-displaying-the-current-date-and-time-using-hooks-21d946971556
   const [date, setDate] = useState(new Date());
@@ -76,45 +134,30 @@ function DeadlineBar() {
       clearInterval(timer)
     }
   })
-
-  const deadline = formatDate(tracker.CycleDeadline)
-  let deadlineMinutes = 60 * 24
-  if (tracker.CycleFrequency == 'weekly') {
-    deadlineMinutes = 60 * 24 * 7
-  }
-
-  let minsRemaining = Math.floor((deadline.valueOf() - date.valueOf())/ 1000 / 60)
-
-  return (<div className='select-none flex-col justify-items-left'>
-  <div className='bg-amber-900 w-28 skew-[-3deg] flex my-1'>
-      <span className='text-left font-semibold indent-4 text-xl block skew-[3deg]'> Deadline: </span>
-    </div>
-    <label htmlFor="remTime" className='text-xs flex text-left text-nowrap'> Progress resets in: 
-      <span className='bg-amber-900 inline-flex px-1 mx-0.5 skew-[3deg]'>
-        <span className='skew-[-3deg] font-semibold'> {formatMinutes(minsRemaining)} </span>
-      </span>      
-    </label>
-    <progress id="remTime" className='mt-3 flex w-[100%]' value={minsRemaining} max={deadlineMinutes}></progress>
-  </div>)
-}
-
-function ProgressTracker() {
-  const isDesktop = useScreenSize()
   return (
     (isDesktop)?
-      <>
-    <span className='px-2 pt-0.5 pb-2'>
+    <div className='w-dvw flex justify-between items-start border space-x-2'>
+    <span className=''>
       <ProgressBoxes />
     </span>
-    <span className='px-2 pt-0.5 pb-2 align-self-center block'>
-      <DeadlineBar />
+    <span className=''>
+      <DeadlineBar date={date} />
+    </span> 
+    <span className=''>
+      <DailyStreak date={date} />
     </span>
-      </>:
-    <span className='px-2 pt-0.5 pb-2'>
+    <button className='text-xs border-2 rounded-[2vw] max-h-6 mt-3' onClick={onSettingsClick}> settings </button>
+    </div>:
+    <div className='mx-auto flex p-2 grow-2 space-x-2 border items-end'>
+      <div className='flex flex-col space-y-1.5 w-3/5 flex-[2]'>
       <ProgressBoxes />
-      <DeadlineBar />
-    </span>
-    
+      <DeadlineBar date={date} />
+      </div>
+      <div className='flex flex-col flex-[1] '>
+        <button className='text-xs self-end border-2 mb-10 rounded-[2vw] ' onClick={onSettingsClick}> settings </button>
+      <DailyStreak date={date} />
+      </div>
+    </div>
   );
 }
 
@@ -192,13 +235,15 @@ function TrackerBar() {
       console.error(error.message);
     }
   };
+  const onSettingsClick = () => {
+    isEditing? exitEditing(): setIsEditing(true)
+  }
   
   return (      
-      <div className="min-h-[79px] bg-blue-400 border-x-violet-300 border-4 ">
+      <div className="min-h-[79px] bg-blue-400 border-x-violet-300 border-4 w-full mx-auto px-4">
         <div className='flex justify-between px-1.5 mb-1 text-center'>
-          <ProgressTracker />
-          <p className='text-sm p-1'>Current lootboxes earned {(tracker.CycleFrequency === "weekly")? 'this week' : 'today'}: {tracker.CurBoxesAwarded}</p>
-          <button className='text-xs align-right border-2 rounded-[2vw] max-h-6 mt-4' onClick={() => {isEditing? exitEditing(): setIsEditing(true)}}> settings </button>
+          <ProgressTracker onSettingsClick={onSettingsClick}/>
+          {/* <p className='text-sm p-1'>Current lootboxes earned {(tracker.CycleFrequency === "weekly")? 'this week' : 'today'}: {tracker.CurBoxesAwarded}</p> */}
         </div>
         {isEditing && <div className='flex-row bg-gray-500 opacity-70'>
         <div className='grid grid-cols-2 p-2 gap-4'>
@@ -243,7 +288,7 @@ function TrackerBar() {
             Save
           </button>
           <button
-            className="ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 bg-rose-400 opacity-35 hover:bg-blue-400 hover:opacity-100 hover:bg-rose-400 hover:opacity-35"
+            className="ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 opacity-35 bg-blue-400 hover:opacity-100 hover:bg-rose-400"
             onClick={(e) => {
               e.stopPropagation();
               setIsEditing(false);
