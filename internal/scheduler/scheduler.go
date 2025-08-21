@@ -41,32 +41,48 @@ type TrackerGoal struct {
 	TrackerType    string
 }
 
-func (tg *TrackerGoal) resetDeadline() {
+func (tg *TrackerGoal) resetDeadline() *TrackerGoal {
 	// the default time value 0001-01-01 and very early time values causes looping behavior with my scheduler algorithm.
-	// users will have to make do with a hard reset
+	// users will have to make do with a hard reset and the hope that I have enough safety checks to avoid such a scenario.
 	n := time.Now()
 	tDist := n.Sub(tg.CycleDeadline)
 	if tg.CycleDeadline.IsZero() || (tDist > time.Microsecond && tDist > deadlineResetCutoffDuration) || (tDist < time.Microsecond && tDist < -1*deadlineResetCutoffDuration) {
 		tg.CycleDeadline = n
 	}
-	AdjustNewDeadline(tg, tg)
+	return AdjustNewDeadline(*tg, *tg)
 }
 
-// AdjustNewDeadline mutates newTg, setting its CycleDeadline to the nearest upcoming multiple of newTg's CycleFrequency.NumDays() from oldTg's deadline.
-func AdjustNewDeadline(oldTg, newTg *TrackerGoal) {
+/*
+AdjustNewDeadline returns an adjusted TrackerGoal with CycleDeadline set to the nearest upcoming multiple, newTg.CycleFrequency.NumDays() away from oldTg's deadline.
+I prefer not have to do a check for nil db values every time this function is run:
+
+	nilTime := time.Time{}
+	if newTg.CycleDeadline != nilTime {
+		oldTg.CycleDeadline = newTg.CycleDeadline
+	}
+
+... so oldTg.CycleDeadline will have to first be overwritten outside of this function, for the user to set a new deadline value
+oldTg.CycleDeadline is the actual time.Time value that will be calculated/truncated against
+*/
+func AdjustNewDeadline(oldTg, newTg TrackerGoal) *TrackerGoal {
 	now := time.Now()
-	// persist the old deadline if it hasn't passed
-	if now.Before(oldTg.CycleDeadline) {
+
+	// persist the old deadline if it hasn't passed AND we are not truncating the cycle frequency
+	if now.Before(oldTg.CycleDeadline) && (oldTg.CycleFrequency.NumDays() <= newTg.CycleFrequency.NumDays()) {
 		newTg.CycleDeadline = oldTg.CycleDeadline
-		return
+		return &newTg
 	}
 	numDaysBetween := int(now.Sub(oldTg.CycleDeadline).Round(time.Hour) / (time.Hour * 24))
 	log.Printf("numDaysBetween: %d, now: %v, prev: %v", numDaysBetween, now, oldTg.CycleDeadline)
-	numDaysToNextDeadline := (int(numDaysBetween/newTg.CycleFrequency.NumDays()) + 1) * newTg.CycleFrequency.NumDays()
+	numDaysToNextDeadline := numDaysBetween
+	if numDaysBetween > 0 {
+		numDaysToNextDeadline = (int(numDaysBetween/newTg.CycleFrequency.NumDays()) + 1) * newTg.CycleFrequency.NumDays()
+	}
 	// log.Printf("math test: %v, %v", numDaysToNextDeadline, (numDaysBetween + newTg.CycleFrequency.NumDays()))
 	//	 numDaysToNextDeadline can't simply be numDaysBetween + newTg.CycleFrequency.NumDays()
 	//	 I need the floor division to happen so I can maintain an accurate sliding instance of time.
-	newTg.CycleDeadline = oldTg.CycleDeadline.Add(time.Hour * 24 * time.Duration(numDaysToNextDeadline))
+	newTg.CycleDeadline = oldTg.CycleDeadline.AddDate(0, 0, numDaysToNextDeadline)
+	return &newTg
 }
 
 func NewScheduler() *Scheduler {
@@ -204,9 +220,9 @@ func (s *Scheduler) Start() {
 			log.Printf("timer tick at %v", t)
 			tg := heap.Pop(s.g).(*TrackerGoal)
 			log.Printf("popped %v", tg.CycleDeadline)
-			tg.resetDeadline()
-			s.OutputCh <- tg
-			heap.Push(s.g, tg)
+			newTg := tg.resetDeadline()
+			s.OutputCh <- newTg
+			heap.Push(s.g, newTg)
 			s.updateTimer()
 			s.mutex.Unlock()
 		}

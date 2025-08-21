@@ -117,18 +117,33 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 		updateTracker.TrackerType = repoTracker.TrackerType
 		oldGoal := repoTracker.ToTrackerGoal()
 		newGoal := updateTracker.ToTrackerGoal()
-		// overwrite the nil value of newGoal.CycleDeadline to prevent scheduler looping
-		scheduler.AdjustNewDeadline(oldGoal, newGoal)
-		err = s.scheduler.ReplaceTrackerGoal(oldGoal, newGoal)
+		// set oldGoal.CycleDeadline as the value to be adjusted (see AdjustNewDeadline description)
+		if slices.Contains(updateFields, cycleDeadlineField) {
+			oldGoal.CycleDeadline = newGoal.CycleDeadline
+		}
+		// overwrite the potential nil value of newGoal.CycleDeadline to prevent scheduler looping
+		adjustedGoal := scheduler.AdjustNewDeadline(*oldGoal, *newGoal)
+		err = s.scheduler.ReplaceTrackerGoal(repoTracker.ToTrackerGoal(), adjustedGoal)
 		if err != nil {
 			// fail scheduler gracefully?
 			log.Print("scheduler replace failed:", err)
+		}
+		if adjustedGoal.CycleDeadline != oldGoal.CycleDeadline {
+			_, err := s.repo.updateJobAppTrackerFields(&JobAppTracker{UnderlyingTracker: UnderlyingTracker{
+				ID:            repoTracker.GetID(),
+				CycleDeadline: adjustedGoal.CycleDeadline,
+			}}, []string{cycleDeadlineField})
+			if err != nil {
+				log.Print("repo deadline adjust failed:", err)
+			}
 		}
 	}
 
 	// validate counters and score tracker if needed (technically curScorableItemsField should never be manually updated by the service update function)
 	if slices.Contains(updateFields, goalQuantityField) || slices.Contains(updateFields, curScorableItemsField) {
-		return s.updateTrackerState(repoTracker.GetID())
+		if err = s.updateTrackerState(repoTracker.GetID()); err != nil {
+			return nil, err
+		}
 	}
 
 	t, err := s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
@@ -188,7 +203,9 @@ func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields
 	}
 
 	if i.IsScorable() {
-		return s.addOneScorableItem(t)
+		if err = s.addOneScorableItem(t); err != nil {
+			return nil, err
+		}
 	}
 	t, err = s.repo.getJobAppTrackerWithItemsFromUserID(userID)
 	if err != nil {
@@ -230,11 +247,15 @@ func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *Job
 	if repoItem.IsScorable() {
 		// decrement tracker CurScorableItems if this update makes it no longer scorable
 		if slices.Contains(updateFields, statusField) && updateItem.Status != StatusComplete {
-			return s.subOneScorableItem(t)
+			if err = s.subOneScorableItem(t); err != nil {
+				return nil, err
+			}
 		}
 	} else if !repoItem.IsAttributed && slices.Contains(updateFields, statusField) && updateItem.Status == StatusComplete {
 		// increment it if this update makes the item scorable
-		return s.addOneScorableItem(t)
+		if err = s.addOneScorableItem(t); err != nil {
+			return nil, err
+		}
 	}
 	t, err = s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
 	if err != nil {
@@ -256,8 +277,7 @@ func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
 	}
 	// decrement tracker scorable item count if needed
 	if repoItem.IsScorable() {
-		_, err = s.subOneScorableItem(t)
-		if err != nil {
+		if err = s.subOneScorableItem(t); err != nil {
 			return err
 		}
 	}
@@ -268,28 +288,28 @@ func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
 
 // updateTrackerState checks for overflow of CurScorableItems and goalQuantity and adjusts
 // curBoxesAwarded and CurScorableItems, performing a repo update if needed.
-func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
+func (s *Service) updateTrackerState(tid string) error {
 	// I went back and forth on this for a while but I decided to just go with a lot (+2) of lookup calls
 	// and have this function be easier to use (just require a valid id)
 	repoTracker, err := s.repo.getJobAppTrackerWithItemsFromTrackerID(tid)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if repoTracker.CurScorableItems < repoTracker.GoalQuantity {
-		return repoTracker, nil
-	}
+	// if repoTracker.CurScorableItems < repoTracker.GoalQuantity {
+	// 	return nil
+	// }
 
 	// check if tracker needs to be scored; exit early if not
 	n := time.Now()
 	numToAward := repoTracker.CurScorableItems / repoTracker.GoalQuantity
 	items, err := s.repo.getScorableJobAppItems(repoTracker)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(items) < repoTracker.GoalQuantity*numToAward {
 		log.Print("mismatch between number of scorable items and tracker current items completed: " + fmt.Sprintf("%d < %d", len(items), repoTracker.CurScorableItems))
 		// is it good to set curScorableItems to len(items) here?
-		return nil, errors.New("mismatch between number of scorable items and tracker current items completed: " + fmt.Sprintf("%d < %d", len(items), repoTracker.CurScorableItems))
+		return errors.New("mismatch between number of scorable items and tracker current items completed: " + fmt.Sprintf("%d < %d", len(items), repoTracker.CurScorableItems))
 	}
 
 	// score n items. They should be already sorted by create time
@@ -313,7 +333,7 @@ func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
 		for id, v := range badFields {
 			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
 		}
-		return nil, err
+		return err
 	}
 
 	updateFields := []string{curScorableItemsField, curBoxesAwardedField, totalBoxesAwardedField}
@@ -350,15 +370,7 @@ func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
 	repoTracker.CurBoxesAwarded = repoTracker.CurBoxesAwarded + numToAward
 	repoTracker.TotalBoxesAwarded = repoTracker.TotalBoxesAwarded + numToAward
 	_, err = s.repo.updateJobAppTrackerFields(repoTracker, updateFields)
-	if err != nil {
-		return nil, err
-	}
-	repoTracker, err = s.repo.getJobAppTrackerWithItemsFromTrackerID(repoTracker.GetID())
-	if err != nil {
-		return nil, err
-	}
-	repoTracker.CheckIfLit()
-	return repoTracker, nil
+	return err
 }
 
 func (s *Service) updateJobAppItemFields(t *JobAppTracker, itemID string, fields *JobAppItemUpdateFields) error {
@@ -382,8 +394,7 @@ func (s *Service) updateJobAppItemFields(t *JobAppTracker, itemID string, fields
 
 // addOneScorableItem increments the CurScorableItems count for the tracker
 // t needs a valid tracker ID and accurate CurScorableItems count (to be incremented by 1)
-// it returns the updated tracker with all its items
-func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
+func (s *Service) addOneScorableItem(t *JobAppTracker) error {
 	n := scheduler.GetCurrentServerDay()
 	t.CurScorableItems = t.CurScorableItems + 1
 	fields := []string{curScorableItemsField}
@@ -414,7 +425,7 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 	if err != nil {
 		badFields["tracker"] = err.Error()
 	}
-	repoTracker, err := s.updateTrackerState(t.GetID())
+	err = s.updateTrackerState(t.GetID())
 	if err != nil {
 		badFields["tracker state"] = err.Error()
 	}
@@ -424,18 +435,16 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
 		}
 	}
-	// no need for CheckIfLit() here because updateTrackerState includes it in the results
-	return repoTracker, err
+	return err
 }
 
 // subOneScorableItem decrements the CurScorableItems count for the tracker
 // t needs a valid tracker ID and accurate CurScorableItems count (to be decremented by 1)
-// it returns the updated tracker with all its items
-func (s *Service) subOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
+func (s *Service) subOneScorableItem(t *JobAppTracker) error {
 	t.CurScorableItems = max(0, t.CurScorableItems-1)
 	_, err := s.repo.updateJobAppTrackerFields(t, []string{curScorableItemsField})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return s.updateTrackerState(t.GetID())
 }

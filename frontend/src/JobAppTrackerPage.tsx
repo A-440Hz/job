@@ -97,27 +97,30 @@ function DailyStreak({date}: {date: Date}) {
   const { tracker, serverDay, error } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
 
+  const maxProg = 25 * 60;
+
   // progress bar deadline is set to server's "today" + 25h
-  const deadline =  serverDay.valueOf() + 1000 * 60 * 25
+  const deadline =  serverDay.valueOf() + (1000 * 25)
   let minsRemaining = Math.floor((deadline - date.valueOf())/ 1000 / 60)
 
   return (<div className='select-none inline-block min-h-1/3 border'>
   <div className='items-baseline inline-flex'>
     <span>
     <div className='bg-orange-500 pr-3.5 skew-[-2deg] my-1'>
-        <span className='text-left font-semibold indent-4 text-xl block skew-[2deg] text-nowrap'> Daily Streak: {tracker.IsLitDailyStreak === true && tracker.CurDailyStreak}</span>
+        <span className='text-left font-semibold indent-4 text-xl block skew-[2deg] text-nowrap'> Daily Streak: </span>
     </div>
     </span>
     <span className='text-orange-500 font-bold indent-2 text-xs text-nowrap'>
-      {(tracker.IsLitDailyStreak === true)? 'fire svg' : 'outline svg'}
+      {(tracker.IsLitDailyStreak === true)? `fire-svg` : `outline`}
+      <span className='ml-1'>{(tracker.CurDailyStreak > 0) && Number(tracker.CurDailyStreak)}</span>
     </span>
   </div>
-  <label htmlFor="remTime" className='text-xs flex text-left text-nowrap'> Progress resets in: 
-    <span className='bg-orange-500 inline-flex px-1 mx-0.5  skew-[2deg]'>
-      <span className='skew-[-3deg] font-semibold'> {formatMinutes(minsRemaining)} </span>
-    </span>      
+  <label htmlFor="remTime" className={`text-xs block text-left text-nowrap`}> {(tracker.CurDailyStreak > 0)? 'Streak resets in:' : 'not yet completed'} 
+    {tracker.CurDailyStreak > 0 && <span className={`bg-orange-500 inline-flex px-1 mx-0.5 skew-[3deg]`}>
+      <span className={`skew-[-3deg] font-semibold`}> {formatMinutes(minsRemaining)} </span>
+    </span>}
   </label>
-    <progress id="remTime" className='mt-3 streak-bar flex w-[100%]' value={minsRemaining} max={25 * 60}></progress>
+    <progress id="remTime" className='mt-3 streak-bar flex w-[100%]' value={(tracker.IsLitDailyStreak === true)? maxProg : minsRemaining} max={maxProg}></progress>
   </div>)
 }
 
