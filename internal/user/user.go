@@ -49,11 +49,10 @@ func (u *User) IsRegistered() bool {
 }
 
 type UserUpdateFields struct {
-	Registered *bool   `json:"registered,omitempty"`
-	Username   *string `json:"username,omitempty"`
-	Email      *string `json:"email,omitempty"`
-	Password   *string `json:"password,omitempty"`
-	Timezone   *int64  `json:"timezone,omitempty"`
+	Username *string `json:"username,omitempty"`
+	Email    *string `json:"email,omitempty"`
+	Password *string `json:"password,omitempty"`
+	Timezone *int64  `json:"timezone,omitempty"`
 }
 
 // sanitizeFields trims leading and trailing whitespaces in the username and email, and lowercases the email
@@ -75,10 +74,6 @@ func (uf *UserUpdateFields) formatForRepo() (*User, []string, error) {
 	u := &User{}
 	fields := []string{}
 	uf.sanitizeFields()
-	if uf.Registered != nil {
-		u.Registered = *uf.Registered
-		fields = append(fields, registeredField)
-	}
 	if uf.Username != nil {
 		u.Username = uf.Username
 		fields = append(fields, usernameField)

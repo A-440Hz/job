@@ -84,26 +84,19 @@ func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, erro
 		}
 		return nil, err
 	}
-	uf.sanitizeFields()
-	hashedPass, err := db.HashPassword(*uf.Password)
+	updateUser, updateFields, err := uf.formatForRepo()
 	if err != nil {
 		return nil, err
 	}
-
-	updateFields := []string{registeredField, usernameField, passwordField}
-	if uf.Email != nil {
-		repoUser.Email = uf.Email
-		updateFields = append(updateFields, emailField)
-	}
-	repoUser.Registered = true
-	repoUser.Username = uf.Username
-	repoUser.Password = &hashedPass
-
-	err = s.validateUniqueUsernameEmail(*repoUser)
+	err = s.validateUniqueUsernameEmail(*updateUser)
 	if err != nil {
 		return nil, err
 	}
-	_, err = s.repo.updateUserFields(repoUser, updateFields)
+	updateUser.ID = repoUser.GetID()
+	// after passing validations, mark Registered as true
+	updateUser.Registered = true
+	updateFields = append(updateFields, registeredField)
+	_, err = s.repo.updateUserFields(updateUser, updateFields)
 	if err != nil {
 		return nil, err
 	}

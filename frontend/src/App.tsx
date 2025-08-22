@@ -3,6 +3,7 @@ import JobAppTrackerPage from './JobAppTrackerPage';
 import Topbar from './Topbar';
 import { ScreenSizeProvider } from './ScreenSizeProvider';
 import UserPage from './UserPage';
+import LoginPage from './LoginPage';
 
 const About = () => <h2 className='justify-self-center text-4xl'>About Page</h2>;
 
@@ -17,6 +18,7 @@ function App() {
         <Route path="/" element={<JobAppTrackerPage />} />
         <Route path="/profile" element={<UserPage />} />
         <Route path="/About" element={<About />} />
+        <Route path="/login" element={<LoginPage />} />
       </Routes>
     </ScreenSizeProvider>
     </BrowserRouter>

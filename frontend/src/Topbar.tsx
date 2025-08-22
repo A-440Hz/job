@@ -59,7 +59,14 @@ export function Navbar() {
 } 
 
 export function Login() {
-  return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/login">Login</a>
+  const {user, error} = useTrackerData();
+  if (error) return <div>Error loading backend: {error}</div>;
+  if (!user) return <div>???</div>;
+  if (user.Registered === true) {
+    return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/logout">Logout</a>
+  } else {
+    return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/login">Login/Register</a>
+  }
 }
 
 export default function Topbar() {
@@ -72,10 +79,14 @@ export default function Topbar() {
       {/* <span className="hidden md:flex border select-none text-4xl ml-0"> Hi this is a topbar </span> */}
       <Navbar />
       <Login />
-      {/* TODO: scrolling banner; click to hide */}
-      <p className='flex absolute top-[60px] right-0 text-xs text-nowrap'> 
-        {user.Registered? '' : 'You are logged in as a demo user. Your progress will be lost after 60 days of inactivity or if you lose your session cookie. Register an account to persist your progress'}
-      </p>
+      {/* TODO: scrolling banner; click to hide */
+      // user.Registered === false &&
+      // <p className='flex absolute top-[60px] right-0 text-xs text-nowrap marquee'> 
+      //   <span>
+      //     You are logged in as a demo user. Your progress will be lost after 60 days of inactivity or if you lose your session cookie. Register an account to persist your progress
+      //   </span>
+      // </p>
+      }
     </div>);
 }
 

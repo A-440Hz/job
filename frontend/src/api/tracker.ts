@@ -1,4 +1,6 @@
-const url = 'http://localhost:8080/careers';
+import { endpoint } from "./endpoint";
+
+const url = endpoint+'/careers';
 
 const timezoneOffset = new Date().getTimezoneOffset();
 

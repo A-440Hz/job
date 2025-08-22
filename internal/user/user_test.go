@@ -102,10 +102,9 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 			u1, err := svc.CreateNewUser(nil)
 			require.NoError(t, err)
 			u1, err = svc.RegisterBaseUser(u1.GetID(), &UserUpdateFields{
-				Username:   strPtr("u1"),
-				Password:   strPtr("p1"),
-				Email:      strPtr("e1@mail.com"),
-				Registered: boolPtr(true),
+				Username: strPtr("u1"),
+				Password: strPtr("p1"),
+				Email:    strPtr("e1@mail.com"),
 			})
 			require.NoError(t, err)
 			assert.NotNil(t, u1)
@@ -114,10 +113,9 @@ func Test_validateRegisterBaseUser(t *testing.T) {
 			u2, err := svc.CreateNewUser(nil)
 			assert.NoError(t, err)
 			u2, err = svc.RegisterBaseUser(u2.GetID(), &UserUpdateFields{
-				Username:   tt.Username,
-				Password:   tt.Password,
-				Email:      tt.Email,
-				Registered: boolPtr(true),
+				Username: tt.Username,
+				Password: tt.Password,
+				Email:    tt.Email,
 			})
 			for _, msg := range tt.wantErrMsg {
 				assert.Contains(t, err.Error(), msg)
@@ -141,13 +139,13 @@ func Test_RegisterBaseUser(t *testing.T) {
 	u1, err := svc.CreateNewUser(nil)
 	require.NoError(t, err)
 	u1, err = svc.RegisterBaseUser(u1.GetID(), &UserUpdateFields{
-		Username:   strPtr("u1"),
-		Password:   strPtr("p1"),
-		Email:      strPtr("e1@mail.com"),
-		Registered: boolPtr(true),
+		Username: strPtr("u1"),
+		Password: strPtr("p1"),
+		Email:    strPtr("e1@mail.com"),
 	})
 	require.NoError(t, err)
 	assert.NotNil(t, u1)
+	assert.True(t, u1.Registered)
 
 	lookupU1, err := svc.LookupUser(u1.GetID())
 	require.NoError(t, err)
@@ -160,10 +158,9 @@ func Test_RegisterBaseUser(t *testing.T) {
 	assert.NotNil(t, lookupU1.Timezone)
 
 	_, err = svc.RegisterBaseUser(u1.GetID(), &UserUpdateFields{
-		Username:   strPtr("u1"),
-		Password:   strPtr("p1"),
-		Email:      strPtr("e1@mail.com"),
-		Registered: boolPtr(true),
+		Username: strPtr("u1"),
+		Password: strPtr("p1"),
+		Email:    strPtr("e1@mail.com"),
 	})
 	assert.ErrorContains(t, err, "user already registered")
 	dbase.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
@@ -179,18 +176,16 @@ func Test_UpdateUserFields(t *testing.T) {
 
 	tests := []struct {
 		name       string
-		Registered *bool
 		Username   *string
 		Email      *string
 		Timezone   *int64
 		wantErrMsg []string
 	}{
 		{
-			name:       "valid-fields",
-			Registered: boolPtr(true),
-			Username:   strPtr("u2"),
-			Email:      strPtr("e2@mail.com"),
-			Timezone:   int64Ptr(-1 * 3600),
+			name:     "valid-fields",
+			Username: strPtr("u2"),
+			Email:    strPtr("e2@mail.com"),
+			Timezone: int64Ptr(-1 * 3600),
 		},
 		{
 			name:       "no-fields",
@@ -198,7 +193,6 @@ func Test_UpdateUserFields(t *testing.T) {
 		},
 		{
 			name:       "username-taken",
-			Registered: boolPtr(true),
 			Username:   strPtr("u1"),
 			Email:      strPtr("e2@mail.com"),
 			Timezone:   int64Ptr(-1 * 3600),
@@ -206,7 +200,6 @@ func Test_UpdateUserFields(t *testing.T) {
 		},
 		{
 			name:       "email-taken-&-trim-space",
-			Registered: boolPtr(true),
 			Username:   strPtr("  u2  "),
 			Email:      strPtr("    E1@Mail.cOm   "),
 			Timezone:   int64Ptr(-1 * 3600),
@@ -224,10 +217,9 @@ func Test_UpdateUserFields(t *testing.T) {
 			u1, err := svc.CreateNewUser(nil)
 			require.NoError(t, err)
 			u1, err = svc.RegisterBaseUser(u1.GetID(), &UserUpdateFields{
-				Username:   strPtr("u1"),
-				Password:   strPtr("p1"),
-				Email:      strPtr("e1@mail.com"),
-				Registered: boolPtr(true),
+				Username: strPtr("u1"),
+				Password: strPtr("p1"),
+				Email:    strPtr("e1@mail.com"),
 			})
 			require.NoError(t, err)
 			assert.NotNil(t, u1)
@@ -236,10 +228,9 @@ func Test_UpdateUserFields(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, u2)
 			uf := &UserUpdateFields{
-				Registered: tt.Registered,
-				Username:   tt.Username,
-				Email:      tt.Email,
-				Timezone:   tt.Timezone,
+				Username: tt.Username,
+				Email:    tt.Email,
+				Timezone: tt.Timezone,
 			}
 			updateU2, err := svc.UpdateUserFields(u2.GetID(), uf)
 			if len(tt.wantErrMsg) > 0 {
@@ -251,9 +242,6 @@ func Test_UpdateUserFields(t *testing.T) {
 			}
 			assert.NoError(t, err)
 			assert.NotEqual(t, u2, updateU2)
-			if tt.Registered != nil {
-				assert.Equal(t, updateU2.Registered, *tt.Registered)
-			}
 			assert.Equal(t, updateU2.Username, tt.Username)
 			assert.Equal(t, updateU2.Email, tt.Email)
 			assert.Equal(t, updateU2.Timezone.GetOffset(), *tt.Timezone)
