@@ -405,15 +405,14 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) error {
 		fields = append(fields, firstCompletedField)
 	}
 	// populate LastCompleted and manage daily streak
-	if t.LastCompleted == nil || scheduler.OneDayApart(n, *t.LastCompleted) {
+
+	if t.LastCompleted == nil || !t.DailyStreakMet() {
 		t.CurDailyStreak += 1
-		fields = append(fields, curDailyStreakField)
+		t.ContinueDailyStreak = true
+		fields = append(fields, curDailyStreakField, continueDailyStreakField)
 		// TODO: I can add counters for rewards or give rewards every time here.
 		// I think some coins is a better philosophy than lootboxes
 		// that way it makes more sense when there's multiple trackers too.
-	} else if !t.DailyStreakMet() {
-		t.CurDailyStreak = 1
-		fields = append(fields, curDailyStreakField)
 	}
 	t.LastCompleted = &n
 	fields = append(fields, lastCompletedField)
@@ -486,7 +485,7 @@ func (s *Service) resetTrackerDeadline(poppedTg *scheduler.TrackerGoal) error {
 	}
 
 	// reset goal streak if no boxes earned last cycle
-	if repoTracker.CurCycleItemsCompleted < repoTracker.GoalQuantity {
+	if repoTracker.CurBoxesAwarded < 1 {
 		updateTracker.CurGoalStreak = 0
 		updateFields = append(updateFields, curGoalStreakField)
 
@@ -500,11 +499,18 @@ func (s *Service) resetTrackerDeadline(poppedTg *scheduler.TrackerGoal) error {
 		}
 	}
 
+	// potentially preserve CurDailyStreak but always flip ContinueDailyStreak
+	if repoTracker.ContinueDailyStreak == false {
+		updateTracker.CurDailyStreak = 0
+		updateFields = append(updateFields, curDailyStreakField)
+	}
+
 	// reset tracker cycle counters
-	updateFields = append(updateFields, curScorableItemsField, curBoxesAwardedField, curCycleItemsCompleted)
+	updateFields = append(updateFields, curScorableItemsField, curBoxesAwardedField, curCycleItemsCompleted, continueDailyStreakField)
 	updateTracker.CurScorableItems = curScorable
 	updateTracker.CurBoxesAwarded = 0
 	updateTracker.CurCycleItemsCompleted = 0
+	updateTracker.ContinueDailyStreak = false
 
 	updateTracker.ID = poppedTg.TrackerID
 	updateTracker.TrackerType = TrackerType(poppedTg.TrackerType)

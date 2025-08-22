@@ -20,6 +20,7 @@ const (
 	missedGoalPenaltyField      = "missed_goal_penalty"
 	curDailyStreakField         = "cur_daily_streak"
 	curGoalStreakField          = "cur_goal_streak"
+	continueDailyStreakField    = "continue_daily_streak"
 	maxGoalStreakField          = "max_goal_streak"
 	curCycleItemsCompleted      = "cur_cycle_items_completed"
 	totalItemsCompletedField    = "total_items_completed"
@@ -67,13 +68,14 @@ type UnderlyingTracker struct {
 	MissedGoalPenalty bool                `gorm:"default:false"` // if enabled, enacts a reward penalty on missed goal cycle
 
 	// stats
-	CurDailyStreak         int `gorm:"default:0"`
-	CurGoalStreak          int `gorm:"default:0"`
-	MaxGoalStreak          int `gorm:"default:0"`
-	CurCycleItemsCompleted int `gorm:"default:0"`
-	TotalItemsCompleted    int `gorm:"default:0"`
-	MaxCycleItemsCompleted int `gorm:"default:0"`
-	TotalBoxesAwarded      int `gorm:"default:0"`
+	CurDailyStreak         int  `gorm:"default:0"`
+	CurGoalStreak          int  `gorm:"default:0"`
+	ContinueDailyStreak    bool `gorm:"default:false"`
+	MaxGoalStreak          int  `gorm:"default:0"`
+	CurCycleItemsCompleted int  `gorm:"default:0"`
+	TotalItemsCompleted    int  `gorm:"default:0"`
+	MaxCycleItemsCompleted int  `gorm:"default:0"`
+	TotalBoxesAwarded      int  `gorm:"default:0"`
 	FirstCompleted         *time.Time
 	LastCompleted          *time.Time
 	CreatedAt              time.Time
@@ -117,10 +119,7 @@ func (t *JobAppTracker) GetUserID() string {
 }
 
 func (t *UnderlyingTracker) DailyStreakMet() bool {
-	if t.LastCompleted == nil {
-		return false
-	}
-	return t.LastCompleted.Equal(scheduler.GetCurrentServerDay())
+	return t.ContinueDailyStreak
 }
 
 // CheckIfLit populates the IsLitDailyStreak field for a streak effect

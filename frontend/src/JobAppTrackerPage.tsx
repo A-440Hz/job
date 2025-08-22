@@ -103,7 +103,7 @@ function DailyStreak({date}: {date: Date}) {
   const deadline =  serverDay.valueOf() + (1000 * 25)
   let minsRemaining = Math.floor((deadline - date.valueOf())/ 1000 / 60)
 
-  return (<div className='select-none inline-block min-h-1/3 border'>
+  return (<div className='select-none inline-block min-h-1/3'>
   <div className='items-baseline inline-flex'>
     <span>
     <div className='bg-orange-500 pr-3.5 skew-[-2deg] my-1'>
@@ -115,12 +115,12 @@ function DailyStreak({date}: {date: Date}) {
       <span className='ml-1'>{(tracker.CurDailyStreak > 0) && Number(tracker.CurDailyStreak)}</span>
     </span>
   </div>
-  <label htmlFor="remTime" className={`text-xs block text-left text-nowrap`}> {(tracker.CurDailyStreak > 0)? 'Streak resets in:' : 'not yet completed'} 
+  <label htmlFor="remTime" className={`text-xs block text-left text-nowrap`}> {(tracker.CurDailyStreak > 0)? ((tracker.IsLitDailyStreak)? 'Next cycle begins:': 'Streak expires in:') : 'no applications completed'} 
     {tracker.CurDailyStreak > 0 && <span className={`bg-orange-500 inline-flex px-1 mx-0.5 skew-[3deg]`}>
       <span className={`skew-[-3deg] font-semibold`}> {formatMinutes(minsRemaining)} </span>
     </span>}
   </label>
-    <progress id="remTime" className='mt-3 streak-bar flex w-[100%]' value={(tracker.IsLitDailyStreak === true)? maxProg : minsRemaining} max={maxProg}></progress>
+    <progress id="remTime" className='mt-3 streak-bar flex w-[100%]' value={(tracker.CurDailyStreak > 0)? minsRemaining : 0} max={maxProg}></progress>
   </div>)
 }
 
@@ -139,7 +139,7 @@ function ProgressTracker( {onSettingsClick}: {onSettingsClick: () => void }) {
   })
   return (
     (isDesktop)?
-    <div className='w-dvw flex justify-between items-start border space-x-2'>
+    <div className='w-dvw flex justify-between items-start space-x-2'>
     <span className=''>
       <ProgressBoxes />
     </span>
@@ -151,7 +151,7 @@ function ProgressTracker( {onSettingsClick}: {onSettingsClick: () => void }) {
     </span>
     <button className='text-xs border-2 rounded-[2vw] max-h-6 mt-3' onClick={onSettingsClick}> settings </button>
     </div>:
-    <div className='mx-auto flex p-2 grow-2 space-x-2 border items-end'>
+    <div className='mx-auto flex p-2 grow-2 space-x-2 items-end'>
       <div className='flex flex-col space-y-1.5 w-3/5 flex-[2]'>
       <ProgressBoxes />
       <DeadlineBar date={date} />
