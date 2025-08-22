@@ -295,13 +295,14 @@ func (s *Service) updateTrackerState(tid string) error {
 	if err != nil {
 		return err
 	}
-	// if repoTracker.CurScorableItems < repoTracker.GoalQuantity {
-	// 	return nil
-	// }
 
 	// check if tracker needs to be scored; exit early if not
-	n := time.Now()
 	numToAward := repoTracker.CurScorableItems / repoTracker.GoalQuantity
+	if numToAward == 0 {
+		return nil
+	}
+
+	n := time.Now()
 	items, err := s.repo.getScorableJobAppItems(repoTracker)
 	if err != nil {
 		return err

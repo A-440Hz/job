@@ -111,7 +111,7 @@ func Test_UpdateJobAppTrackerFields(t *testing.T) {
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
-	n := time.Now().Round(time.Hour).Unix()
+	n := time.Now().Round(time.Hour).Add(time.Hour).Unix()
 	tests := []struct {
 		name             string
 		CycleDeadline    *int64
@@ -378,7 +378,8 @@ func Test_UpdateJobAppItemFields(t *testing.T) {
 	dBase.Exec("TRUNCATE TABLE job_app_trackers, job_app_items, users RESTART IDENTITY CASCADE")
 }
 
-func Test_Scheduler(t *testing.T) {
+// Test_Scheduler_AdvanceDeadline creates 4 tracker deadlines from now+1s and verifies the scheduler correctly cycles them in the brackground
+func Test_Scheduler_AdvanceDeadline(t *testing.T) {
 	db.SetEnvForTesting()
 	dBase, err := db.InitGormTestDB()
 	require.NoError(t, err)
@@ -386,7 +387,7 @@ func Test_Scheduler(t *testing.T) {
 	repo := NewRepository(dBase)
 	svc := NewService(repo, scheduler.NewScheduler(), collection.NewService(collection.NewRepository(dBase)))
 
-	t0 := time.Now().Round(time.Second)
+	t0 := time.Now().Round(time.Second).Add(time.Second)
 	t1 := t0.Add(time.Second * 1)
 	t2 := t1.Add(time.Second * 1)
 	t3 := t2.Add(time.Second * 1)
@@ -438,7 +439,7 @@ func Test_Scheduler(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.NotEqual(t, jt3, jt33)
-	time.Sleep(time.Second * 4)
+	time.Sleep(time.Second * 6)
 
 	jt000, err := svc.LookupJobAppTrackerFromUserID(u0.GetID())
 	require.NoError(t, err)
@@ -462,7 +463,6 @@ func Test_Scheduler(t *testing.T) {
 	log.Printf("after: %v, before: %v", jt333.CycleDeadline, jt33.CycleDeadline)
 	svc.scheduler.Stop()
 	dBase.Exec("TRUNCATE TABLE job_app_trackers RESTART IDENTITY CASCADE")
-
 }
 
 func Test_JobAppTrackerItemScoring(t *testing.T) {

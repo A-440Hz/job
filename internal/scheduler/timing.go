@@ -47,7 +47,8 @@ func GetDefaultTimezone() *Timezone {
 	return NewTimezoneWithOffset(defaultTimezoneOffset)
 }
 
-// GetDefaultCycleDeadline returns 1AM plus 7 days at location l, defaulting to DefaultTimezone
+// GetDefaultCycleDeadline returns 1AM in 6 days at location l, defaulting to DefaultTimezone
+// 6 days because it is an easy value to get consistent test results from the scheduler
 func GetDefaultCycleDeadline(z *Timezone) time.Time {
 	var l *time.Location
 	if z == nil {
@@ -57,7 +58,7 @@ func GetDefaultCycleDeadline(z *Timezone) time.Time {
 		l = z.Location
 	}
 	now := time.Now()
-	return time.Date(now.Year(), now.Month(), now.Day()+8, 1, 0, 0, 0, l)
+	return time.Date(now.Year(), now.Month(), now.Day()+6, 1, 0, 0, 0, l)
 }
 
 func GetCurrentServerDay() time.Time {

@@ -75,7 +75,7 @@ func AdjustNewDeadline(oldTg, newTg TrackerGoal) *TrackerGoal {
 	numDaysBetween := int(now.Sub(oldTg.CycleDeadline).Round(time.Hour) / (time.Hour * 24))
 	log.Printf("numDaysBetween: %d, now: %v, prev: %v", numDaysBetween, now, oldTg.CycleDeadline)
 	numDaysToNextDeadline := numDaysBetween
-	if numDaysBetween > 0 {
+	if numDaysBetween >= 0 {
 		numDaysToNextDeadline = (int(numDaysBetween/newTg.CycleFrequency.NumDays()) + 1) * newTg.CycleFrequency.NumDays()
 	}
 	// log.Printf("math test: %v, %v", numDaysToNextDeadline, (numDaysBetween + newTg.CycleFrequency.NumDays()))

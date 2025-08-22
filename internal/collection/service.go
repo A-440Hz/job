@@ -31,6 +31,9 @@ func (s *Service) AssignBoxes(userID string, lootboxDelta int) (*UserInventory, 
 	if err != nil {
 		return nil, err
 	}
+	if lootboxDelta == 0 {
+		return repoInv, nil
+	}
 	repoInv.NumLootboxes = max(0, repoInv.NumLootboxes+lootboxDelta)
 	_, err = s.repo.updateUserInventoryFields(repoInv, []string{numLootboxesField})
 	if err != nil {
