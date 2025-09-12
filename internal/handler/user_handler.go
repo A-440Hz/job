@@ -67,6 +67,10 @@ func (h *Handler) GetUserAndUserInventory(w http.ResponseWriter, r *http.Request
 }
 
 func (h *Handler) RegisterBaseUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
 	// parse request info
 	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
 	if err != nil {
@@ -91,6 +95,12 @@ func (h *Handler) RegisterBaseUser(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
+	// TODO: on happy path, check if current unregistered user session has 0 items and 0 inventory. if so, delete session from repo.
+	// not an essential task because empty demo user>tracker>sessions are cron deleted after 2 days
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
 	uf, err := getUserUpdateFields(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -120,11 +130,15 @@ func (h *Handler) HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	// refer to tracker main page??
-	// json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(true)
 }
 
 // HandleLogoutRequest deletes the current session and clears the session cookie
 func (h *Handler) HandleLogoutRequest(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
 	sID := h.UserService.GetSessionIDFromCookie(r, w)
 	h.UserService.ClearSessionCookie(w)
 	if sID != "" {
@@ -135,6 +149,7 @@ func (h *Handler) HandleLogoutRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(true)
 	// refer to main page
 }
 

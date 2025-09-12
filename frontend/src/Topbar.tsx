@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTrackerData } from './JobAppTrackerDataContext';
+import { logoutUser } from './api/user';
 import { NavLink } from 'react-router-dom';
 
 function Glyph() {
@@ -63,7 +64,7 @@ export function Login() {
   if (error) return <div>Error loading backend: {error}</div>;
   if (!user) return <div>???</div>;
   if (user.Registered === true) {
-    return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/logout">Logout</a>
+    return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" onClick={() => logoutUser()}>Logout</a>
   } else {
     return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/login">Login/Register</a>
   }

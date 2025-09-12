@@ -18,6 +18,7 @@ const (
 func (s *Service) GetUserIDFromCookie(r *http.Request, w http.ResponseWriter) (string, error) {
 	// https://www.alexedwards.net/blog/working-with-cookies-in-go
 	cookie, err := r.Cookie(sessionCookieName)
+	// TODO: this is mutative behavior and probably wrong
 	if err != nil {
 		s.ClearSessionCookie(w)
 		return "", err
