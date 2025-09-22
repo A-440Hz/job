@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { registerUser, loginUser } from './api/user';
 import './App.css';
+import { useNavigate } from 'react-router-dom';
 
 function LoginPage() {
 	const [username, setUsername] = useState('');
@@ -10,6 +11,7 @@ function LoginPage() {
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState<string | null>(null);
 	const [isRegister, setIsRegister] = useState(false);
+	const navigate = useNavigate();
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -19,9 +21,11 @@ function LoginPage() {
 			if (isRegister) {
 				await registerUser(username, password, email || undefined);
 				setSuccess('Registration successful!');
+				navigate('/');
 			} else {
 				await loginUser(username, password)
 				setSuccess('Login successful!');
+				navigate('/');
 			}
 		} catch (err: any) {
 			setError(err.message || 'An error occurred');
@@ -86,8 +90,9 @@ function LoginPage() {
 					type="button"
 					className="w-full py-2 rounded border-2 border-indigo-400 text-indigo-700 font-semibold hover:bg-indigo-50 mt-1"
 					onClick={() => setIsRegister(!isRegister)}
+					title={isRegister ? 'Log in to an existing account' : 'Create a new account and secure your current progress'}
 				>
-					{isRegister ? 'Already have an account? Login' : 'Secure your progress - Register'}
+					{isRegister ? 'Switch to Login page' : 'Register a new account'}
 				</button>
 			</form>
 		</div>

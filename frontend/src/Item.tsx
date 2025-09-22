@@ -84,7 +84,7 @@ const Item = React.memo(function Item({
               />
               {!isNewItem && (
                 <button
-                  className="delete rounded-[2vw] text-sm bg-blue-100 border-rose-600 border-2 px-1 text-amber-800 hover:bg-rose-400"
+                  className="delete rounded-[2vw] text-sm bg-slate-300 border-rose-600 border-2 px-1 text-amber-800 hover:bg-rose-400"
                   onClick={() => handleDelete(item.ID)}
                   onMouseOver={() => setSaveHighlight(false)}
                   onMouseLeave={() => setSaveHighlight(true)}
@@ -136,7 +136,7 @@ const Item = React.memo(function Item({
             <span className="flex justify-between items-start">
               <p className="item-title">{item.Title}</p>
               <button
-                className="rounded-[2vw] text-sm bg-blue-100 border-blue-300 border-2 px-1 text-amber-800 hover:bg-blue-200"
+                className="rounded-[2vw] text-sm bg-slate-100 border-slate-300 border-2 px-1 text-amber-800 hover:bg-slate-200"
                 onClick={() => setEditingId(item.ID)}
               >
                 Edit
