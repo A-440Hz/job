@@ -73,10 +73,10 @@ function ProgressBoxes() {
       Complete <span className='font-semibold text-emerald-600'>{tracker.GoalQuantity}</span> application{tracker.GoalQuantity > 1 && 's'} for a lootbox
     </div>
     <div className='space-y-2'>
-      <div className='flex justify-between text-xs text-gray-500'>
+      {/* <div className='flex justify-between text-xs text-gray-500'>
         <span>{completed} of {gq} completed</span>
         <span>{Math.round((completed/gq) * 100)}%</span>
-      </div>
+      </div> */}
       <ul className='flex items-center gap-1.5'>{blocks}</ul>
     </div>
   </div>
@@ -106,13 +106,9 @@ function DeadlineBar({date}: {date: Date}) {
         {tracker.CycleFrequency}
       </span>
     </div>
-    <div className='text-sm text-gray-600 mb-3'>
-      Progress resets in <span className='font-semibold text-amber-600'>{formatMinutes(minsRemaining)}</span>
-    </div>
     <div className='space-y-2'>
       <div className='flex justify-between text-xs text-gray-500'>
-        <span>Progress resets in {formatMinutes(minsRemaining)}</span>
-        <span>{Math.round(progressPercentage)}%</span>
+        <span>Progress resets in <span className='font-semibold text-amber-600'>{formatMinutes(minsRemaining)}</span></span>
       </div>
       <div className='w-full bg-gray-200 rounded-full h-3 overflow-hidden'>
         <div
@@ -142,8 +138,8 @@ function DailyStreak({date}: {date: Date}) {
         Daily Streak
       </h3>
       <div className='flex items-center gap-2'>
-        <span className='text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-full'>
-          {tracker.CurDailyStreak > 0 ? tracker.CurDailyStreak : '0'}
+        <span className='text-xs font-medium text-gray-500 bg-gray-50 pl-2 py-1 rounded-full'>
+          {tracker.CurDailyStreak > 0 ? tracker.CurDailyStreak : ''}
         </span>
         {tracker.IsLitDailyStreak === true
           ? <img src={flameHot} alt="daily streak met" className="h-6 w-6" />
@@ -162,7 +158,6 @@ function DailyStreak({date}: {date: Date}) {
         : 'No applications completed today'
       }
     </div>
-        <span>{Math.round(progressPercentage)}%</span>
       </div>
       <div className='w-full bg-gray-200 rounded-full h-3 overflow-hidden'>
         <div
@@ -193,7 +188,7 @@ function ProgressTracker( {onSettingsClick}: {onSettingsClick: () => void }) {
         {/* <h2 className='text-xl font-bold text-gray-800'>Progress Dashboard</h2> */}
         <div></div>
         <button
-          className='bg-white hover:bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1'
+          className='bg-white hover:bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-1'
           onClick={onSettingsClick}
           title="Tracker Settings"
         >
@@ -296,61 +291,101 @@ function TrackerBar() {
           <ProgressTracker onSettingsClick={onSettingsClick}/>
           {/* <p className='text-sm p-1'>Current lootboxes earned {(tracker.CycleFrequency === "weekly")? 'this week' : 'today'}: {tracker.CurBoxesAwarded}</p> */}
         </div>
-        {isEditing && <div className='flex-row bg-gray-500 opacity-70'>
-        <div className='grid grid-cols-2 p-2 gap-4'>
-          <div className={`border-3 p-2 flex-col justify-between ${(quantity != tracker.GoalQuantity) && 'border-amber-300'}`}>
-            <div className='block'> Set the goal for earning a lootbox: </div>
-            <input className='bg-lime-500 w-10 ml-1 block justify-self-center' type="number" value={quantity} min={1} onChange={(e) => setQuantity(e.target.valueAsNumber)}></input>
-          </div>
-          <div className={`border-3 p-2 ${(deadline !== localizedDeadline) && 'border-amber-300'}`}>
-            <label htmlFor="select-date"> Set goal deadline: </label>
-            <input className='border' id='select-date' type='datetime-local' value={deadline} min={dateToInputString(now)} onChange={(e) => setDeadline(e.target.value)}></input>
-            <p> {Math.floor(formatDate(tracker.CycleDeadline).valueOf()/ 1)} </p>
-            <p> {Math.floor(adjustTimezoneOffset(inputStringToDate(deadline), user.Timezone.OffsetSeconds, false).valueOf()/1)} </p>
-            <p> {adjustTimezoneOffset(inputStringToDate(deadline), user.Timezone.OffsetSeconds, false).toJSON()} </p>
-            <p> {formatDate(tracker.CycleDeadline).toJSON()} </p>
-          </div>
-          {/* <input type='datetime-local' value={addOffsetSeconds(tracker.CycleDeadline, user.Timezone.Offset).toISOString().substring(0, deadline.indexOf('T')+6)} ref={deadlineRef}></input> */}
-          {/* https://developer.mozilla.org/en-US/docs/Web/HTML/Guides/Date_and_time_formats#local_date_and_time_strings */}
-          {/* <div>{deadlineRef.current.value};</div> */}
-          <div className={`border-3 p-2 ${(frequency !== tracker.CycleFrequency) && 'border-amber-300'}`}> 
-            <div> Set deadline reset frequency: </div>
-            <select value={frequency} onChange={(e) => setFrequency(e.target.value)}>
-              <option className='text-gray-300' value="daily">daily</option>
-              <option className='text-gray-300' value="weekly">weekly</option>
-            </select>
-          </div>
-          <div className={`border-3 p-2 ${(penalty !== tracker.MissedGoalPenalty) && 'border-amber-300'}`}>
-            <div> Enable goal failure penalty:
-            <input className='ml-1' type="checkbox" defaultChecked={penalty} onChange={() => setPenalty(!penalty)}></input>
+        {isEditing && (
+          <div className='bg-white rounded-xl mt-4 p-6 shadow-lg border border-gray-200'>
+            <h3 className='text-lg font-semibold text-gray-800 mb-4'>Tracker Settings</h3>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+                quantity !== tracker.GoalQuantity ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
+              }`}>
+                <label className='block text-sm font-medium text-gray-700'>
+                  Lootbox Goal
+                </label>
+                <p className='text-xs text-gray-500 mb-2'>Applications needed to earn a lootbox</p>
+                <input
+                  className='w-20 text-emerald-600 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500'
+                  type="number"
+                  value={quantity}
+                  min={1}
+                  onChange={(e) => setQuantity(e.target.valueAsNumber)}
+                />
+              </div>
+
+              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+                deadline !== localizedDeadline ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
+              }`}>
+                <label htmlFor="select-date" className='block text-sm font-medium text-gray-700'>
+                  Goal Deadline
+                </label>
+                <input
+                  className='w-full text-amber-600  px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
+                  id='select-date'
+                  type='datetime-local'
+                  value={deadline}
+                  min={dateToInputString(now)}
+                  onChange={(e) => setDeadline(e.target.value)}
+                />
+              </div>
+
+              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+                frequency !== tracker.CycleFrequency ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
+              }`}>
+                <label className='block text-sm font-medium text-gray-700'>
+                  Reset Frequency
+                </label>
+                <p className='text-xs text-gray-500 mb-2'>How often the deadline resets</p>
+                <select
+                  className='w-full text-amber-600 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
+                  value={frequency}
+                  onChange={(e) => setFrequency(e.target.value)}
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                </select>
+              </div>
+
+              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+                penalty !== tracker.MissedGoalPenalty ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
+              }`}>
+                <label className='block text-sm font-medium text-gray-700'>
+                  Goal Failure Penalty
+                </label>
+                <p className='text-xs text-gray-500 mb-2'>Apply penalties for missed goals</p>
+                <label className='flex items-center space-x-2 cursor-pointer'>
+                  <input
+                    className='w-4 h-4 text-slate-600 bg-gray-100 border-gray-300 rounded focus:ring-slate-500'
+                    type="checkbox"
+                    checked={penalty}
+                    onChange={() => setPenalty(!penalty)}
+                  />
+                  <span className='text-sm text-amber-600'>Enable penalty</span>
+                </label>
+              </div>
+            </div>
+
+            <div className='flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200'>
+              <button
+                className='px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsEditing(false);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                className='px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors'
+                onClick={(e) => {
+                  e.stopPropagation();
+                  submitChanges();
+                }}
+              >
+                Save Changes
+              </button>
             </div>
           </div>
-        </div>
-        <span className="float-right border-1">
-          <button
-            className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 ${
-              saveHighlight ? "hover:bg-emerald-500 hover:opacity-35" : ""
-            }`}
-            onClick={(e) => {
-              e.stopPropagation();
-              submitChanges();
-            }}
-          >
-            Save
-          </button>
-          <button
-            className="ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 opacity-35 bg-slate-600 hover:opacity-100 hover:bg-rose-400"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsEditing(false);
-            }}
-            onMouseOver={() => setSaveHighlight(false)}
-            onMouseLeave={() => setSaveHighlight(true)}
-          >
-            Cancel
-          </button>
-        </span>
-        </div>}
+        )}
       </div>
 
     

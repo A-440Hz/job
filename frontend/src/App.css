@@ -89,6 +89,9 @@ li:has(.cancel:hover) {
   }
 }
 
+::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
 
 /* progress bar: 
   https://stackoverflow.com/questions/18368202/how-can-i-set-the-color-for-the-progress-element
