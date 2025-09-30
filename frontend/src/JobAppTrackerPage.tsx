@@ -185,7 +185,6 @@ function ProgressTracker( {onSettingsClick}: {onSettingsClick: () => void }) {
   return (
     <div className='w-full'>
       <div className='flex items-center justify-between mb-4'>
-        {/* <h2 className='text-xl font-bold text-gray-800'>Progress Dashboard</h2> */}
         <div></div>
         <button
           className='bg-white hover:bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-1'

@@ -8,17 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// func getUserID(r *http.Request) (string, error) {
-// 	var req struct {
-// 		ID string `json:"id"`
-// 	}
-// 	err := json.NewDecoder(r.Body).Decode(&req)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return req.ID, nil
-// }
-
 func getUserUpdateFields(r *http.Request) (*user.UserUpdateFields, error) {
 	var fields user.UserUpdateFields
 	err := json.NewDecoder(r.Body).Decode(&fields)
@@ -44,7 +33,6 @@ func (h *Handler) GetUserAndUserInventory(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// uInv, err := h.CollectionService.LookupUserInventory(uuid)
 	coll, err := h.CollectionService.GetAllCollectablesForUser(uuid)
 
 	if err != nil && err != gorm.ErrRecordNotFound {
@@ -220,6 +208,10 @@ func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleAwardCollectableRequest(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -232,5 +224,7 @@ func (h *Handler) HandleAwardCollectableRequest(w http.ResponseWriter, r *http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(col)
+	json.NewEncoder(w).Encode(map[string]any{
+		"col": col,
+	})
 }

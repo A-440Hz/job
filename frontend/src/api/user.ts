@@ -3,6 +3,7 @@ import { endpoint } from "./endpoint"
 const registerEndpoint = endpoint+'/careers/register'
 const loginEndpoint = endpoint+'/careers/login'
 const logoutEndpoint = endpoint+'/careers/logout'
+const openLootboxEndpoint = endpoint+'/careers/profile/open'
 
 export async function registerUser(username: string, password: string, email?: string) {
     const req: Record<string, any> = { username, password };
@@ -46,3 +47,13 @@ export async function logoutUser() {
     return await res.json();
 }
 
+export async function openOneLootbox(): Promise<any> {
+    const res = await fetch(openLootboxEndpoint, {
+        method: 'GET',
+        credentials: 'include',
+    });
+    if (!res.ok) {
+        throw new Error(`Failed to open lootbox: ${res.statusText}`);
+    }
+    return await res.json();
+}

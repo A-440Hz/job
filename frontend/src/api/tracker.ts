@@ -1,13 +1,13 @@
 import { endpoint } from "./endpoint";
 
-const url = endpoint+'/careers';
+const trackerEndpoint = endpoint+'/careers';
 
 const timezoneOffset = new Date().getTimezoneOffset();
 
 export async function fetchTrackerData(): Promise<any> {
     const headers = new Headers();
     headers.append('X-Timezone-Offset', timezoneOffset.toString());
-    const res = await fetch(url, {
+    const res = await fetch(trackerEndpoint, {
         method: 'GET',
         credentials: 'include',
         headers,
@@ -28,7 +28,7 @@ export async function updateTracker(frequency?:string, deadline?:number, quantit
     if (quantity) updateTracker.goalQuantity = quantity;
     if (penalty !== undefined) updateTracker.missedGoalPenalty = penalty;
     console.log("updateTracker:", updateTracker)
-    const res = await fetch(url, {
+    const res = await fetch(trackerEndpoint, {
         method: 'PATCH',
         credentials: 'include',
         body: JSON.stringify(updateTracker)
@@ -47,7 +47,7 @@ export async function createTrackerItem(title: string, body: string): Promise<an
         status: "complete",
         isAttributed: false,
     };
-    const res = await fetch(url, {
+    const res = await fetch(trackerEndpoint, {
         method: 'POST',
         credentials: 'include',
         body: JSON.stringify(item)
@@ -66,7 +66,7 @@ export async function updateTrackerItem(id: string, title?: string, body?: strin
     if (title) item.title = title;
     if (body) item.body = body;
 
-    const res = await fetch(url + '?id=' + id, {
+    const res = await fetch(trackerEndpoint + '?id=' + id, {
         method: 'PUT',
         credentials: 'include',
         body: JSON.stringify(item)
@@ -80,7 +80,7 @@ export async function updateTrackerItem(id: string, title?: string, body?: strin
 }
 
 export async function deleteTrackerItem(id: string): Promise<any> {
-    const res = await fetch(url + '?id=' + id, {
+    const res = await fetch(trackerEndpoint + '?id=' + id, {
         method: 'DELETE',
         credentials: 'include',
     });

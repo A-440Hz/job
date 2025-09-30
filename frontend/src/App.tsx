@@ -4,6 +4,7 @@ import Topbar from './Topbar';
 import { ScreenSizeProvider } from './ScreenSizeProvider';
 import UserPage from './UserPage';
 import LoginPage from './LoginPage';
+import LootboxPage from './Lootbox';
 
 const About = () => <h2 className='justify-self-center text-4xl'>About Page</h2>;
 
@@ -19,6 +20,7 @@ function App() {
         <Route path="/profile" element={<UserPage />} />
         <Route path="/About" element={<About />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/Lootbox" element={<LootboxPage />} />
       </Routes>
     </ScreenSizeProvider>
     </BrowserRouter>
