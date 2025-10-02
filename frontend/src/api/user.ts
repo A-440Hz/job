@@ -4,6 +4,22 @@ const registerEndpoint = endpoint+'/careers/register'
 const loginEndpoint = endpoint+'/careers/login'
 const logoutEndpoint = endpoint+'/careers/logout'
 const openLootboxEndpoint = endpoint+'/careers/profile/open'
+const collectablesEndpoint = endpoint+'/careers/profile'
+
+export async function fetchCollectablesData(): Promise<any> {
+    const headers = new Headers();
+    const res = await fetch(collectablesEndpoint, {
+        method: 'GET',
+        credentials: 'include',
+        headers: headers
+    });
+
+    if (!res.ok) {
+        throw new Error(`Failed to Fetch collectables: ${res.statusText}`);
+    }
+
+    return await res.json();
+}
 
 export async function registerUser(username: string, password: string, email?: string) {
     const req: Record<string, any> = { username, password };
@@ -55,5 +71,7 @@ export async function openOneLootbox(): Promise<any> {
     if (!res.ok) {
         throw new Error(`Failed to open lootbox: ${res.statusText}`);
     }
-    return await res.json();
+    const data = await res.json();
+    console.log("opened one lootbox:", data);
+    return data;
 }

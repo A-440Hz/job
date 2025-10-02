@@ -1,17 +1,54 @@
 import { useState, useEffect } from "react";
-import { useTrackerData } from "./JobAppTrackerDataContext";
+import { useCollectablesData } from "./CollectablesDataContext";
 import { useScreenSize } from "./ScreenSizeProvider";
 import { openOneLootbox } from "./api/user";
 import { getImageURL } from "./api/collectable";
 
+function CollectableMedia({ collectable, onClick }: { collectable: any, onClick?: (e: React.MouseEvent) => void}) {
+    if (!collectable) return null;
+
+    if (collectable.Type === "media") {
+        return (
+            <video
+                controls
+                className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover autoplay loop playsinline"
+                onClick={onClick}
+            >
+                <source src={getImageURL(collectable.Filename)} type="video/mp4" />
+                Your browser does not support the video tag.
+            </video>
+        );
+    }
+
+    // Default to image
+    return (
+        <img
+            src={getImageURL(collectable.Filename)}
+            alt={filenameToTitle(collectable.Name)}
+            className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover"
+            onClick={onClick}
+            onError={(e) => {
+                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24" fill="%23999"><rect width="24" height="24" fill="%23f5f5f5"/><text x="12" y="12" text-anchor="middle" dy=".3em" fill="%23999">?</text></svg>';
+            }}
+        />
+    );
+}
+
+
 function LootboxPage() {
-    const { user, error, refreshData} = useTrackerData();
+    const { user, error, refreshData} = useCollectablesData();
     const isDesktop = useScreenSize();
 
     // State management for view switching
     const [view, setView] = useState('inventory'); // 'inventory' | 'opening'
     const [lootboxResult, setLootboxResult] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+        refreshData();
+        }
+    }, []);
 
     if (error) return <div>Error loading backend: {error}</div>;
     if ( !user ) return <div>???</div>;
@@ -92,32 +129,98 @@ function LootboxPage() {
 
 function OpeningAnimationView({ result, onComplete }: { result: any, onComplete: () => void }) {
     const [animationState, setAnimationState] = useState('waiting'); // 'waiting' | 'animating' | 'complete'
-    console.log(result);
+    const [showMagnified, setShowMagnified] = useState(false);
+    const [isPreloaded, setIsPreloaded] = useState(false);
+
+    // Preload the collectable media when component mounts
+    useEffect(() => {
+        if (result?.col?.Collectable?.Filename) {
+            const preloadElement = result.col.Collectable.Type === "media"
+                ? document.createElement('video')
+                : document.createElement('img');
+
+            preloadElement.onload = () => setIsPreloaded(true);
+            preloadElement.onloadeddata = () => setIsPreloaded(true); // for video
+            preloadElement.src = getImageURL(result.col.Collectable.Filename);
+        }
+    }, [result]);
+
     const handleInteraction = () => {
         if (animationState === 'waiting') {
             setAnimationState('animating');
             // Simulate animation duration
             setTimeout(() => {
                 setAnimationState('complete');
-            }, 2000);
+            }, 600);
         } else if (animationState === 'complete') {
             onComplete();
         }
     };
 
+    const MagnifiedImageModal = ( {collectable}: {collectable: any} ) => {
+        if (!showMagnified || !collectable) return null;
+
+        if (collectable.Type === "media") {
+            return (
+                <div
+                className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 select-none"
+                onClick={() => setShowMagnified(false)}
+            >
+                <div className="w-full flex flex-col items-center mb-4">
+                    <h1 className="text-white text-4xl font-bold text-center mb-4">
+                        {filenameToTitle(collectable.Name) || 'A Rare Squid'}
+                    </h1>
+                    <video
+                        controls
+                        className="w-[32rem] h-[32rem] mx-auto rounded-lg shadow-md object-cover autoplay loop playsinline"
+                    >
+                        <source src={getImageURL(collectable.Filename)} type="video/mp4" />
+                        Your browser does not support the video tag.
+                    </video>
+                </div>
+            </div>
+            );
+        }
+
+        return (
+            <div
+                className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 select-none"
+                onClick={() => setShowMagnified(false)}
+            >
+                <div className="w-full flex flex-col items-center mb-4">
+                    <h1 className="text-white text-4xl font-bold text-center mb-4">
+                        {filenameToTitle(collectable.Name) || 'A Rare Squid'}
+                    </h1>
+                    <img
+                        src={getImageURL(collectable.Filename)}
+                        alt={filenameToTitle(collectable.Name) || 'A Rare Squid'}
+                        className="w-[32rem] h-[32rem] rounded-xl shadow-2xl object-contain border-4 border-yellow-400"
+                        style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+                    />
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div className="px-8 pt-4 w-8/10 justify-self-center justify-items-center border-blue-200 border mt-3">
+            <MagnifiedImageModal collectable={result.col.Collectable} />
             <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 mt-4 max-w-lg mx-auto">
                 <div className="text-center">
                     {animationState === 'waiting' && (
                         <div
                             className="cursor-pointer select-none"
                             onClick={handleInteraction}
-                            onMouseEnter={handleInteraction}
                         >
                             <h2 className="text-2xl font-bold text-gray-800 mb-6">Ready to Open!</h2>
-                            <div className="text-6xl mb-4">📦</div>
-                            <p className="text-gray-600">Click or hover to open your lootbox</p>
+                            <div className="animate-bounce text-6xl mb-4">📦</div>
+                            <p className="text-gray-600">Click to open your lootbox</p>
+                            {!isPreloaded && (
+                                <div className="mt-4 flex items-center justify-center gap-2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                                    <span className="text-xs text-gray-500">Preparing squids...</span>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -138,12 +241,11 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
 
                             {result.col && result.col.Collectable.Filename && (
                                 <div className="mb-6">
-                                    <img
-                                        src={getImageURL(result.col.Collectable.Filename)}
-                                        alt="Collectable"
-                                        className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover"
-                                        onError={(e) => {
-                                            e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24" fill="%23999"><rect width="24" height="24" fill="%23f5f5f5"/><text x="12" y="12" text-anchor="middle" dy=".3em" fill="%23999">?</text></svg>';
+                                    <CollectableMedia
+                                        collectable={result.col.Collectable}
+                                        onClick={e => {
+                                            e.stopPropagation();
+                                            if (!showMagnified) setShowMagnified(true);
                                         }}
                                     />
                                 </div>
@@ -154,8 +256,9 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
                                 <div className="text-sm text-gray-600">
                                     {result.col ? (
                                         <div>
-                                            <p><strong>Name:</strong> {result.col.Collectable.Name || 'Unknown Item'}</p>
+                                            <p><strong>Name:</strong> {filenameToTitle(result.col.Collectable.Name) || 'Unknown Item'}</p>
                                             <p><strong>Description:</strong> {result.col.Collectable.Description || 'A rare squid'}</p>
+                                            <p><strong>Number Owned:</strong> {String(result.col.Quantity) || 'Uncertain' }</p>
                                         </div>
                                     ) : (
                                         <p>Mysterious item received!</p>
@@ -163,13 +266,17 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
                                 </div>
                             </div>
 
-                            <p className="text-gray-500 text-sm">Click anywhere to return to inventory</p>
+                            <p className="text-gray-500 text-sm">Click here to return to previous screen</p>
                         </div>
                     )}
                 </div>
             </div>
         </div>
-    );
+    );    
+}
+
+function filenameToTitle(str: string): string {
+    return str.split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ');
 }
 
 export default LootboxPage;
