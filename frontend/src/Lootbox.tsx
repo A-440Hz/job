@@ -3,20 +3,30 @@ import { useCollectablesData } from "./CollectablesDataContext";
 import { useScreenSize } from "./ScreenSizeProvider";
 import { openOneLootbox } from "./api/user";
 import { getImageURL } from "./api/collectable";
+import ReactPlayer from "react-player";
+
+const rarityMap: Map<string, string> = new Map([
+    ["C", "Common"],
+    ["B", "Rare"],
+    ["A", "Epic"],
+    ["S", "Legendary"],
+]);
 
 function CollectableMedia({ collectable, onClick }: { collectable: any, onClick?: (e: React.MouseEvent) => void}) {
     if (!collectable) return null;
 
     if (collectable.Type === "media") {
         return (
-            <video
-                controls
-                className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover autoplay loop playsinline"
+            <ReactPlayer
+                src={getImageURL(collectable.Filename)}
+                playing={true}
+                loop={true}
+                controls={false}
+                muted={true}
+                playsInline={true}
+                style={{ borderRadius: '0.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
                 onClick={onClick}
-            >
-                <source src={getImageURL(collectable.Filename)} type="video/mp4" />
-                Your browser does not support the video tag.
-            </video>
+            />
         );
     }
 
@@ -132,15 +142,12 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
     const [showMagnified, setShowMagnified] = useState(false);
     const [isPreloaded, setIsPreloaded] = useState(false);
 
-    // Preload the collectable media when component mounts
+    // Preload the collectable img when component mounts
     useEffect(() => {
-        if (result?.col?.Collectable?.Filename) {
-            const preloadElement = result.col.Collectable.Type === "media"
-                ? document.createElement('video')
-                : document.createElement('img');
+        if (result?.col?.Collectable?.Filename && result.col.Collectable.Type === "image") {
+            const preloadElement = document.createElement('img');
 
             preloadElement.onload = () => setIsPreloaded(true);
-            preloadElement.onloadeddata = () => setIsPreloaded(true); // for video
             preloadElement.src = getImageURL(result.col.Collectable.Filename);
         }
     }, [result]);
@@ -170,13 +177,18 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
                     <h1 className="text-white text-4xl font-bold text-center mb-4">
                         {filenameToTitle(collectable.Name) || 'A Rare Squid'}
                     </h1>
-                    <video
-                        controls
-                        className="w-[32rem] h-[32rem] mx-auto rounded-lg shadow-md object-cover autoplay loop playsinline"
-                    >
-                        <source src={getImageURL(collectable.Filename)} type="video/mp4" />
-                        Your browser does not support the video tag.
-                    </video>
+                        <ReactPlayer
+                            src={getImageURL(collectable.Filename)}
+                            playing={true}
+                            loop={true}
+                            controls={false}
+                            muted={true}
+                            playsInline={true}
+                            width="90%"
+                            height="90%"
+                            style={{ borderRadius: '0.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
+                            onClick={() => setShowMagnified(false)}
+                        />
                 </div>
             </div>
             );
@@ -257,7 +269,7 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
                                     {result.col ? (
                                         <div>
                                             <p><strong>Name:</strong> {filenameToTitle(result.col.Collectable.Name) || 'Unknown Item'}</p>
-                                            <p><strong>Description:</strong> {result.col.Collectable.Description || 'A rare squid'}</p>
+                                            <p><strong>Rarity:</strong> {valueToRarity(result.col.Collectable.Value)}</p>
                                             <p><strong>Number Owned:</strong> {String(result.col.Quantity) || 'Uncertain' }</p>
                                         </div>
                                     ) : (
@@ -277,6 +289,11 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
 
 function filenameToTitle(str: string): string {
     return str.split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ');
+}
+
+function valueToRarity(v: string): string {
+    // TODO: can return color and styled element
+    return rarityMap.get(v) || "Unknown";
 }
 
 export default LootboxPage;

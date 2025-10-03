@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const seedFile = "data/collectables.json"
@@ -51,7 +52,6 @@ func NewRepository(d *gorm.DB) *Repository {
 
 // importCollectables deletes the collectables table and re-imports it from the json seedFile
 func (r *Repository) importCollectables() error {
-	r.db.Exec("TRUNCATE TABLE collectables RESTART IDENTITY CASCADE")
 	f, err := os.Open(getSeedFilePath())
 	if err != nil {
 		return err
@@ -63,8 +63,16 @@ func (r *Repository) importCollectables() error {
 		return err
 	}
 	r.size = len(collectables)
-	res := r.db.Create(&collectables)
-	return res.Error
+	for _, c := range collectables {
+		res := r.db.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "id"}},
+			UpdateAll: true,
+		}).Create(&c)
+		if res.Error != nil {
+			return res.Error
+		}
+	}
+	return nil
 }
 
 func (u *UserInventory) BeforeCreate(tx *gorm.DB) error {
