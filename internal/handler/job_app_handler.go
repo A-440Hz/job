@@ -93,7 +93,6 @@ func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// TODO: refactor the data out of all handler functions so I can remove serverDay logic
 	serverDay := scheduler.GetCurrentServerDay()
 
 	w.Header().Set("Content-Type", "application/json")

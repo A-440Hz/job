@@ -67,20 +67,30 @@ oldTg.CycleDeadline is the actual time.Time value that will be calculated/trunca
 func AdjustNewDeadline(oldTg, newTg TrackerGoal) *TrackerGoal {
 	now := time.Now()
 
-	// persist the old deadline if it hasn't passed AND we are not truncating the cycle frequency
+	// persist the old deadline if it hasn't passed AND we are not shortening the cycle frequency
 	if now.Before(oldTg.CycleDeadline) && (oldTg.CycleFrequency.NumDays() <= newTg.CycleFrequency.NumDays()) {
 		newTg.CycleDeadline = oldTg.CycleDeadline
 		return &newTg
 	}
-	numDaysBetween := int(now.Sub(oldTg.CycleDeadline).Round(time.Hour) / (time.Hour * 24))
+
+	// numDaysBetween is the integer number of days between now and the old deadline
+	// why was I rounding to the hour? It seems fine to just use the now.Sub duration
+	// ...because if I round by time.Hour and time.Now() is less than 30min ahead of oldTG.CycleDeadline, numDaysBetween will be 0
+	// ...and if numDaysBetween is 0, the deadline isn't moved even though it is before time.Now()
+	// numDaysBetween := int(now.Sub(oldTg.CycleDeadline).Round(time.Hour) / (time.Hour * 24))
+	numDaysBetween := int(now.Sub(oldTg.CycleDeadline) / (time.Hour * 24))
 	log.Printf("numDaysBetween: %d, now: %v, prev: %v", numDaysBetween, now, oldTg.CycleDeadline)
+	//	 If numDaysBetween is negative (the current deadline is in the the future), then we just set the next deadline to be NumDays() away from the current deadline
 	numDaysToNextDeadline := numDaysBetween
 	if numDaysBetween >= 0 {
-		numDaysToNextDeadline = (int(numDaysBetween/newTg.CycleFrequency.NumDays()) + 1) * newTg.CycleFrequency.NumDays()
+		// sets numDaysBetween to the smallest multiple of newTg.CycleFrequency.NumDays() that is greater than numDaysBetween
+		// e.g. if numDaysBetween is 8 and newTg.CycleFrequency.NumDays() is 7, then numDaysToNextDeadline becomes 14
+		// e.g. if numDaysBetween is 15 and newTg.CycleFrequency.NumDays() is 7, then numDaysToNextDeadline becomes 21
+		numDaysToNextDeadline = (numDaysBetween/newTg.CycleFrequency.NumDays() + 1) * newTg.CycleFrequency.NumDays()
 	}
+
+	// TODO: define behavior for negative numDaysBetween in test. As is i think it sets next deadline to be now, which counts as a failed cycle and resets on the next tick
 	// log.Printf("math test: %v, %v", numDaysToNextDeadline, (numDaysBetween + newTg.CycleFrequency.NumDays()))
-	//	 numDaysToNextDeadline can't simply be numDaysBetween + newTg.CycleFrequency.NumDays()
-	//	 I need the floor division to happen so I can maintain an accurate sliding instance of time.
 	newTg.CycleDeadline = oldTg.CycleDeadline.AddDate(0, 0, numDaysToNextDeadline)
 	return &newTg
 }

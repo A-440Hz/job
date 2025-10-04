@@ -62,7 +62,7 @@ func GetDefaultCycleDeadline(z *Timezone) time.Time {
 }
 
 func GetCurrentServerDay() time.Time {
-	return time.Now().Round(24 * time.Hour)
+	return time.Now().Truncate(24 * time.Hour)
 }
 
 // OneDayApart is intended for use with truncated times from GetCurrentServerDay

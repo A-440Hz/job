@@ -121,7 +121,7 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 		if slices.Contains(updateFields, cycleDeadlineField) {
 			oldGoal.CycleDeadline = newGoal.CycleDeadline
 		}
-		// overwrite the potential nil value of newGoal.CycleDeadline to prevent scheduler looping
+		// set new CycleDeadline value using AdjustNewDeadline
 		adjustedGoal := scheduler.AdjustNewDeadline(*oldGoal, *newGoal)
 		err = s.scheduler.ReplaceTrackerGoal(repoTracker.ToTrackerGoal(), adjustedGoal)
 		if err != nil {
