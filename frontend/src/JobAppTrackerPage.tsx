@@ -124,10 +124,10 @@ function DailyStreak({date}: {date: Date}) {
   const { tracker, serverDay, error } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
 
-  const maxProg = 25 * 60;
+  const maxProg = 24 * 60;
 
-  // progress bar deadline is set to server's "today" + 25h
-  const deadline =  serverDay.valueOf() + (1000 * 25)
+  // progress bar deadline is set to server's "today" + 24h
+  const deadline =  serverDay.valueOf() + (1000 * 60 * 60 * 24)
   let minsRemaining = Math.floor((deadline - date.valueOf())/ 1000 / 60)
   const progressPercentage = tracker.CurDailyStreak > 0 ? Math.max(0, Math.min(100, (minsRemaining / maxProg) * 100)) : 0
 
@@ -153,7 +153,7 @@ function DailyStreak({date}: {date: Date}) {
       <div className='text-sm text-gray-500 mb-3'>
       {tracker.CurDailyStreak > 0
         ? <>
-            {tracker.IsLitDailyStreak ? 'Next cycle begins' : 'Streak expires'} in <span className='font-semibold text-orange-600'>{formatMinutes(minsRemaining)}</span>
+            {tracker.IsLitDailyStreak ? 'Next cycle begins in' : 'Streak expires in'}  <span className='font-semibold text-orange-600'>{formatMinutes(minsRemaining)}</span>
           </>
         : 'No applications completed today'
       }

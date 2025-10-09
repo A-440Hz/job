@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"job/internal/scheduler"
 	"job/internal/tracker"
 	"job/internal/user"
 	"net/http"
@@ -93,13 +92,11 @@ func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	serverDay := scheduler.GetCurrentServerDay()
-
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
 		"user":      user,
 		"tracker":   tracker,
-		"serverDay": serverDay,
+		"serverDay": h.TrackerService.ServerDay,
 	})
 }
 

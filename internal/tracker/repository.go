@@ -186,7 +186,6 @@ func (r *Repository) deleteJobAppTrackerItem(i *JobAppItem) error {
 }
 
 // getAllUnderlyingTrackers runs on startup, retrieving repo trackers of every type and feeding them into the scheduler
-// it currently does not filter "expired" trackers and has no
 func (r *Repository) getAllUnderlyingTrackers() ([]UnderlyingTracker, error) {
 	allUnderlying := []UnderlyingTracker{}
 	jobAppTrackers := []JobAppTracker{}
@@ -201,8 +200,17 @@ func (r *Repository) getAllUnderlyingTrackers() ([]UnderlyingTracker, error) {
 	return allUnderlying, nil
 }
 
-// selectAllJobAppTrackers is an admin function used for debugging. TODO: hide or gate this
 func (r *Repository) selectAllJobAppTrackers() ([]JobAppTracker, error) {
+	trackers := []JobAppTracker{}
+	res := r.db.Find(&trackers)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return trackers, nil
+}
+
+// selectAllJobAppTrackersAndItems is an admin function used for debugging. TODO: hide or gate this
+func (r *Repository) selectAllJobAppTrackersAndItems() ([]JobAppTracker, error) {
 	trackers := []JobAppTracker{}
 	res := r.db.Preload("Items").Find(&trackers)
 	if res.Error != nil {

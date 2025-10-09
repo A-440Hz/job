@@ -17,10 +17,11 @@ type Service struct {
 	repo       *Repository
 	scheduler  *scheduler.Scheduler
 	collection *collection.Service
+	ServerDay  time.Time
 }
 
 func NewService(r *Repository, s *scheduler.Scheduler, c *collection.Service) *Service {
-	return &Service{repo: r, scheduler: s, collection: c}
+	return &Service{repo: r, scheduler: s, collection: c, ServerDay: scheduler.GetCurrentServerDay()}
 }
 
 // This method functions like a create hook for UnderlyingTracker.
@@ -454,6 +455,7 @@ func (s *Service) subOneScorableItem(t *JobAppTracker) error {
 func (s *Service) Start() {
 	go s.scheduler.Start()
 	go s.startTrackerUpdateListener()
+	go s.startServerDayManager()
 	s.MigrateTrackersIntoScheduler()
 }
 
@@ -497,12 +499,6 @@ func (s *Service) resetTrackerDeadline(poppedTg *scheduler.TrackerGoal) error {
 				return fmt.Errorf("unable to apply penalty on %q failed tracker %q goal: %w", repoTracker.UserID, repoTracker.ID, err)
 			}
 		}
-	}
-
-	// potentially preserve CurDailyStreak but always flip ContinueDailyStreak
-	if repoTracker.ContinueDailyStreak == false {
-		updateTracker.CurDailyStreak = 0
-		updateFields = append(updateFields, curDailyStreakField)
 	}
 
 	// reset tracker cycle counters
@@ -612,7 +608,42 @@ func (s *Service) MigrateTrackersIntoScheduler() {
 	}
 }
 
+// startServerDayManager is run as a go function to advance the server day and call updateDailyStreaks for all trackers
+func (s *Service) startServerDayManager() {
+	for {
+		// TODO: if I ever update the s.ServerDay value outside of this function, I need to lock it with a mutex
+		s.ServerDay = scheduler.GetCurrentServerDay()
+		next := s.ServerDay.Add(24 * time.Hour)
+		time.Sleep(time.Until(next))
+		log.Println("Server day updated from ", s.ServerDay, "to", next)
+		s.ServerDay = next
+		go s.updateDailyStreaks()
+	}
+}
+
+// updateDailyStreaks is run when the server day changes to manage streak status
+func (s *Service) updateDailyStreaks() {
+	serverDay := s.ServerDay
+	// TODO: currently this is only updating job app trackers.. I am not sure of the design I want to implement for other tracker types
+	// maybe I should turn this select all into a decorator specifically for trackers that care about daily streaks.
+	trackers, err := s.repo.selectAllJobAppTrackers()
+	if err != nil {
+		log.Print("UpdateDailyStreaks failed:", err)
+		return
+	}
+	for _, t := range trackers {
+		// potentially preserve CurDailyStreak but always flip ContinueDailyStreak
+		t.ContinueDailyStreak = false
+		fields := []string{continueDailyStreakField}
+		if t.LastCompleted == nil || serverDay.Sub(*t.LastCompleted) > 24*time.Hour {
+			t.CurDailyStreak = 0
+			fields = append(fields, curDailyStreakField)
+		}
+		s.repo.updateJobAppTrackerFields(&t, fields)
+	}
+}
+
 // SelectAllJobAppTrackers is used for testing
 func (s *Service) SelectAllJobAppTrackers() ([]JobAppTracker, error) {
-	return s.repo.selectAllJobAppTrackers()
+	return s.repo.selectAllJobAppTrackersAndItems()
 }
