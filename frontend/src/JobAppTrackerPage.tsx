@@ -23,11 +23,12 @@ function JobAppTrackerPage() {
   const { user, tracker, error, refreshData } = useTrackerData();
   const isDesktop = useScreenSize();
 
+  // refresh data when user changes (login/logout)
   useEffect(() => {
     if (user) {
       refreshData();
     }
-  }, [user, refreshData]);
+  }, [user]);
 
   if (error) return <div>Error loading backend: {error}</div>;
   if (!user || !tracker) return <div>???</div>;
@@ -473,6 +474,7 @@ function ItemsList() {
         ))}
       </ul>
       <p>user: {user?.ID}</p>
+      <p>last completed: {tracker?.LastCompleted}</p>
     </div>
   );
 }

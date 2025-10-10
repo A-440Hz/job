@@ -133,11 +133,11 @@ progress.streak-bar {
 .marquee span {
   display: inline-block;
   padding-left: 100%;
-  animation: marquee 24s linear infinite;
+  animation: marquee 20s linear infinite;
 }
 
 .marquee2 span {
-  animation-delay: 12s;
+  animation-delay: 10s;
 }
 
 @keyframes marquee {
