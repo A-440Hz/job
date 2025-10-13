@@ -27,3 +27,8 @@ export function getImageURL(filename: string): string {
     // Optionally add error handling, fallback, etc.
     return defaultMediaURLProvider.getImageURL(filename);
 }
+
+// TODO: return this already formatted in json and get rid of this function
+export function filenameToTitle(str: string): string {
+    return str.split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ');
+}

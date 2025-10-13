@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { fetchCollectablesData } from './api/user';
+import { fetchTrackerData } from './api/tracker';
 
 type CollectablesDataContextType = {
     user: any;
@@ -28,24 +29,36 @@ export function CollectablesDataProvider({ children }: { children: React.ReactNo
         const [error, setError] = useState<string | null>(null);
     
 
-    const fetchData = () => {
-        fetchCollectablesData()
-            .then((data) => {
+    const fetchData = async () => {
+        setError(null);
+        try {
+            const data = await fetchCollectablesData();
+            setUser(data.user);
+            setEarnedCollectables(data.earned_collectables);
+            setAllCollectables(data.all_collectables);
+        } catch (err) {
+            try {
+                await fetchTrackerData();
+                const data = await fetchCollectablesData();
                 setUser(data.user);
                 setEarnedCollectables(data.earned_collectables);
                 setAllCollectables(data.all_collectables);
-            })
-            .catch((err) => setError(err.message));
+            } catch (finalErr: any) {
+                setError(finalErr.message || "Failed to load collectables.");
+            }
+        }
     };
 
-    useEffect(fetchData, []);
+    useEffect(() => {
+        fetchData();
+    }, []);
     return (
         <CollectablesDataContext.Provider
             value={{
                 user,
                 earned_collectables,
-                all_collectables: all_collectables,
-                error: error,
+                all_collectables,
+                error,
                 refreshData: fetchData,
             }}
         >

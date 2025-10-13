@@ -34,7 +34,7 @@ function JobAppTrackerPage() {
   if (!user || !tracker) return <div>???</div>;
 
   return (
-    <div className="px-8 pt-4 w-8/10 justify-self-center border-blue-200 border mt-3">
+    <div className="grid mx-auto px-8 pt-4 w-8/10 justify-self-center border-blue-200 border mt-3">
       <h1 className="vp-mid text-5xl font-bold select-none text-indigo-700 mb-4 text-center text-shadow-2xs text-shadow-blue-300">
         {isDesktop? 'Job App Tracker With Lootbox Technology + Agentic Functionality' : 'Job App Tracker'}
       </h1>

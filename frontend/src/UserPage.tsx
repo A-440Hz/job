@@ -30,6 +30,9 @@ function UserPage() {
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
+        if (date.valueOf() === 0) {
+            return "";
+        }
         return date.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',

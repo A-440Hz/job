@@ -1,48 +1,9 @@
 import { useState, useEffect } from "react";
+import { CollectableMedia, MagnifiedMediaModal, valueToRarity } from "./Collectables"
 import { useCollectablesData } from "./CollectablesDataContext";
 import { useScreenSize } from "./ScreenSizeProvider";
 import { openOneLootbox } from "./api/user";
-import { getImageURL } from "./api/collectable";
-import ReactPlayer from "react-player";
-
-const rarityMap: Map<string, string> = new Map([
-    ["C", "Common"],
-    ["B", "Rare"],
-    ["A", "Epic"],
-    ["S", "Legendary"],
-]);
-
-function CollectableMedia({ collectable, onClick }: { collectable: any, onClick?: (e: React.MouseEvent) => void}) {
-    if (!collectable) return null;
-
-    if (collectable.Type === "media") {
-        return (
-            <ReactPlayer
-                src={getImageURL(collectable.Filename)}
-                playing={true}
-                loop={true}
-                controls={false}
-                muted={true}
-                playsInline={true}
-                style={{ borderRadius: '0.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
-                onClick={onClick}
-            />
-        );
-    }
-
-    // Default to image
-    return (
-        <img
-            src={getImageURL(collectable.Filename)}
-            alt={filenameToTitle(collectable.Name)}
-            className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover"
-            onClick={onClick}
-            onError={(e) => {
-                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24" fill="%23999"><rect width="24" height="24" fill="%23f5f5f5"/><text x="12" y="12" text-anchor="middle" dy=".3em" fill="%23999">?</text></svg>';
-            }}
-        />
-    );
-}
+import { getImageURL, filenameToTitle } from "./api/collectable";
 
 
 function LootboxPage() {
@@ -164,59 +125,11 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
         }
     };
 
-    const MagnifiedImageModal = ( {collectable}: {collectable: any} ) => {
-        if (!showMagnified || !collectable) return null;
-
-        if (collectable.Type === "media") {
-            return (
-                <div
-                className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 select-none"
-                onClick={() => setShowMagnified(false)}
-            >
-                <div className="w-full flex flex-col items-center mb-4">
-                    <h1 className="text-white text-4xl font-bold text-center mb-4">
-                        {filenameToTitle(collectable.Name) || 'A Rare Squid'}
-                    </h1>
-                        <ReactPlayer
-                            src={getImageURL(collectable.Filename)}
-                            playing={true}
-                            loop={true}
-                            controls={false}
-                            muted={true}
-                            playsInline={true}
-                            width="90%"
-                            height="90%"
-                            style={{ borderRadius: '0.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
-                            onClick={() => setShowMagnified(false)}
-                        />
-                </div>
-            </div>
-            );
-        }
-
-        return (
-            <div
-                className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 select-none"
-                onClick={() => setShowMagnified(false)}
-            >
-                <div className="w-full flex flex-col items-center mb-4">
-                    <h1 className="text-white text-4xl font-bold text-center mb-4">
-                        {filenameToTitle(collectable.Name) || 'A Rare Squid'}
-                    </h1>
-                    <img
-                        src={getImageURL(collectable.Filename)}
-                        alt={filenameToTitle(collectable.Name) || 'A Rare Squid'}
-                        className="w-[32rem] h-[32rem] rounded-xl shadow-2xl object-contain border-4 border-yellow-400"
-                        style={{ maxWidth: '90vw', maxHeight: '90vh' }}
-                    />
-                </div>
-            </div>
-        );
-    };
+        
 
     return (
         <div className="px-8 pt-4 w-8/10 justify-self-center justify-items-center border-blue-200 border mt-3">
-            <MagnifiedImageModal collectable={result.col.Collectable} />
+            <MagnifiedMediaModal showMagnified={showMagnified} setShowMagnified={setShowMagnified} collectable={result.col.Collectable} />
             <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 mt-4 max-w-lg mx-auto">
                 <div className="text-center">
                     {animationState === 'waiting' && (
@@ -255,7 +168,7 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
                                 <div className="mb-6">
                                     <CollectableMedia
                                         collectable={result.col.Collectable}
-                                        onClick={e => {
+                                        onClick={(e: React.MouseEvent) => {
                                             e.stopPropagation();
                                             if (!showMagnified) setShowMagnified(true);
                                         }}
@@ -287,13 +200,8 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
     );    
 }
 
-function filenameToTitle(str: string): string {
-    return str.split('_').map(w => w[0].toUpperCase() + w.substring(1).toLowerCase()).join(' ');
-}
 
-function valueToRarity(v: string): string {
-    // TODO: can return color and styled element
-    return rarityMap.get(v) || "Unknown";
-}
+
+
 
 export default LootboxPage;
