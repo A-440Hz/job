@@ -61,8 +61,8 @@ function UserPage() {
             {/* User Info Card */}
             <div className="bg-orange-200 rounded-xl shadow-md p-6">
                 <h2 className="text-2xl font-bold text-gray-800 mb-4">Account Information</h2>
-                <StatRow label="Username" value={user.Username} />
-                <StatRow label="Email" value={user.Email} />
+                <StatRow label="Username" value={user.username} />
+                <StatRow label="Email" value={user.email} />
                 <StatRow label="Account Created" value={created} />
             </div>
 

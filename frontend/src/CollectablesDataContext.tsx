@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { fetchCollectablesData } from './api/user';
 import { fetchTrackerData } from './api/tracker';
 
@@ -66,3 +66,22 @@ export function CollectablesDataProvider({ children }: { children: React.ReactNo
         </CollectablesDataContext.Provider>
     );
 };
+
+export function useInView(options?: IntersectionObserverInit): [React.RefObject<HTMLDivElement | null>, boolean] {
+    const ref = useRef<HTMLDivElement>(null);
+    const [inView, setInView] = useState(false);
+
+    useEffect(() => {
+        const observer = new window.IntersectionObserver(([entry]) => {
+            setInView(entry.isIntersecting);
+        }, options);
+
+        if (ref.current) observer.observe(ref.current);
+
+        return () => {
+            if (ref.current) observer.unobserve(ref.current);
+        };
+    }, [options]);
+
+    return [ref, inView];
+}

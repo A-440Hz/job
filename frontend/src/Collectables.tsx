@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useCollectablesData } from "./CollectablesDataContext";
+import { useCollectablesData, useInView } from "./CollectablesDataContext";
 import { useScreenSize } from "./ScreenSizeProvider";
 import { getImageURL, filenameToTitle } from "./api/collectable";
 import ReactPlayer from "react-player";
@@ -16,55 +16,50 @@ export function valueToRarity(v: string): string {
     return rarityMap.get(v) || "Unknown";
 }
 
-export function CollectableMedia({ collectable, onClick, autoplayVideo }: { collectable: any, onClick?: (e: React.MouseEvent) => void, autoplayVideo?: boolean }) {
+export function CollectableMedia({ collectable, onClick, lootboxView }: { collectable: any, onClick?: (e: React.MouseEvent) => void, lootboxView?: boolean }) {
+    const [containerRef, inView] = useInView({ threshold: 0.1 });
     const [isPlaying, setIsPlaying] = useState(false);
 
     if (!collectable) return null;
 
-    if (collectable.Type === "media") {
-        return (
-            <div
-                onMouseOver={() => setIsPlaying(true)}
-                onMouseLeave={() => setIsPlaying(false)}
-                className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover bg-gray-100 cursor-pointer"
-            >
+    return (
+        <div ref={containerRef} 
+            className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover bg-gray-100 cursor-pointer"
+            onMouseOver={() => setIsPlaying(true)}
+            onMouseLeave={() => setIsPlaying(false)}
+        >
+            {(inView || lootboxView) && collectable.Type === "media" ? (
                 <ReactPlayer
                     src={getImageURL(collectable.Filename)}
-                    playing={autoplayVideo || isPlaying}
+                    playing={lootboxView || isPlaying}
                     loop={true}
                     controls={false}
                     muted={true}
                     playsInline={true}
-                    // width={"32rem"}
-                    // height={"32rem"}
                     style={{
                         width: "100%",
                         height: "100%",
-                        aspectRatio: '1/1' 
                     }}
                     onClick={onClick}
                     className="mx-auto rounded-lg shadow-md object-cover"
                 />
-            </div>
-        );
-    }
-
-    // Default to image
-    return (
-        <img
-            src={getImageURL(collectable.Filename)}
-            alt={filenameToTitle(collectable.Name)}
-            className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover"
-            onClick={onClick}
-            onError={(e) => {
-                e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24" fill="%23999"><rect width="24" height="24" fill="%23f5f5f5"/><text x="12" y="12" text-anchor="middle" dy=".3em" fill="%23999">?</text></svg>';
-            }}
-            loading="lazy"
-        />
+            ) : null}
+            {(inView || lootboxView) && collectable.Type !== "media" ? (
+                <img
+                    src={getImageURL(collectable.Filename)}
+                    alt={filenameToTitle(collectable.Name)}
+                    className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover"
+                    onClick={onClick}
+                    onError={(e) => {
+                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24" fill="%23999"><rect width="24" height="24" fill="%23f5f5f5"/><text x="12" y="12" text-anchor="middle" dy=".3em" fill="%23999">?</text></svg>';
+                    }}
+                />
+            ) : null}
+        </div>
     );
+        
+    }
     
-}
-
 export const MagnifiedMediaModal = ( {showMagnified, setShowMagnified, collectable}: {showMagnified: boolean, setShowMagnified: (show: boolean) => void, collectable: any} ) => {
     if (!showMagnified || !collectable) return null;
 
@@ -189,7 +184,7 @@ export function CollectablesPage() {
                                 <CollectableMedia
                                     collectable={item.Collectable}
                                     onClick={() => handleCollectableClick(item.Collectable)}
-                                    autoplayVideo={false}
+                                    lootboxView={false}
                                 />
                             </div>
                             <div className="text-center mt-2">
