@@ -20,7 +20,7 @@ root {
   font-weight: var(--font-weight-semibold) /* 600 */;
   font-size: var(--text-lg) /* 1.125rem = 18px */;
   line-height: var(--tw-leading, var(--text-lg--line-height) /* calc(1.75 / 1.125) ≈ 1.5556 */);
-  color: var(--color-yellow-700);
+  color: var(--color-yellow-900);
   /* margin-bottom: 1rem; */
 }
 
