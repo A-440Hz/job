@@ -172,6 +172,7 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
                                             e.stopPropagation();
                                             if (!showMagnified) setShowMagnified(true);
                                         }}
+                                        autoplayVideo={true}
                                     />
                                 </div>
                             )}

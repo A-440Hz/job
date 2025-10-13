@@ -16,21 +16,36 @@ export function valueToRarity(v: string): string {
     return rarityMap.get(v) || "Unknown";
 }
 
-export function CollectableMedia({ collectable, onClick }: { collectable: any, onClick?: (e: React.MouseEvent) => void}) {
+export function CollectableMedia({ collectable, onClick, autoplayVideo }: { collectable: any, onClick?: (e: React.MouseEvent) => void, autoplayVideo?: boolean }) {
+    const [isPlaying, setIsPlaying] = useState(false);
+
     if (!collectable) return null;
 
     if (collectable.Type === "media") {
         return (
-            <ReactPlayer
-                src={getImageURL(collectable.Filename)}
-                playing={true}
-                loop={true}
-                controls={false}
-                muted={true}
-                playsInline={true}
-                style={{ borderRadius: '0.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
-                onClick={onClick}
-            />
+            <div
+                onMouseOver={() => setIsPlaying(true)}
+                onMouseLeave={() => setIsPlaying(false)}
+                className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover bg-gray-100 cursor-pointer"
+            >
+                <ReactPlayer
+                    src={getImageURL(collectable.Filename)}
+                    playing={autoplayVideo || isPlaying}
+                    loop={true}
+                    controls={false}
+                    muted={true}
+                    playsInline={true}
+                    // width={"32rem"}
+                    // height={"32rem"}
+                    style={{
+                        width: "100%",
+                        height: "100%",
+                        aspectRatio: '1/1' 
+                    }}
+                    onClick={onClick}
+                    className="mx-auto rounded-lg shadow-md object-cover"
+                />
+            </div>
         );
     }
 
@@ -44,6 +59,7 @@ export function CollectableMedia({ collectable, onClick }: { collectable: any, o
             onError={(e) => {
                 e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24" fill="%23999"><rect width="24" height="24" fill="%23f5f5f5"/><text x="12" y="12" text-anchor="middle" dy=".3em" fill="%23999">?</text></svg>';
             }}
+            loading="lazy"
         />
     );
     
@@ -54,7 +70,7 @@ export const MagnifiedMediaModal = ( {showMagnified, setShowMagnified, collectab
 
     if (collectable.Type === "media") {
         return (
-            <div
+        <div
             className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 select-none"
             onClick={() => setShowMagnified(false)}
         >
@@ -69,11 +85,15 @@ export const MagnifiedMediaModal = ( {showMagnified, setShowMagnified, collectab
                         controls={false}
                         muted={true}
                         playsInline={true}
-                        width="90%"
-                        height="90%"
-                        style={{ borderRadius: '0.5rem', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
-                        onClick={() => setShowMagnified(false)}
+                        style={{
+                            width: "100%",
+                            height: "100%",
+                        }}
+                        className="rounded-xl border-4 border-yellow-400"
                     />
+                    <div className="text-white text-center mt-4 px-4">
+                    {/* {"text"} */}
+                    </div>
             </div>
         </div>
         );
@@ -92,9 +112,10 @@ export const MagnifiedMediaModal = ( {showMagnified, setShowMagnified, collectab
                     alt={filenameToTitle(collectable.Name) || 'A Rare Squid'}
                     className="w-[32rem] h-[32rem] rounded-xl shadow-2xl object-contain border-4 border-yellow-400"
                     style={{ maxWidth: '90vw', maxHeight: '90vh' }}
+                    loading="lazy"
                 />
                 <div className="text-white text-center mt-4 px-4">
-                    {}
+                    {/* {"text"} */}
                 </div>
             </div>
         </div>
@@ -146,7 +167,7 @@ export function CollectablesPage() {
                     }`}
                     onClick={() => setView('viewEarned')}
                 >
-                    View Earned ({earned_collectables.length})
+                    View Earned
                 </button>
                 <button
                     className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
@@ -156,7 +177,7 @@ export function CollectablesPage() {
                     }`}
                     onClick={() => setView('viewAll')}
                 >
-                    View All ({all_collectables.length})
+                    View All
                 </button>
             </div>
 
@@ -168,6 +189,7 @@ export function CollectablesPage() {
                                 <CollectableMedia
                                     collectable={item.Collectable}
                                     onClick={() => handleCollectableClick(item.Collectable)}
+                                    autoplayVideo={false}
                                 />
                             </div>
                             <div className="text-center mt-2">
