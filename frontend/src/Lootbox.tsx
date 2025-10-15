@@ -6,6 +6,34 @@ import { openOneLootbox } from "./api/user";
 import { getImageURL, filenameToTitle } from "./api/collectable";
 
 
+// It's strange to press the back button and see a lootbox count that is inaccurate.
+// When the count went from 0 to 1, the button is enabled but unpressable. 
+//
+// Making a fetch request within `useEffect` on every render is generally not recommended due to performance concerns and potential infinite loops. However, there are strategies to keep the frontend state fresh without constantly fetching data. 
+// ## Pros and Cons of Fetching on Every Render
+// | **Pros**                   | **Cons**                     |
+// |---------------------------|------------------------------|
+// | Always up-to-date data    | High resource usage          |
+// | Simple to implement        | Risks infinite loop          |
+// | Useful for debugging       | Can lead to poor user experience due to lag |
+// ---
+// ## Recommended Solutions to Keep State Fresh
+// ### 1. **Dependency Array in `useEffect`**
+//    - You can control when the fetch is executed by passing a dependency array to `useEffect`. By including the state or props that trigger changes, you can fetch data only when those values change.
+// ### 2. **Polling**
+//    - Set up a timer using `setInterval` inside `useEffect` to fetch data every few seconds or minutes. Make sure to clear the interval on component unmount.
+// ### 3. **WebSockets**
+//    - For real-time applications, consider using WebSockets. This allows the server to push updates to the client, maintaining a fresh state without continuous polling.
+// ### 4. **State Management Libraries**
+//    - Use libraries like Redux or Zustand that handle global state and can integrate with middlewares (like Redux Thunk) to manage side effects, including fetching data.
+// ### 5. **React Query**
+//    - This library simplifies data fetching, caching, and synchronization. It offers features like automatic refetching, background updates, and caching.
+// ### 6. **Manual Refresh**
+//    - Provide a button or user-triggered event that allows users to refresh data as needed. This gives control without unnecessary requests.
+// ### 7. **Conditional Fetching**
+//    - You can conditionally fetch data based on specific user actions or conditions that make a fetch specifically necessary.
+// By combining these strategies, you can effectively keep your frontend state fresh without compromising performance or user experience. Would you like to dive deeper into any of these solutions?
+
 function LootboxPage() {
     const { user, error, refreshData} = useCollectablesData();
     const isDesktop = useScreenSize();
@@ -15,6 +43,10 @@ function LootboxPage() {
     const [lootboxResult, setLootboxResult] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
 
+    useEffect(() => {
+        refreshData();
+    }, []);
+    
     useEffect(() => {
         if (user) {
         refreshData();

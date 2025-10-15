@@ -146,7 +146,9 @@ func (r *Repository) lookupUserCollectable(userId string, collectableID int) (*U
 
 func (r *Repository) getAllCollectablesForUser(userId string) ([]UserCollectable, error) {
 	u := []UserCollectable{}
-	res := r.db.Where("user_id = ?", userId).Preload("Collectable").Find(&u)
+	res := r.db.Where("user_id = ?", userId).Preload("Collectable", func(db *gorm.DB) *gorm.DB {
+		return db.Order("collectables.ID ASC")
+	}).Find(&u)
 	if res.Error != nil {
 		return nil, res.Error
 	}

@@ -33,7 +33,7 @@ func (h *Handler) GetUserAndUserInventory(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	coll, err := h.CollectionService.GetAllCollectablesForUser(uuid)
+	uColl, err := h.CollectionService.GetAllCollectablesForUser(uuid)
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -49,7 +49,7 @@ func (h *Handler) GetUserAndUserInventory(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
 		"user":                user,
-		"earned_collectables": coll,
+		"earned_collectables": uColl,
 		"all_collectables":    aColl,
 	})
 }

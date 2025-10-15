@@ -410,7 +410,8 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) error {
 	if t.LastCompleted == nil || !t.DailyStreakMet() {
 		t.CurDailyStreak += 1
 		t.ContinueDailyStreak = true
-		fields = append(fields, curDailyStreakField, continueDailyStreakField)
+		t.MaxDailyStreak = max(t.CurDailyStreak, t.MaxDailyStreak)
+		fields = append(fields, curDailyStreakField, maxDailyStreakField, continueDailyStreakField)
 		// TODO: I can add counters for rewards or give rewards every time here.
 		// I think some coins is a better philosophy than lootboxes
 		// that way it makes more sense when there's multiple trackers too.

@@ -25,10 +25,10 @@ function JobAppTrackerPage() {
 
   // refresh data when user changes (login/logout)
   useEffect(() => {
-    if (user) {
-      refreshData();
+    if (user || tracker) {
+    refreshData();
     }
-  }, [user]);
+  }, [user, tracker]);
 
   if (error) return <div>Error loading backend: {error}</div>;
   if (!user || !tracker) return <div>???</div>;

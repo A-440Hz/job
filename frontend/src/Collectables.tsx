@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import {useSearchParams} from "react-router-dom";
 import { useCollectablesData, useInView } from "./CollectablesDataContext";
 import { useScreenSize } from "./ScreenSizeProvider";
 import { getImageURL, filenameToTitle } from "./api/collectable";
 import ReactPlayer from "react-player";
+
 
 const rarityMap: Map<string, string> = new Map([
     ["C", "Common"],
@@ -19,17 +21,20 @@ export function valueToRarity(v: string): string {
 export function CollectableMedia({ collectable, onClick, lootboxView }: { collectable: any, onClick?: (e: React.MouseEvent) => void, lootboxView?: boolean }) {
     const [containerRef, inView] = useInView({ threshold: 0.1 });
     const [isPlaying, setIsPlaying] = useState(false);
+    const [hasLoadError, setHasLoadError] = useState(false);
 
-    if (!collectable) return null;
+    if (!collectable) return unearnedCollectable();
 
     return (
-        <div ref={containerRef} 
+        <div
+            ref={containerRef}
             className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover bg-gray-100 cursor-pointer"
             onMouseOver={() => setIsPlaying(true)}
             onMouseLeave={() => setIsPlaying(false)}
         >
-            {(inView || lootboxView) && collectable.Type === "media" ? (
-                <ReactPlayer
+            {collectable.Type === "media" && inView ? (
+                !hasLoadError ? (
+                    <ReactPlayer
                     src={getImageURL(collectable.Filename)}
                     playing={lootboxView || isPlaying}
                     loop={true}
@@ -40,20 +45,25 @@ export function CollectableMedia({ collectable, onClick, lootboxView }: { collec
                         width: "100%",
                         height: "100%",
                     }}
+                    onError={() => setHasLoadError(true)}
                     onClick={onClick}
                     className="mx-auto rounded-lg shadow-md object-cover"
-                />
+                    />
+                ) : (
+                    <div className="flex items-center justify-center h-full text-gray-500">Error loading media {collectable.Filename}</div>
+                )
             ) : null}
-            {(inView || lootboxView) && collectable.Type !== "media" ? (
-                <img
-                    src={getImageURL(collectable.Filename)}
-                    alt={filenameToTitle(collectable.Name)}
-                    className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover"
-                    onClick={onClick}
-                    onError={(e) => {
-                        e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24" fill="%23999"><rect width="24" height="24" fill="%23f5f5f5"/><text x="12" y="12" text-anchor="middle" dy=".3em" fill="%23999">?</text></svg>';
-                    }}
-                />
+            {collectable.Type === "image" && (inView || lootboxView) ? (
+            <img
+                src={getImageURL(collectable.Filename)}
+                alt={filenameToTitle(collectable.Name)}
+                className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover"
+                onClick={onClick}
+                onError={(e) => {
+                e.currentTarget.src =
+                    'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 24 24" fill="%23999"><rect width="24" height="24" fill="%23f5f5f5"/><text x="12" y="12" text-anchor="middle" dy=".3em" fill="%23999">?</text></svg>';
+                }}
+            />
             ) : null}
         </div>
     );
@@ -119,17 +129,72 @@ export const MagnifiedMediaModal = ( {showMagnified, setShowMagnified, collectab
 
 export function unearnedCollectable() {
     // return a blank card with a question mark
-    return {}
+    return (
+        <div className="w-32 h-32 mx-auto rounded-lg shadow-md object-cover bg-slate-100 flex items-center justify-center hover:ignore-cursor">
+            <span className="text-7xl text-gray-400 select-none font-semibold">?</span>
+        </div>
+    );
 
 }
+
+export function viewAllCollectables({earned_collectables, all_collectables, handleCollectableClick}:
+        {earned_collectables: any[], all_collectables: any[], handleCollectableClick: (collectable: any) => void}) {
+    const earnedIds = new Set(earned_collectables.map(ec => ec.Collectable.ID));
+
+    return (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 p-4">
+                {all_collectables.map((ac) => {
+                    let earned = earnedIds.has(ac.ID)? earned_collectables.find(ec => ec.Collectable.ID === ac.ID) : null;
+                    console.log(earned)
+                    return earned !== null ? (
+                        <div key={ac.ID} className="relative">
+                        <CollectableMedia
+                                collectable={earned?.Collectable}
+                                onClick={() => handleCollectableClick(earned.Collectable)}
+                                lootboxView={false}
+                            />
+                            <div className="text-center mt-2">
+                                <p className="text-xs font-medium text-yellow-700 truncate max-w-full">
+                                    {filenameToTitle(ac.Name) || 'Unknown'}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.75">{valueToRarity(ac.Value)}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    Quantity: {earned?.Quantity}
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div key={ac.ID} className="relative">
+                            {unearnedCollectable()}
+                            <div className="text-center mt-2">
+                                <p className="text-xs font-medium text-yellow-700 truncate max-w-full">
+                                    {filenameToTitle(ac.Name) || 'Unknown'}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-0.75">{valueToRarity(ac.Value)}</p>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    Quantity: 0
+                                </p>
+                            </div>
+                        </div>
+                    )
+                })}
+        </div>
+    )
+}
+
 
 export function CollectablesPage() {
     const { user, earned_collectables, all_collectables, error, refreshData } = useCollectablesData();
     const isDesktop = useScreenSize();
 
-    const [view, setView] = useState('viewEarned'); // 'viewEarned' | 'viewAll'
     const [showMagnified, setShowMagnified] = useState(false);
     const [selectedCollectable, setSelectedCollectable] = useState(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const view = searchParams.get("view") || "viewEarned"; // "viewEarned" is the default
+    const handleSetView = (newView: string) => {
+        setSearchParams({ view: newView });
+    }
 
     useEffect(() => {
         if (user) {
@@ -160,7 +225,7 @@ export function CollectablesPage() {
                             ? 'bg-yellow-500 text-white shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2'
                             : 'bg-gray-300 text-gray-500 hover:bg-yellow-400 hover:text-white cursor-pointer'
                     }`}
-                    onClick={() => setView('viewEarned')}
+                    onClick={() => handleSetView('viewEarned')}
                 >
                     View Earned
                 </button>
@@ -170,7 +235,7 @@ export function CollectablesPage() {
                             ? 'bg-yellow-500 text-white shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2'
                             : 'bg-gray-300 text-gray-500 hover:bg-yellow-400 hover:text-white cursor-pointer'
                     }`}
-                    onClick={() => setView('viewAll')}
+                    onClick={() => handleSetView('viewAll')}
                 >
                     View All
                 </button>
@@ -179,7 +244,7 @@ export function CollectablesPage() {
             {view === 'viewEarned' && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 p-4">
                     {earned_collectables.map((item, index) => (
-                        <div key={item.ID || index} className="flex flex-col items-center">
+                        <div key={item.ID || index+1} className="flex flex-col items-center">
                             <div className="cursor-pointer transform transition-transform hover:scale-105 w-32 rounded-lg overflow-hidden bg-gray-100">
                                 <CollectableMedia
                                     collectable={item.Collectable}
@@ -202,9 +267,7 @@ export function CollectablesPage() {
             )}
 
             {view === 'viewAll' && (
-                <div className="text-center text-gray-500 py-8">
-                    <p>View All collectables coming soon...</p>
-                </div>
+                viewAllCollectables({earned_collectables, all_collectables, handleCollectableClick})
             )}
         </div>
     )

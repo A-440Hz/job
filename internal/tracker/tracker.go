@@ -19,6 +19,7 @@ const (
 	curBoxesAwardedField        = "cur_boxes_awarded"
 	missedGoalPenaltyField      = "missed_goal_penalty"
 	curDailyStreakField         = "cur_daily_streak"
+	maxDailyStreakField         = "max_daily_streak"
 	curGoalStreakField          = "cur_goal_streak"
 	continueDailyStreakField    = "continue_daily_streak"
 	maxGoalStreakField          = "max_goal_streak"
@@ -69,6 +70,7 @@ type UnderlyingTracker struct {
 
 	// stats
 	CurDailyStreak         int  `gorm:"default:0"`
+	MaxDailyStreak         int  `gorm:"default:0"`
 	CurGoalStreak          int  `gorm:"default:0"`
 	ContinueDailyStreak    bool `gorm:"default:false"`
 	MaxGoalStreak          int  `gorm:"default:0"`
@@ -95,16 +97,9 @@ type JobAppTracker struct {
 
 // TrackerStats is a json object for UnderlyingTracker to return
 // TODO: probably get rid of this.. actually how would i do AvgDailyCompleted then?
+// TODO: this is a placeholder for computed stats that are not stored in the db
 type TrackerStats struct {
-	CurDailyStreak         int        `json:"curDailyStreak"`
-	CurGoalStreak          int        `json:"curGoalStreak"`
-	MaxGoalStreak          int        `json:"maxGoalStreak"`
-	MaxCycleItemsCompleted int        `json:"maxCycleItemsCompleted"`
-	TotalItemsCompleted    int        `json:"totalItemsCompleted"`
-	TotalBoxesAwarded      int        `json:"totalBoxesAwarded"`
-	AvgDailyCompleted      float64    `json:"avgDailyCompleted"`
-	FirstCompleted         *time.Time `json:"firstCompleted"`
-	LastCompleted          *time.Time `json:"lastCompleted"`
+	AvgDailyCompleted float64 `json:"avgDailyCompleted"`
 	// What about AvgCycleCompleted? i think that's too difficult to accurately track given how every time the user
 	// updates CycleDeadline it counts as a new cycle
 }
