@@ -145,7 +145,7 @@ export function viewAllCollectables({earned_collectables, all_collectables, hand
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 p-4">
                 {all_collectables.map((ac) => {
                     let earned = earnedIds.has(ac.ID)? earned_collectables.find(ec => ec.Collectable.ID === ac.ID) : null;
-                    console.log(earned)
+                    // console.log(earned)
                     return earned !== null ? (
                         <div key={ac.ID} className="relative">
                         <CollectableMedia
