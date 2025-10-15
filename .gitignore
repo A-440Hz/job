@@ -27,3 +27,4 @@ go.work.sum
 plan.md
 data/*
 frontend/pkg*
+cmd/*__debug_bin*
