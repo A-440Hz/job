@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTrackerData } from './JobAppTrackerDataContext';
 import { logoutUser } from './api/user';
 import { NavLink } from 'react-router-dom';
+import { useScreenSize } from './ScreenSizeProvider';
 
 function Glyph() {
   const [source, setSource] = useState("/src/assets/sb1rb.png");
@@ -25,10 +26,7 @@ function Glyph() {
   /> 
 }
 
-export function Navbar() {
-  const {user, error} = useTrackerData();
-  if (error) return <div> ??? </div>;
-
+export function Navbar({ user }: { user: any }) {
   const navClass = "mx-1.5 text-m/6 hover:opacity-60 "
   return <nav className='flex border-2 justify-between pl-3 pr-3'>
     <NavLink to='/' className={({ isActive }) =>
@@ -44,7 +42,7 @@ export function Navbar() {
     <NavLink to='/Lootbox' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass
       }>
-       Lootbox {/*<text> {(user.inventory?.NumLootboxes > 0)? `(${user.inventory?.NumLootboxes})` : ''}</text> */}
+       Lootbox <text className="text-orange-300"> {(user.inventory?.NumLootboxes > 0)? `(${user.inventory?.NumLootboxes})` : ''}</text>
     </NavLink>
     <NavLink to='/About' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass
@@ -59,9 +57,7 @@ export function Navbar() {
   </nav>;
 } 
 
-export function Login() {
-  const {user, error} = useTrackerData();
-  if (error) return <div>Error loading backend: {error}</div>;
+export function Login({ user }: { user: any }) {
   if (!user) return <div>???</div>;
   if (user.Registered === true) {
     return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" onClick={() => logoutUser()}>Logout</a>
@@ -71,23 +67,20 @@ export function Login() {
 }
 
 export default function Topbar() {
-  const {user, error} = useTrackerData();
+  // const isDesktop = useScreenSize();
+  const {user, error, refreshData} = useTrackerData();
+  useEffect(() => {
+    refreshData();
+  }, []);
+
   if (error) return <div>Error loading backend: {error}</div>;
   if (!user) return <div>???</div>; 
     return (
     <div className='flex h-[62px] min-w-full items-center border justify-between select-none z50'>
       <span> <Glyph /> </span>
-      {/* <span className="hidden md:flex border select-none text-4xl ml-0"> Hi this is a topbar </span> */}
-      <Navbar />
-      <Login />
-      {/* TODO: scrolling banner; click to hide */
-      // user.Registered === false &&
-      // <p className='flex absolute top-[60px] right-0 text-xs text-nowrap marquee'> 
-      //   <span>
-      //     You are logged in as a demo user. Your progress will be lost after 60 days of inactivity or if you lose your session cookie. Register an account to persist your progress
-      //   </span>
-      // </p>
-      }
+      {/* <span className="md:flex select-none font-semibold text-3xl ml-0"> {isDesktop && "haotianswebsite.com"} </span> */}
+      <Navbar user={user}/>
+      <Login user={user} />
     </div>);
 }
 
