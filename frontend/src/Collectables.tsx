@@ -53,7 +53,7 @@ export function CollectableMedia({ collectable, onClick, lootboxView }: { collec
                     <div className="flex items-center justify-center h-full text-gray-500">Error loading media {collectable.Filename}</div>
                 )
             ) : null}
-            {collectable.Type === "image" && (inView || lootboxView) ? (
+            {collectable.Type === "image" && inView ? (
             <img
                 src={getImageURL(collectable.Filename)}
                 alt={filenameToTitle(collectable.Name)}
@@ -71,38 +71,17 @@ export function CollectableMedia({ collectable, onClick, lootboxView }: { collec
     }
     
 export const MagnifiedMediaModal = ( {showMagnified, setShowMagnified, collectable}: {showMagnified: boolean, setShowMagnified: (show: boolean) => void, collectable: any} ) => {
+    const [mediaUrl, setMediaUrl] = useState<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (showMagnified) {
+            const url = getImageURL(collectable.Filename);
+            setMediaUrl(url); // Set media URL when the modal is shown
+        }
+    }, [showMagnified, collectable]);
+
     if (!showMagnified || !collectable) return null;
 
-    if (collectable.Type === "media") {
-        return (
-        <div
-            className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 select-none"
-            onClick={() => setShowMagnified(false)}
-        >
-            <div className="w-full flex flex-col items-center mb-4">
-                <h1 className="text-white text-4xl font-bold text-center mb-4">
-                    {filenameToTitle(collectable.Name) || 'A Rare Squid'}
-                </h1>
-                    <ReactPlayer
-                        src={getImageURL(collectable.Filename)}
-                        playing={true}
-                        loop={true}
-                        controls={false}
-                        muted={true}
-                        playsInline={true}
-                        style={{
-                            width: "100%",
-                            height: "100%",
-                        }}
-                        className="rounded-xl border-4 border-yellow-400"
-                    />
-                    <div className="text-white text-center mt-4 px-4">
-                    {/* {"text"} */}
-                    </div>
-            </div>
-        </div>
-        );
-    }
     return (
         <div
             className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 select-none"
@@ -112,13 +91,24 @@ export const MagnifiedMediaModal = ( {showMagnified, setShowMagnified, collectab
                 <h1 className="text-white text-4xl font-bold text-center mb-4">
                     {filenameToTitle(collectable.Name) || 'A Rare Squid'}
                 </h1>
-                <img
-                    src={getImageURL(collectable.Filename)}
-                    alt={filenameToTitle(collectable.Name) || 'A Rare Squid'}
-                    className="w-[32rem] h-[32rem] rounded-xl shadow-2xl object-contain border-4 border-yellow-400"
-                    style={{ maxWidth: '90vw', maxHeight: '90vh' }}
-                    loading="lazy"
-                />
+                {collectable.Type === "media" ? (
+                    <ReactPlayer
+                        src={mediaUrl}
+                        playing={true}
+                        loop={true}
+                        controls={false}
+                        muted={true}
+                        playsInline={true}
+                        style={{ width: "100%", height: "100%" }}
+                        className="rounded-xl border-4 border-yellow-400"
+                    />
+                ) : (
+                    <img
+                        src={mediaUrl}
+                        alt={filenameToTitle(collectable.Name) || 'A Rare Squid'}
+                        className="w-[32rem] h-[32rem] rounded-xl shadow-2xl object-contain border-4 border-yellow-400"
+                    />
+                )}
                 <div className="text-white text-center mt-4 px-4">
                     {/* {"text"} */}
                 </div>

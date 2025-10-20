@@ -47,6 +47,7 @@ func (h *Handler) GetUserAndUserInventory(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	json.NewEncoder(w).Encode(map[string]any{
 		"user":                user,
 		"earned_collectables": uColl,
@@ -192,7 +193,7 @@ func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, PATCH, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Cache-Control")
 	switch r.Method {
 	case http.MethodOptions:
 		w.WriteHeader(http.StatusOK)

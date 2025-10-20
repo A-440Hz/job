@@ -21,6 +21,8 @@ class FirebaseURLProvider implements MediaURLProvider {
     }
 }
 
+// TODO: this will be useful if I ever want to have a fallback providers pattern
+// https://www.npmjs.com/package/react-image
 let defaultMediaURLProvider: MediaURLProvider = new GithubURLProvider();
 
 export function getImageURL(filename: string): string {
