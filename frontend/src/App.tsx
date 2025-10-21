@@ -5,7 +5,7 @@ import { ScreenSizeProvider } from './ScreenSizeProvider';
 import UserPage from './UserPage';
 import LoginPage from './LoginPage';
 import LootboxPage from './Lootbox';
-import { CollectablesPage } from './Collectables';
+import CollectablesPage from './CollectablesPage';
 
 const About = () => <h2 className='justify-self-center text-4xl'>About Page</h2>;
 
