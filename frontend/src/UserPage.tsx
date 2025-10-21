@@ -23,10 +23,10 @@ function UserPage() {
     const [showBanner, setShowBanner] = useState(true);
 
     useEffect(() => {
-        if (user || tracker) {
+        if (user) {
         refreshData();
         }
-    }, [user, tracker]);
+    }, [user?.UserID]);
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);

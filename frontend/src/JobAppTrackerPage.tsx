@@ -23,20 +23,28 @@ function JobAppTrackerPage() {
   const { user, tracker, error, refreshData } = useTrackerData();
   const isDesktop = useScreenSize();
 
-  // refresh data when user changes (login/logout)
+  // refresh data when user changes (login/logout),
+  // trying to avoid refreshData causing a fetch loop.
   useEffect(() => {
-    if (user || tracker) {
-    refreshData();
+    if (user) {
+      refreshData();
     }
-  }, [user, tracker]);
+  }, [user?.UserID]);
 
   if (error) return <div>Error loading backend: {error}</div>;
   if (!user || !tracker) return <div>???</div>;
 
   return (
-    <div className="grid mx-auto px-8 pt-4 w-8/10 justify-self-center border-blue-200 border mt-3">
+    <div className="grid mx-auto px-8 pt-4 min-w-8/10 max-w-10/10 justify-self-center border-blue-200 border mt-3">
       <h1 className="vp-mid text-5xl font-bold select-none text-indigo-700 mb-4 text-center text-shadow-2xs text-shadow-blue-300">
-        {isDesktop? 'Job App Tracker With Lootbox Technology + Agentic Functionality' : 'Job App Tracker'}
+        {isDesktop ?
+          (<>
+            Job App Tracker With
+            <div className="text-5xl">Lootboxes</div>
+            <div className="text-4xl">and Agentic Functionality</div>
+          </>)
+            :
+          'Job App Tracker'}
       </h1>
 
       <div className={`${isDesktop?'':'w-[90vw] relative left-1/2 right-1/2 -mx-[45vw]'} `}>
