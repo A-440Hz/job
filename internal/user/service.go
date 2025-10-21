@@ -234,14 +234,15 @@ func (s *Service) DeleteUser(id string) error {
 // StartCleanupCron starts as a goroutine
 func (s *Service) StartCleanupCron() {
 	var start = func() {
-		timer := time.NewTimer(0)
-		for {
-			select {
-			case <-timer.C:
-				timer.Reset(sessionCronFrequency)
-				s.cleanupExpiredSessions()
-				s.cleanupExpiredDemoUsers()
-			}
+		// Run once immediately, then run on a regular ticker interval.
+		s.cleanupExpiredSessions()
+		s.cleanupExpiredDemoUsers()
+
+		ticker := time.NewTicker(sessionCronFrequency)
+		defer ticker.Stop()
+		for range ticker.C {
+			s.cleanupExpiredSessions()
+			s.cleanupExpiredDemoUsers()
 		}
 	}
 	go start()
