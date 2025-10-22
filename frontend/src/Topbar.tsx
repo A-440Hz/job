@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTrackerData } from './JobAppTrackerDataContext';
 import { logoutUser } from './api/user';
 import { NavLink } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useScreenSize } from './ScreenSizeProvider';
 
 function Glyph() {
@@ -69,9 +70,15 @@ export function Login({ user }: { user: any }) {
 export default function Topbar() {
   // const isDesktop = useScreenSize();
   const {user, error, refreshData} = useTrackerData();
+  const location = useLocation();
+
+  // Refresh on mount and when the route path changes. This keeps the
+  // navbar counters (e.g. lootbox count) reasonably up-to-date when the
+  // user navigates between pages.
   useEffect(() => {
     refreshData();
-  }, []);
+    // only re-run when pathname changes
+  }, [location.pathname]);
 
   if (error) return <div>Error loading backend: {error}</div>;
   if (!user) return <div>???</div>; 
