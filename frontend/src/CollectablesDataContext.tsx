@@ -3,6 +3,10 @@ import { fetchCollectablesData } from './api/user';
 import { fetchTrackerData } from './api/tracker';
 import { cacheCollectables } from './utils/cacheCollectables';
 
+// NOTE: the CollectablesDataContext differs from TrackerDataContext in that it
+// specifically handles collectables-related data and caching.
+// To this end, it contains a no-cache header on fetches to ensure fresh data retrieval.
+
 type CollectablesDataContextType = {
     user: any;
     earned_collectables: any[];

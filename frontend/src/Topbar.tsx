@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useTrackerData } from './JobAppTrackerDataContext';
+import { useCollectablesData } from './CollectablesDataContext';
 import { logoutUser } from './api/user';
 import { NavLink } from 'react-router-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -77,7 +77,7 @@ export function Login({ user, onLogout }: { user: any; onLogout?: () => void }) 
 
 export default function Topbar() {
   // const isDesktop = useScreenSize();
-  const {user, error, refreshData} = useTrackerData();
+  const {user, error, refreshData} = useCollectablesData();
   const location = useLocation();
   const navigate = useNavigate();
 

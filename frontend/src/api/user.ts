@@ -11,7 +11,8 @@ export async function fetchCollectablesData(): Promise<any> {
     const res = await fetch(collectablesEndpoint, {
         method: 'GET',
         credentials: 'include',
-        headers: headers
+        headers: headers,
+        cache: 'no-cache',
     });
 
     if (!res.ok) {
@@ -67,6 +68,7 @@ export async function openOneLootbox(): Promise<any> {
     const res = await fetch(openLootboxEndpoint, {
         method: 'GET',
         credentials: 'include',
+        cache: 'no-cache',
     });
     if (!res.ok) {
         throw new Error(`Failed to open lootbox: ${res.statusText}`);
