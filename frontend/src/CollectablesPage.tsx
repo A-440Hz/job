@@ -22,7 +22,7 @@ export default function CollectablesPage() {
         if (user) {
         refreshData();
         }
-    }, []);
+    }, [user?.UserID]);
 
     if (error) return <div>Error loading backend: {error}</div>;
     if ( !user || !earned_collectables || !all_collectables ) return <div>???</div>;
@@ -65,8 +65,10 @@ export default function CollectablesPage() {
 
             {view === 'viewEarned' && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 p-4">
-                    {earned_collectables.map((item, index) => (
-                        <div key={item.ID || index+1} className="flex flex-col items-center">
+                    {earned_collectables.sort((a, b) => {
+                            return (a.CollectableID || 0) - (b.CollectableID || 0);
+                        }).map((item) => (
+                        <div key={item.CollectableID} className="flex flex-col items-center">
                             <div className="cursor-pointer transform transition-transform hover:scale-105 w-32 rounded-lg overflow-hidden bg-gray-100">
                                 <CollectableMedia
                                     collectable={item.Collectable}

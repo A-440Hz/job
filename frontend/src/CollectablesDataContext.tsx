@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { fetchCollectablesData } from './api/user';
 import { fetchTrackerData } from './api/tracker';
+import { cacheCollectables } from './utils/cacheCollectables';
 
 type CollectablesDataContextType = {
     user: any;
@@ -26,7 +27,7 @@ export function CollectablesDataProvider({ children }: { children: React.ReactNo
     const [user, setUser] = useState<any>(null);
     const [earned_collectables, setEarnedCollectables] = useState<any[]>([]);
     const [all_collectables, setAllCollectables] = useState<any[]>([]);
-        const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
     
 
     const fetchData = async () => {
@@ -36,13 +37,19 @@ export function CollectablesDataProvider({ children }: { children: React.ReactNo
             setUser(data.user);
             setEarnedCollectables(data.earned_collectables);
             setAllCollectables(data.all_collectables);
+
+            // Request service worker to cache collectable images
+            await cacheCollectables(data.all_collectables);
         } catch (err) {
             try {
-                await fetchTrackerData();
+                await fetchTrackerData(); // this line attempts to generate a new session in case the current one is invalid
                 const data = await fetchCollectablesData();
                 setUser(data.user);
                 setEarnedCollectables(data.earned_collectables);
                 setAllCollectables(data.all_collectables);
+
+                // Request service worker to cache collectable images
+                await cacheCollectables(data.all_collectables);
             } catch (finalErr: any) {
                 setError(finalErr.message || "Failed to load collectables.");
             }

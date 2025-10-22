@@ -5,4 +5,6 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Copy service worker to build output without processing it
+  publicDir: 'public',
 })

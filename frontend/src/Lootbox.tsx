@@ -45,13 +45,7 @@ function LootboxPage() {
 
     useEffect(() => {
         refreshData();
-    }, []);
-    
-    useEffect(() => {
-        if (user) {
-        refreshData();
-        }
-    }, []);
+    }, [user?.UserID]);
 
     if (error) return <div>Error loading backend: {error}</div>;
     if ( !user ) return <div>???</div>;
@@ -82,7 +76,7 @@ function LootboxPage() {
 
     // Inventory view
     return (
-        <div className="mx-auto px-8 pt-4 max-w-8/10 justify-self-center justify-items-center border-blue-200 border mt-3">
+        <div className="mx-auto px-8 pt-4 max-w-8/10 justify-self-center justify-items-center mt-3">
             <div className="bg-slate-50 rounded-xl p-6 shadow-md border border-gray-100 mt-4 max-w-md mx-auto">
                 <div className="text-center select-none">
                     <div className="text-4xl font-bold text-yellow-600 mb-2">
@@ -122,10 +116,6 @@ function LootboxPage() {
                     </div>
                 </div>
             </div>
-
-            <div>
-                {user && user.inventory ? JSON.stringify(user.inventory) : 'empty'}
-            </div>
         </div>
     )
 }
@@ -160,7 +150,7 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
         
 
     return (
-        <div className="mx-auto px-8 pt-4 w-8/10 justify-self-center justify-items-center border-blue-200 border mt-3">
+        <div className="mx-auto px-8 pt-4 w-8/10 justify-self-center justify-items-center mt-3">
             <MagnifiedMediaModal showMagnified={showMagnified} setShowMagnified={setShowMagnified} collectable={result.col.Collectable} />
             <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 mt-4 max-w-lg mx-auto">
                 <div className="text-center">
