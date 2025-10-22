@@ -1,6 +1,7 @@
 // Service Worker for caching collectable images
 // This worker caches all images/video requests at the network layer
 const CACHE_NAME = 'collectables-cache-v1';
+const IMAGE_SOURCE = 'raw.githubusercontent.com';
 
 // Install event - set up the service worker
 self.addEventListener('install', (event) => {
@@ -64,7 +65,7 @@ self.addEventListener('fetch', (event) => {
 
   // Check if it's a media request
   const url = new URL(event.request.url);
-  const isMediaRequest = url.hostname === 'raw.githubusercontent.com' ||
+  const isMediaRequest = url.hostname === IMAGE_SOURCE ||
                          event.request.destination === 'image' ||
                          event.request.destination === 'video';
 
