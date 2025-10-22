@@ -75,7 +75,7 @@ function ProgressBoxes() {
         Goal Progress
       </h3>
       <span className='text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-full'>
-        {tracker.CurBoxesAwarded} earned {(tracker.CycleFrequency === "weekly")? 'this week' : 'today'}
+        {tracker.CurBoxesAwarded} earned this deadline
       </span>
     </div>
     <div className='text-sm text-gray-600 mb-3'>
@@ -481,8 +481,6 @@ function ItemsList() {
           />
         ))}
       </ul>
-      <p>user: {user?.ID}</p>
-      <p>last completed: {tracker?.LastCompleted}</p>
     </div>
   );
 }

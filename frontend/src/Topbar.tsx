@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTrackerData } from './JobAppTrackerDataContext';
 import { logoutUser } from './api/user';
 import { NavLink } from 'react-router-dom';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useScreenSize } from './ScreenSizeProvider';
 
 function Glyph() {
@@ -58,10 +58,18 @@ export function Navbar({ user }: { user: any }) {
   </nav>;
 } 
 
-export function Login({ user }: { user: any }) {
+export function Login({ user, onLogout }: { user: any; onLogout?: () => void }) {
   if (!user) return <div>???</div>;
   if (user.Registered === true) {
-    return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" onClick={() => logoutUser()}>Logout</a>
+    return (
+      <button
+        className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60"
+        id="navbar_sign_in_button"
+        onClick={() => onLogout && onLogout()}
+      >
+        Logout
+      </button>
+    );
   } else {
     return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/login">Login/Register</a>
   }
@@ -71,6 +79,23 @@ export default function Topbar() {
   // const isDesktop = useScreenSize();
   const {user, error, refreshData} = useTrackerData();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const onLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (err) {
+      console.error('Logout failed:', err);
+    } finally {
+      // refresh client state and navigate home
+      try {
+        await refreshData();
+      } catch (e) {
+        console.error('refreshData failed after logout', e);
+      }
+      navigate('/');
+    }
+  };
 
   // Refresh on mount and when the route path changes. This keeps the
   // navbar counters (e.g. lootbox count) reasonably up-to-date when the
@@ -87,7 +112,7 @@ export default function Topbar() {
       <span> <Glyph /> </span>
       {/* <span className="md:flex select-none font-semibold text-3xl ml-0"> {isDesktop && "haotianswebsite.com"} </span> */}
       <Navbar user={user}/>
-      <Login user={user} />
+      <Login user={user} onLogout={onLogout} />
     </div>);
 }
 
