@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useCollectablesData, useInView } from "./CollectablesDataContext";
+import { useCollectablesData } from "./CollectablesDataContext";
 import {useSearchParams} from "react-router-dom";
 // import { useScreenSize } from "./ScreenSizeProvider";
 import { filenameToTitle } from "./api/collectable";
