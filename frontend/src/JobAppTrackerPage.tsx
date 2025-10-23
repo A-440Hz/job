@@ -446,7 +446,6 @@ function ItemsList() {
           isEditing={editingId === "new"}
           isNewItem={true}
           setIsNewItem={setIsNewItem}
-          editingId={editingId}
           setEditingId={setEditingId}
           handleEdit={handleEdit}
           handleDelete={handleDelete}
@@ -473,7 +472,6 @@ function ItemsList() {
             isEditing={editingId === item.ID}
             isNewItem={false}
             setIsNewItem={setIsNewItem}
-            editingId={editingId}
             setEditingId={setEditingId}
             handleEdit={handleEdit}
             handleDelete={handleDelete}

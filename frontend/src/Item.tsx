@@ -6,7 +6,6 @@ const Item = React.memo(function Item({
   isEditing,
   isNewItem,
   setIsNewItem,
-  editingId,
   setEditingId,
   handleEdit,
   handleDelete,
@@ -16,7 +15,6 @@ const Item = React.memo(function Item({
   isEditing: boolean;
   isNewItem: boolean;
   setIsNewItem: (v: boolean) => void;
-  editingId: string | null;
   setEditingId: (v: string | null) => void;
   handleEdit: (item: any, title: string, body: string) => void;
   handleDelete: (id: string) => void;
