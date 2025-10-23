@@ -8,6 +8,7 @@ package main
 */
 
 import (
+	"flag"
 	"job/internal/collection"
 	"job/internal/db"
 	"job/internal/handler"
@@ -19,13 +20,31 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"gorm.io/gorm"
 )
 
 func main() {
-	db.SetEnvForTesting()
-	dBase, err := db.InitGormLocalDB()
-	if err != nil {
-		panic(err)
+	// parse flags to allow selecting production mode at startup
+	production := flag.Bool("production", false, "use production (Railway) DB")
+	flag.Parse()
+
+	var dBase *gorm.DB
+	var err error
+
+	if *production {
+		// In production we expect DATABASE_URL (Railway) to be present
+		dBase, err = db.InitGormRailwayDB()
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		// Local / test mode: populate local testing envs and use local DB
+		db.SetEnvForTesting()
+		dBase, err = db.InitGormLocalDB()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	port := os.Getenv("PORT")

@@ -17,6 +17,7 @@ import (
 const sqlDSNTesting = "DATABASE_URL_SQL_TESTING"
 const gormDSNTesting = "DATABASE_URL_GORM_TESTING"
 const gormDSNLocalhost = "DATABASE_URL_GORM_LOCALHOST"
+const gormDSNRailway = "DATABASE_URL"
 
 func getDSN(env string) (string, error) {
 	dsn, ok := os.LookupEnv(env)
@@ -52,27 +53,26 @@ func Connect() (*sql.DB, error) {
 // manages migrations so I don't have to
 // summarize and rejustify this later
 func InitGormTestDB() (*gorm.DB, error) {
-	dsn, err := getDSN(gormDSNTesting)
-	if err != nil {
-		return nil, err
-	}
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		return nil, fmt.Errorf("unable to open DB connection with %q: %w", gormDSNTesting, err)
-	}
+	return initGormDB(gormDSNTesting)
 
-	return db, nil
 }
 
 func InitGormLocalDB() (*gorm.DB, error) {
-	dsn, err := getDSN(gormDSNLocalhost)
+	return initGormDB(gormDSNLocalhost)
+}
+
+func InitGormRailwayDB() (*gorm.DB, error) {
+	return initGormDB(gormDSNRailway)
+}
+
+func initGormDB(dbURL string) (*gorm.DB, error) {
+	dsn, err := getDSN(dbURL)
 	if err != nil {
 		return nil, err
 	}
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("unable to open DB connection with %q: %w", gormDSNLocalhost, err)
+		return nil, fmt.Errorf("unable to open DB connection with %q: %w", dbURL, err)
 	}
-
 	return db, nil
 }
