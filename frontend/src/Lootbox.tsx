@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { CollectableMedia, MagnifiedMediaModal, valueToRarity } from "./Collectables"
 import { useCollectablesData } from "./CollectablesDataContext";
-import { useScreenSize } from "./ScreenSizeProvider";
+// import { useScreenSize } from "./ScreenSizeProvider";
 import { openOneLootbox } from "./api/user";
 import { getImageURL, filenameToTitle } from "./api/collectable";
 
@@ -37,7 +37,7 @@ import { getImageURL, filenameToTitle } from "./api/collectable";
 
 function LootboxPage() {
     const { user, error, refreshData} = useCollectablesData();
-    const isDesktop = useScreenSize();
+    // const isDesktop = useScreenSize();
     const location = useLocation();
 
     // State management for view switching

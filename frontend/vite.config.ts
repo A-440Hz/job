@@ -7,4 +7,5 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   // Copy service worker to build output without processing it
   publicDir: 'public',
+  // base: './',
 })

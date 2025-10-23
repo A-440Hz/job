@@ -3,7 +3,7 @@ import { useCollectablesData } from './CollectablesDataContext';
 import { logoutUser } from './api/user';
 import { NavLink } from 'react-router-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useScreenSize } from './ScreenSizeProvider';
+// import { useScreenSize } from './ScreenSizeProvider';
 
 function Glyph() {
   const [source, setSource] = useState("/src/assets/sb1rb.png");
@@ -43,7 +43,7 @@ export function Navbar({ user }: { user: any }) {
     <NavLink to='/Lootbox' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass
       }>
-       Lootbox <text className="text-orange-300"> {(user.inventory?.NumLootboxes > 0)? `(${user.inventory?.NumLootboxes})` : ''}</text>
+       Lootbox <p className="text-orange-300"> {(user.inventory?.NumLootboxes > 0)? `(${user.inventory?.NumLootboxes})` : ''}</p>
     </NavLink>
     <NavLink to='/About' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass

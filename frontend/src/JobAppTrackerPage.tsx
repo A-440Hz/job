@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect } from 'react'
 import Item from './Item';
 import { createTrackerItem, deleteTrackerItem, updateTrackerItem, updateTracker } from './api/tracker'
 import { formatDate, dateToInputString, inputStringToDate, adjustTimezoneOffset, convertToBackendTime } from './api/datetime'
@@ -220,7 +220,6 @@ function TrackerBar() {
   if (error) return <div>Error loading backend: {error}</div>;
   
   const [isEditing, setIsEditing] = useState(false);
-  const [saveHighlight, setSaveHighlight] = useState(true);
 
   useEffect(() => {
     if (!isEditing) {
@@ -326,6 +325,7 @@ function TrackerBar() {
                 <label htmlFor="select-date" className='block text-sm font-medium text-gray-700'>
                   Goal Deadline
                 </label>
+                <p className='text-xs text-gray-500 mb-2'>Deadline to meet Lootbox Goal before it resets</p>
                 <input
                   className='w-full text-amber-600  px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
                   id='select-date'
@@ -402,7 +402,7 @@ function TrackerBar() {
 
 function ItemsList() {
   const isDesktop = useScreenSize();
-  const { user, tracker, error, refreshData, setTracker } = useTrackerData();
+  const { tracker, error, refreshData, setTracker } = useTrackerData();
   const [isNewItem, setIsNewItem] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 

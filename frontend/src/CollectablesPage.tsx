@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { useCollectablesData, useInView } from "./CollectablesDataContext";
 import {useSearchParams} from "react-router-dom";
-import { useScreenSize } from "./ScreenSizeProvider";
+// import { useScreenSize } from "./ScreenSizeProvider";
 import { filenameToTitle } from "./api/collectable";
 import { MagnifiedMediaModal, CollectableMedia, valueToRarity, viewAllCollectables } from "./Collectables";
 
 export default function CollectablesPage() {
     const { user, earned_collectables, all_collectables, error, refreshData } = useCollectablesData();
-    const isDesktop = useScreenSize();
+    // const isDesktop = useScreenSize();
 
     const [showMagnified, setShowMagnified] = useState(false);
     const [selectedCollectable, setSelectedCollectable] = useState(null);

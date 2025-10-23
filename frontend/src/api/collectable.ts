@@ -3,7 +3,7 @@
 
 
 const domainGithub = "https://raw.githubusercontent.com/A-440Hz/squids/main/";
-const domainFirebase = "";
+// const domainFirebase = "";
 
 interface MediaURLProvider {
     getImageURL(filename: string): string;
@@ -15,11 +15,11 @@ class GithubURLProvider implements MediaURLProvider {
     }
 }
 
-class FirebaseURLProvider implements MediaURLProvider {
-    getImageURL(filename: string): string {
-        return `${domainFirebase}/${filename}`;
-    }
-}
+// class FirebaseURLProvider implements MediaURLProvider {
+//     getImageURL(filename: string): string {
+//         return `${domainFirebase}/${filename}`;
+//     }
+// }
 
 // TODO: this will be useful if I ever want to have a fallback providers pattern
 // https://www.npmjs.com/package/react-image

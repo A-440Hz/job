@@ -27,6 +27,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	// use AutoMigrate instead of CleanDB to perserve models
 	// db.CleanDB(*dBase, user.User{}, user.Session{}, collection.UserInventory{}, tracker.JobAppTracker{}, tracker.JobAppItem{}, collection.Collectable{})
 	dBase.AutoMigrate(user.User{}, user.Session{}, collection.Collectable{}, collection.UserCollectable{}, collection.UserInventory{}, tracker.JobAppTracker{}, tracker.JobAppItem{})
@@ -54,8 +60,8 @@ func main() {
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		log.Println("Server running at http://localhost:8080")
-		if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Println("Server running at ", port)
+		if err := http.ListenAndServe(":"+port, nil); err != nil {
 			log.Fatalf("HTTP server error: %v", err)
 		}
 	}()

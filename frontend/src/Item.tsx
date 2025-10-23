@@ -82,7 +82,7 @@ const Item = React.memo(function Item({
               />
               {!isNewItem && (
                 <button
-                  className="delete rounded-[2vw] text-sm bg-slate-300 border-rose-600 border-2 px-1 text-amber-800 hover:bg-rose-400"
+                  className="delete rounded-[2vw] text-sm bg-orange-200 border-amber-50 border-2 px-1 text-amber-800 hover:bg-rose-400"
                   onClick={() => handleDelete(item.ID)}
                   onMouseOver={() => setSaveHighlight(false)}
                   onMouseLeave={() => setSaveHighlight(true)}
