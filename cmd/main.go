@@ -32,12 +32,14 @@ func main() {
 
 	var dBase *gorm.DB
 	var err error
+	log.Println("WE ARE IN MAIN")
 
 	if *production {
 		// In production we expect DATABASE_URL (Railway) to be present.
 		// The database service (managed by the platform) may not be ready
 		// immediately when the container starts. Retry with backoff until
 		// we can open a connection or hit a timeout.
+		log.Println("WE ARE IN PRODUCTION")
 		const maxAttempts = 30
 		const baseDelay = 2 // seconds
 		var attempt int
