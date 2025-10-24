@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -33,9 +34,32 @@ func main() {
 	var err error
 
 	if *production {
-		// In production we expect DATABASE_URL (Railway) to be present
-		dBase, err = db.InitGormRailwayDB()
+		// In production we expect DATABASE_URL (Railway) to be present.
+		// The database service (managed by the platform) may not be ready
+		// immediately when the container starts. Retry with backoff until
+		// we can open a connection or hit a timeout.
+		const maxAttempts = 30
+		const baseDelay = 2 // seconds
+		var attempt int
+		for attempt = 1; attempt <= maxAttempts; attempt++ {
+			dBase, err = db.InitGormRailwayDB()
+			if err == nil {
+				break
+			}
+			log.Printf("DB connect attempt %d/%d failed: %v", attempt, maxAttempts, err)
+			// If we've exhausted attempts, break and panic below
+			if attempt == maxAttempts {
+				break
+			}
+			// exponential backoff with jitter
+			wait := time.Duration(baseDelay*(1<<uint(attempt-1))) * time.Second
+			if wait > 30*time.Second {
+				wait = 30 * time.Second
+			}
+			time.Sleep(wait)
+		}
 		if err != nil {
+			// final failure after retries
 			panic(err)
 		}
 	} else {
