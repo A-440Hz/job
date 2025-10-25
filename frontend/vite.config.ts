@@ -6,6 +6,13 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   // Copy service worker to build output without processing it
-  publicDir: 'public',
+  publicDir: './src/assets',
   base: './',
+  server: {
+    allowedHosts: ['.localhost', "frontend-staging-60b5.up.railway.app"],
+    host: '0.0.0.0',
+  },
+  build: {
+    minify: 'esbuild', // Ensures production builds are minimized
+  },
 })

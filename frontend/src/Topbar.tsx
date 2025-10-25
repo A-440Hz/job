@@ -28,8 +28,8 @@ function Glyph() {
 }
 
 export function Navbar({ user }: { user: any }) {
-  const navClass = "mx-1.5 text-m/6 hover:opacity-60 "
-  return <nav className='flex border-2 justify-between pl-3 pr-3'>
+  const navClass = "flex mx-1.5 text-m/6 hover:opacity-60 "
+  return <nav className='flex border-2 justify-between px-3 py-1 rounded-lg bg-slate-700 border-violet-200'>
     <NavLink to='/' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass
       }>
@@ -43,7 +43,7 @@ export function Navbar({ user }: { user: any }) {
     <NavLink to='/Lootbox' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass
       }>
-       Lootbox <p className="text-orange-300"> {(user.inventory?.NumLootboxes > 0)? `(${user.inventory?.NumLootboxes})` : ''}</p>
+       Lootbox <p className={`text-orange-300 ${user.inventory?.NumLootboxes > 0 && "ml-1"}`}> {(user.inventory?.NumLootboxes > 0)? `(${user.inventory?.NumLootboxes})` : ''}</p>
     </NavLink>
     <NavLink to='/About' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass
