@@ -8,7 +8,6 @@ echo "Waiting up to ${PGTIMEOUT}s for Postgres at ${PGHOST}:${PGPORT}..."
 elapsed=0
 interval=2
 while ! pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" >/dev/null 2>&1; do
-  echo `pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE"`
   sleep $interval
   elapsed=$((elapsed + interval))
   echo "elapsed time: $elapsed seconds"

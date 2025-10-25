@@ -3,7 +3,6 @@ package collection
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -29,13 +28,14 @@ func getSeedFilePath() string {
 		return p
 	}
 
+	// this has been stinky bad code but it was fine because it worked.
+	// this does not work with a built binary. It will loop forever unless it is placed in a specific location.
+	// TODO: make this better
 	baseDir, err := os.Executable()
 	if err != nil {
 		return seedFile
 	}
-	fmt.Println(baseDir)
 	for filepath.Base(baseDir) != "internal" && filepath.Base(baseDir) != "cmd" {
-		fmt.Println(baseDir)
 		baseDir = filepath.Clean(filepath.Join(baseDir, "../"))
 	}
 	return filepath.ToSlash(filepath.Join(filepath.Dir(baseDir), seedFile))
@@ -50,7 +50,7 @@ func NewRepository(d *gorm.DB) *Repository {
 	return &Repository{db: d}
 }
 
-// importCollectables deletes the collectables table and re-imports it from the json seedFile
+// importCollectables updates the collectables table by re-importing it from the json seedFile
 func (r *Repository) importCollectables() error {
 	f, err := os.Open(getSeedFilePath())
 	if err != nil {
