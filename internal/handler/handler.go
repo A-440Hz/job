@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"fmt"
 	"job/internal/collection"
 	"job/internal/tracker"
 	"job/internal/user"
+	"os"
 )
 
 const localOrigin string = "http://localhost:5173"
@@ -19,6 +21,11 @@ type Handler struct {
 	// this is where I would put my middleware... if I had any!
 }
 
-func SetEnvForProduction() {
-	allowOrigin = "*"
+func SetEnvForProduction() error {
+	if o, exists := os.LookupEnv("ALLOWED_ORIGINS"); exists {
+		allowOrigin = o
+	} else {
+		return fmt.Errorf("ALLOWED_ORIGINS not set in production environment")
+	}
+	return nil
 }

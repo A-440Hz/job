@@ -10,6 +10,7 @@ interval=2
 while ! pg_isready -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "$PGDATABASE" >/dev/null 2>&1; do
   sleep $interval
   elapsed=$((elapsed + interval))
+  echo "elapsed time: $elapsed seconds"
   if [ "$elapsed" -ge "$PGTIMEOUT" ]; then
     echo "Timed out waiting for Postgres after $elapsed seconds" >&2
     exit 1
