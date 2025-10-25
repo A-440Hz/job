@@ -56,7 +56,7 @@ func (h *Handler) GetUserAndUserInventory(w http.ResponseWriter, r *http.Request
 }
 
 func (h *Handler) RegisterBaseUser(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
@@ -86,7 +86,7 @@ func (h *Handler) RegisterBaseUser(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
 	// TODO: on happy path, check if current unregistered user session has 0 items and 0 inventory. if so, delete session from repo.
 	// not an essential task because empty demo user>tracker>sessions are cron deleted after 2 days
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
@@ -124,7 +124,7 @@ func (h *Handler) HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
 
 // HandleLogoutRequest deletes the current session and clears the session cookie
 func (h *Handler) HandleLogoutRequest(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
@@ -190,7 +190,7 @@ func (h *Handler) DeleteUserRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, PATCH, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Cache-Control")
@@ -209,7 +209,7 @@ func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleAwardCollectableRequest(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")

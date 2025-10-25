@@ -40,6 +40,7 @@ func main() {
 		// immediately when the container starts. Retry with backoff until
 		// we can open a connection or hit a timeout.
 		log.Println("WE ARE IN PRODUCTION")
+		handler.SetEnvForProduction()
 		const maxAttempts = 30
 		const baseDelay = 2 // seconds
 		var attempt int
@@ -66,6 +67,7 @@ func main() {
 		}
 	} else {
 		// Local / test mode: populate local testing envs and use local DB
+		log.Println("WE ARE IN LOCAL TESTING")
 		db.SetEnvForTesting()
 		dBase, err = db.InitGormLocalDB()
 		if err != nil {
