@@ -11,7 +11,7 @@ import './index.css'
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('./src/assets/sw.js')
+      .register('./assets/sw.js')
       .then((registration) => {
         console.log('[App] Service Worker registered successfully:', registration.scope);
       })

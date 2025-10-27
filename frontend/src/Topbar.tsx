@@ -6,14 +6,14 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useScreenSize } from './ScreenSizeProvider';
 
 function Glyph() {
-  const [source, setSource] = useState("/src/assets/sb1rb.png");
+  const [source, setSource] = useState("/sb1rb.png");
   const handleMouseAway: React.MouseEventHandler<HTMLImageElement> = (event) => {
     event.preventDefault();
-    setSource("/src/assets/sb2rb.png");
+    setSource("/sb2rb.png");
   };
   const handleMouseOver: React.MouseEventHandler<HTMLImageElement> = (event) => {
     event.preventDefault();
-    setSource("/src/assets/sb1rb.png");
+    setSource("/sb1rb.png");
   };
   const handleMouseClick = () => {
     window.location.href = "/";
