@@ -5,6 +5,7 @@ import (
 	"job/internal/collection"
 	"job/internal/tracker"
 	"job/internal/user"
+	"log"
 	"os"
 )
 
@@ -24,6 +25,7 @@ type Handler struct {
 func SetEnvForProduction() error {
 	if o, exists := os.LookupEnv("ALLOWED_ORIGINS"); exists {
 		allowOrigin = o
+		log.Println("Allowed origin is: ", allowOrigin)
 	} else {
 		return fmt.Errorf("ALLOWED_ORIGINS not set in production environment")
 	}

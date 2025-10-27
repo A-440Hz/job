@@ -40,7 +40,10 @@ func main() {
 		// immediately when the container starts. Retry with backoff until
 		// we can open a connection or hit a timeout.
 		log.Println("WE ARE IN PRODUCTION")
-		handler.SetEnvForProduction()
+		err := handler.SetEnvForProduction()
+		if err != nil {
+			panic(err)
+		}
 		const maxAttempts = 30
 		const baseDelay = 2 // seconds
 		var attempt int
