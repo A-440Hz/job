@@ -3,7 +3,7 @@ import { useCollectablesData } from './CollectablesDataContext';
 import { logoutUser } from './api/user';
 import { NavLink } from 'react-router-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
-// import { useScreenSize } from './ScreenSizeProvider';
+import { useScreenSize } from './ScreenSizeProvider';
 
 function Glyph() {
   const [source, setSource] = useState("/src/assets/sb1rb.png");
@@ -28,8 +28,9 @@ function Glyph() {
 }
 
 export function Navbar({ user }: { user: any }) {
-  const navClass = "flex mx-1.5 text-m/6 hover:opacity-60 "
-  return <nav className='flex border-2 justify-between px-3 py-1 rounded-lg bg-slate-700 border-violet-200'>
+  const isDesktop = useScreenSize();
+  const navClass = "flex text-m/6 hover:opacity-60"
+  return <nav className={`flex border-2 justify-between px-3 py-1 rounded-lg bg-slate-700 border-violet-200 ${isDesktop ? "space-x-12 mx-4" : "space-x-1"}`}>
     <NavLink to='/' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass
       }>

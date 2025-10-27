@@ -36,12 +36,12 @@ function JobAppTrackerPage() {
 
   return (
     <div className="grid mx-auto px-8 pt-4 min-w-8/10 max-w-10/10 justify-self-center border-blue-200 border mt-3">
-      <h1 className="vp-mid text-5xl font-bold select-none text-indigo-700 mb-4 text-center text-shadow-2xs text-shadow-blue-300">
+      <h1 className="vp-mid mb-4 text-5xl font-semibold select-none text-center text-blue-200 text-shadow-2xs text-shadow-violet-900">
         {isDesktop ?
           (<>
             Job App Tracker With
-            <div className="text-5xl">Lootboxes</div>
-            <div className="text-4xl">and Agentic Functionality</div>
+            <div className="text-5xl font-bold tdrop-shadow-md">Lootboxes</div>
+            <div className="text-4xl font-semibold">and Agentic Functionality</div>
           </>)
             :
           'Job App Tracker'}
@@ -196,7 +196,7 @@ function ProgressTracker( {onSettingsClick}: {onSettingsClick: () => void }) {
       <div className='flex items-center justify-between mb-4'>
         <div></div>
         <button
-          className='bg-white hover:bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md transition-all duration-200 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-1'
+          className='bg-white hover:bg-gray-50 border border-gray-200 rounded-xl p-3 shadow-md transition-all duration-200 hover:shadow-lg hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-1'
           onClick={onSettingsClick}
           title="Tracker Settings"
         >
