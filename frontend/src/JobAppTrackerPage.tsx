@@ -4,9 +4,9 @@ import { createTrackerItem, deleteTrackerItem, updateTrackerItem, updateTracker 
 import { formatDate, dateToInputString, inputStringToDate, adjustTimezoneOffset, convertToBackendTime } from './api/datetime'
 import { useTrackerData } from './JobAppTrackerDataContext';
 import { useScreenSize } from './ScreenSizeProvider';
-import flameHot from './assets/flame-hot-svgrepo-com.svg';
-import flameCold from './assets/flame-cold-svgrepo-com.svg';
-import gearIcon from './assets/gear-svgrepo-com.svg';
+import flameHot from '/flame-hot-svgrepo-com.svg';
+import flameCold from '/flame-cold-svgrepo-com.svg';
+import gearIcon from '/gear-svgrepo-com.svg';
 
 import './App.css'
 

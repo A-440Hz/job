@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   // Copy service worker to build output without processing it
-  publicDir: './src/assets',
+  publicDir: './public',
   base: './',
   server: {
     allowedHosts: ['.localhost', "frontend-staging-60b5.up.railway.app", "jobapptracker.up.railway.app", "haotianswebsite.com"],
