@@ -9,7 +9,7 @@ export default defineConfig({
   publicDir: './src/assets',
   base: './',
   server: {
-    allowedHosts: ['.localhost', "frontend-staging-60b5.up.railway.app"],
+    allowedHosts: ['.localhost', "frontend-staging-60b5.up.railway.app", "jobapptracker.up.railway.app", "haotianswebsite.com"],
     host: '0.0.0.0',
   },
   build: {
