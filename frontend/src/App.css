@@ -148,3 +148,150 @@ progress.streak-bar {
     transform: translate(-100%, 0);
   }
 }
+
+
+/* inspired by https://www.w3schools.com/howto/howto_css_modals.asp */
+.popup {
+  display: none; /* hidden by default */
+  position: fixed;
+  z-index: 1;
+  /* background dimming effect */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+.popup-content {
+  position: relative;
+  background-color: #fefefe;
+  margin: auto;
+  height: fit-content;
+  padding: 0;
+  border: 1px solid #888;
+  top: 10%;
+  width: 410px;
+  display: grid;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+}
+
+.popup-header {
+  display: flex;
+  padding: 5px 8px;
+  background-color: #3343a1;
+  color: white;
+}
+
+.popup-header h4 {
+  margin: 1px;
+  padding-top: 5px;
+}
+
+.popup-header h2 {
+  margin: 1px;
+}
+
+.popup-header img {
+  padding-top: 6px;
+  margin-right: 16px;
+  max-width: 80px;
+  height: auto;
+  -webkit-user-drag: none;
+}
+
+.popup-footer {
+  margin: 0px 23px;
+}
+
+.popup-frame {
+  width: fit-content;
+  height: auto;
+  justify-self: center;
+  margin: 9px 9px 0px 9px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px 3px;
+}
+
+
+.capcha-img {
+  border-style: solid;
+  border-color: rgb(0,0,0,0.0);
+  border-width: 2px;
+  box-sizing: border-box;
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+.capcha-img.active {
+  opacity: 0.87;
+  transform: scale(0.88);
+  transform-origin: center;
+  border-style: solid;
+  border-color: blue;
+  border-width: 2px;
+  box-sizing: border-box;
+}
+
+.capcha-img:hover, 
+.capcha-img:focus {
+  opacity: 0.9;
+  cursor: pointer;
+}
+
+.close {
+  color: white;
+  /* float: right; */
+  font-size: 22px;
+  font-weight: bold;
+  position: absolute;
+  right: 10px;
+  top: 2px;
+  margin-bottom: 10px;
+  padding-bottom: 3px;
+}
+
+.close:hover,
+.close:focus {
+  color: rgb(0,0,0,0.5);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.err-msg {
+  margin-left: 18%;
+  color: red;
+  opacity: 0;
+}
+
+.btn {
+  text-wrap: nowrap;
+  box-sizing: border-box;
+  font-size: 20px;
+  border-radius: 3px;
+  border: none;
+  width: 100px;
+  padding: 12px 18px;
+  margin: 2px;
+  float: right;
+  cursor: pointer;
+  /* color:  rgb(217, 244, 244); */
+  opacity: 0.6;
+}
+
+.btn:active:hover {
+  transform: scale(0.97);
+  outline: 2px solid rgb(217, 244, 244);
+}
+
+.btn:hover {
+  opacity: 0.77;
+}
+
+.popup-footer button {
+  color: white;
+  background-color: blue;
+}

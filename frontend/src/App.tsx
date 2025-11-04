@@ -6,8 +6,9 @@ import UserPage from './UserPage';
 import LoginPage from './LoginPage';
 import LootboxPage from './Lootbox';
 import CollectablesPage from './CollectablesPage';
+import { About } from './About';
 
-const About = () => <h2 className='justify-self-center text-4xl'>About Page</h2>;
+// const About = () => <h2 className='justify-self-center text-4xl'>About Page</h2>;
 
 function App() {
 
