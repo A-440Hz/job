@@ -8,7 +8,8 @@ export function About() {
             <h2 className='justify-self-center text-4xl'>About Page</h2>
 
 
-        <button className="btn" type="button" onClick={() => setOpenPopup(true)}> view my resume </button>
+        <button className="text-nowrap px-4 py-2 m-8 cursor-pointer border-3 bg-orange-300 backdrop-opacity-60 hover:opacity-75" type="button" onClick={() => setOpenPopup(true)}> view my resume </button>
+        <p> {openPopup ? 'Popup is open' : 'Popup is closed'} </p>
         { openPopup && (
         <div id="myPopup" className="popup">
         <div className="popup-content no-select">

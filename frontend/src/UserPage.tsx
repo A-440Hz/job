@@ -18,7 +18,7 @@ function StatRow({ label, value }: StatRowProps) {
 function UserPage() {
     const {tracker, user, error, refreshData } = useTrackerData();
     if (error) return <div>Error loading backend: {error}</div>;
-    if ( !user || !tracker ) return <div>???</div>;
+    if ( !user || !tracker ) return <div className='text-center justify-self-center'>I'm on the free version</div>;
 
     const [showBanner, setShowBanner] = useState(true);
 

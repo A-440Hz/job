@@ -51,7 +51,7 @@ function LootboxPage() {
     }, [location.pathname]); // Refresh when route changes
 
     if (error) return <div>Error loading backend: {error}</div>;
-    if ( !user ) return <div>???</div>;
+    if ( !user ) return <div className='text-center justify-self-center'>I'm on the free version</div>;
 
     const handleOpenLootbox = async () => {
         setIsLoading(true);
@@ -94,7 +94,7 @@ function LootboxPage() {
                             className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
                                 (user?.inventory?.NumLootboxes || 0) >= 1 && !isLoading
                                     ? 'bg-yellow-500 text-white hover:bg-yellow-600 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-gray-300 text-gray-500'
                             }`}
                             disabled={(user?.inventory?.NumLootboxes || 0) < 1 || isLoading}
                             onClick={handleOpenLootbox}
@@ -106,7 +106,7 @@ function LootboxPage() {
                             className={`px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
                                 (user?.inventory?.NumLootboxes || 0) >= 10 && !isLoading
                                     ? 'bg-yellow-500 text-white hover:bg-yellow-600 shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2'
-                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    : 'bg-gray-300 text-gray-500'
                             }`}
                             disabled={(user?.inventory?.NumLootboxes || 0) < 10 || isLoading}
                             onClick={() => {

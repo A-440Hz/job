@@ -19,9 +19,9 @@ function App() {
       <Topbar />
       <Routes>
         <Route path="/" element={<JobAppTrackerPage />} />
-        <Route path="/profile" element={<UserPage />} />
+        <Route path="/Profile" element={<UserPage />} />
         <Route path="/About" element={<About />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/Login" element={<LoginPage />} />
         <Route path="/Lootbox" element={<LootboxPage />} />
         <Route path="/Collection" element={<CollectablesPage />} />
       </Routes>

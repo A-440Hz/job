@@ -25,7 +25,7 @@ export default function CollectablesPage() {
     }, [user?.UserID]);
 
     if (error) return <div>Error loading backend: {error}</div>;
-    if ( !user || !earned_collectables || !all_collectables ) return <div>???</div>;
+    if ( !user || !earned_collectables || !all_collectables ) return <div className='text-center justify-self-center'>I'm on the free version</div>;
 
     const handleCollectableClick = (collectable: any) => {
         setSelectedCollectable(collectable);

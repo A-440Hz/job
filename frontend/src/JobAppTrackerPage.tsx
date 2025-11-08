@@ -32,7 +32,7 @@ function JobAppTrackerPage() {
   }, [user?.UserID]);
 
   if (error) return <div>Error loading backend: {error}</div>;
-  if (!user || !tracker) return <div>???</div>;
+  if (!user || !tracker) return <div className='text-center justify-self-center'>I'm on the free version</div>;
 
   return (
     <div className="grid mx-auto px-8 pt-4 min-w-8/10 max-w-10/10 justify-self-center border-blue-200 border mt-3">

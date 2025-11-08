@@ -51,7 +51,7 @@ export function Navbar({ user }: { user: any }) {
       }>
       About
     </NavLink>
-    <NavLink to='/profile' className={({ isActive }) =>
+    <NavLink to='/Profile' className={({ isActive }) =>
         isActive ? navClass + "text-amber-300" : navClass
       }>
       Profile
@@ -60,7 +60,7 @@ export function Navbar({ user }: { user: any }) {
 } 
 
 export function Login({ user, onLogout }: { user: any; onLogout?: () => void }) {
-  if (!user) return <div>???</div>;
+  if (!user) return <div></div>;
   if (user.Registered === true) {
     return (
       <button
@@ -72,7 +72,7 @@ export function Login({ user, onLogout }: { user: any; onLogout?: () => void }) 
       </button>
     );
   } else {
-    return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/login">Login/Register</a>
+    return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/Login">Login/Register</a>
   }
 }
 
@@ -107,7 +107,7 @@ export default function Topbar() {
   }, [location.pathname]);
 
   if (error) return <div>Error loading backend: {error}</div>;
-  if (!user) return <div>???</div>; 
+  if (!user) return <div className='text-center justify-self-center pt-5'>Please bear with the loading time...</div>; 
     return (
     <div className='flex h-[62px] min-w-full items-center border justify-between select-none z50'>
       <span> <Glyph /> </span>
