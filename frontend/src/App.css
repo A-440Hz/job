@@ -154,7 +154,6 @@ progress.streak-bar {
 
 /* inspired by https://www.w3schools.com/howto/howto_css_modals.asp */
 .popup {
-  display: none; /* hidden by default */
   position: fixed;
   z-index: 1;
   /* background dimming effect */
