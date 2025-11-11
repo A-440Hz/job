@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import CQ from "./CircleQueue";
 import EmailObfuscator from "./EmailObfuscator";
+import { endpoint } from "./api/endpoint";
 
 function CapchaSquare({ id, src, isActive, onClick, opacity }: {
     id: string;
@@ -72,14 +73,36 @@ export function About() {
         return res === 51840 || res === 362880;
     };
 
-    const returnFile = () => {
-        const a = document.createElement('a');
-        a.href = "Haotian Zeng_Resume.pdf";
-        a.download = "Haotian Zeng_Resume.pdf";
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setOpenPopup(false);
+    const returnFile = async () => {
+        try {
+            const response = await fetch(`${endpoint}/careers/resume`, {
+                method: 'GET',
+                credentials: 'include',
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to fetch resume');
+            }
+
+            // Get the blob from the response
+            const blob = await response.blob();
+
+            // Create a download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "Haotian Zeng_Resume.pdf";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Clean up the blob URL
+            window.URL.revokeObjectURL(url);
+            setOpenPopup(false);
+        } catch (error) {
+            console.error('Error downloading resume:', error);
+            // Optionally show error to user
+        }
     };
 
     const fadeout = () => {

@@ -105,6 +105,7 @@ func main() {
 	http.HandleFunc("/careers/login", h.HandleLoginRequest)
 	http.HandleFunc("/careers/logout", h.HandleLogoutRequest)
 	http.HandleFunc("/careers/register", h.RegisterBaseUser)
+	http.HandleFunc("/careers/resume", h.ServeResume)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
