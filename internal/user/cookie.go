@@ -58,8 +58,8 @@ func (s *Service) SetSessionCookie(w http.ResponseWriter, sessionID string) {
 		MaxAge:   sessionCookieExpiry,
 		Path:     "/",
 		Secure:   true,
-		HttpOnly: true, // prevents client-side JS from accessing the cookie
-		SameSite: http.SameSiteLaxMode,
+		HttpOnly: true,                  // prevents client-side JS from accessing the cookie
+		SameSite: http.SameSiteNoneMode, // switch to this to try to get site to work on Edge browser
 	}
 	http.SetCookie(w, &cookie)
 }
@@ -73,7 +73,7 @@ func (s *Service) ClearSessionCookie(w http.ResponseWriter) {
 		Path:     "/",
 		Secure:   true,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: http.SameSiteNoneMode,
 	}
 	http.SetCookie(w, &cookie)
 }
