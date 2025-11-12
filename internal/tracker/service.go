@@ -603,6 +603,13 @@ func (s *Service) MigrateTrackersIntoScheduler() {
 	}
 	for _, ut := range allUnderlying {
 		// plug them in. scheduler will automatically scale them to the next upcoming deadline
+		// assume the if the UserInventory is missing it is safe to delete the tracker
+		if _, err = s.collection.LookupUserInventory(ut.UserID); err == gorm.ErrRecordNotFound {
+			if err = s.repo.deleteUnderlyingTracker(&ut); err != nil {
+				log.Print(err)
+			}
+			continue
+		}
 		if err = s.scheduler.AddTrackerGoal(ut.ToTrackerGoal()); err != nil {
 			log.Print(err)
 		}

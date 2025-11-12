@@ -90,6 +90,20 @@ func (r *Repository) updateJobAppTrackerFields(t *JobAppTracker, fields []string
 	return t, nil
 }
 
+func (r *Repository) deleteUnderlyingTracker(t *UnderlyingTracker) error {
+	switch t.TrackerType {
+	case JobAppTrackerType:
+		jt := &JobAppTracker{UnderlyingTracker: *t}
+		return r.deleteJobAppTracker(jt)
+	default:
+		res := r.db.Delete(t)
+		if res.Error != nil {
+			return res.Error
+		}
+	}
+	return nil
+}
+
 // deleteJobAppTracker soft deletes tracker t https://gorm.io/docs/delete.html#Soft-Delete
 func (r *Repository) deleteJobAppTracker(t *JobAppTracker) error {
 	res := r.db.Delete(t)
@@ -188,10 +202,9 @@ func (r *Repository) deleteJobAppTrackerItem(i *JobAppItem) error {
 // getAllUnderlyingTrackers runs on startup, retrieving repo trackers of every type and feeding them into the scheduler
 func (r *Repository) getAllUnderlyingTrackers() ([]UnderlyingTracker, error) {
 	allUnderlying := []UnderlyingTracker{}
-	jobAppTrackers := []JobAppTracker{}
-	res := r.db.Find(&jobAppTrackers)
-	if res.Error != nil {
-		return nil, res.Error
+	jobAppTrackers, err := r.selectAllJobAppTrackers()
+	if err != nil {
+		return nil, err
 	}
 	for _, jat := range jobAppTrackers {
 		allUnderlying = append(allUnderlying, jat.UnderlyingTracker)
