@@ -37,6 +37,19 @@ export function About() {
         }
     }, [openPopup]);
 
+    // Preload and cache captcha images on component mount
+    useEffect(() => {
+        const imagesToPreload = [
+            '/1.jpg', '/2.jpg', '/3.jpg', '/4.jpg', '/5.jpg',
+            '/6.jpg', '/7.jpg', '/8.jpg', '/9.jpg', '/moto.png'
+        ];
+
+        imagesToPreload.forEach(src => {
+            const img = new Image();
+            img.src = src;
+        });
+    }, []);
+
     const handleImageClick = (id: string) => {
         // Enqueue to CircleQueue
         cqRef.current.enqueue(id);
