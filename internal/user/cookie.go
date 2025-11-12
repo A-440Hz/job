@@ -59,7 +59,7 @@ func (s *Service) SetSessionCookie(w http.ResponseWriter, sessionID string) {
 		Path:     "/",
 		Secure:   true,
 		HttpOnly: true, // prevents client-side JS from accessing the cookie
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 	}
 	http.SetCookie(w, &cookie)
 }
@@ -73,7 +73,7 @@ func (s *Service) ClearSessionCookie(w http.ResponseWriter) {
 		Path:     "/",
 		Secure:   true,
 		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 	}
 	http.SetCookie(w, &cookie)
 }
