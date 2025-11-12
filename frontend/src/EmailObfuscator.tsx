@@ -3,7 +3,7 @@
 // i want to see if i can circumvent crawlers and spam
 // this is just for fun i have my personal info on a public pdf anyway
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 class Xor {
     private key: number;
