@@ -1,10 +1,13 @@
 package handler
 
 import (
+	_ "embed"
+	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 )
+
+//go:embed Resume.pdf
+var resume []byte
 
 // ServeResume serves the resume PDF file from the backend
 func (h *Handler) ServeResume(w http.ResponseWriter, r *http.Request) {
@@ -24,19 +27,10 @@ func (h *Handler) ServeResume(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resumePath := filepath.Join("internal", "static", "Haotian Zeng_Resume.pdf")
-	if _, err := os.Stat(resumePath); os.IsNotExist(err) {
-		http.Error(w, "Resume not found", http.StatusNotFound)
-		return
-	}
-
-	fileBytes, err := os.ReadFile(resumePath)
-	if err != nil {
-		http.Error(w, "Error reading resume file", http.StatusInternalServerError)
-		return
-	}
 	w.Header().Set("Content-Type", "application/pdf")
 	w.Header().Set("Content-Disposition", "attachment; filename=\"Haotian Zeng_Resume.pdf\"")
 	w.WriteHeader(http.StatusOK)
-	w.Write(fileBytes)
+	if _, err := w.Write(resume); err != nil {
+		log.Printf("Error writing resume to response: %v", err)
+	}
 }
