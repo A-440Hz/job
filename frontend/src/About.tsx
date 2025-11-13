@@ -41,7 +41,7 @@ export function About() {
     useEffect(() => {
         const imagesToPreload = [
             '/1.jpg', '/2.jpg', '/3.jpg', '/4.jpg', '/5.jpg',
-            '/6.jpg', '/7.jpg', '/8.jpg', '/9.jpg', '/moto.png'
+            '/6.jpg', '/7.jpg', '/8.jpg', '/9.jpg', '/moto.png', 'https://icons.duckduckgo.com/ip3/www.linkedin.com.ico'
         ];
 
         imagesToPreload.forEach(src => {

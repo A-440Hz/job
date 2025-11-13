@@ -41,7 +41,7 @@ function LootboxPage() {
     const location = useLocation();
 
     // State management for view switching
-    const [view, setView] = useState('inventory'); // 'inventory' | 'opening'
+    const [view, setView] = useState('inventory'); // 'inventory' | 'opening' | 'openingTen'
     const [lootboxResult, setLootboxResult] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -65,6 +65,18 @@ function LootboxPage() {
         setIsLoading(false);
     };
 
+    const handleOpenTenLootboxes = async () => {
+        setIsLoading(true);
+        try {
+            const result = await openTenLootboxes();
+            setLootboxResult(result);
+            setView('openingTen');
+        } catch (error: any) {
+            console.error('Error opening ten lootboxes:', error.message);
+        }
+        setIsLoading(false);
+    };
+
     const handleBackToInventory = () => {
         setView('inventory');
         refreshData(); // Refresh user data to update lootbox count
@@ -75,6 +87,8 @@ function LootboxPage() {
     // Conditional rendering based on view state
     if (view === 'opening') {
         return <OpeningAnimationView result={lootboxResult} onComplete={handleBackToInventory} />;
+    } else if (view === 'openingTen') {
+        return <OpeningTenAnimationView result={lootboxResult} onComplete={handleBackToInventory} />;
     }
 
     // Inventory view
@@ -109,10 +123,7 @@ function LootboxPage() {
                                     : 'bg-gray-300 text-gray-500'
                             }`}
                             disabled={(user?.inventory?.NumLootboxes || 0) < 10 || isLoading}
-                            onClick={() => {
-                                // TODO: Handle opening 10 lootboxes
-                                console.log('Opening 10 lootboxes');
-                            }}
+                            onClick={handleOpenTenLootboxes}
                         >
                             Open 10
                         </button>
@@ -134,6 +145,7 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
             const preloadElement = document.createElement('img');
 
             preloadElement.onload = () => setIsPreloaded(true);
+            preloadElement.onerror = () => setIsPreloaded(true); // Hanging indefinitely arguably feels worse.
             preloadElement.src = getImageURL(result.col.Collectable.Filename);
         }
     }, [result]);
@@ -212,11 +224,121 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
                                             <p><strong>Number Owned:</strong> {String(result.col.Quantity) || 'Uncertain' }</p>
                                         </div>
                                     ) : (
-                                        <p>Mysterious item received!</p>
+                                        <p>{'Undefined Squid received! (I made a coding error)'}</p>
                                     )}
                                 </div>
                             </div>
+                            <p className="text-gray-500 text-sm">Click here to return to previous screen</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );    
+}
 
+function OpeningTenAnimationView({ result, onComplete }: { result: any, onComplete: () => void }) {
+    const [animationState, setAnimationState] = useState('waiting'); // 'waiting' | 'animating' | 'complete'
+    const [showMagnified, setShowMagnified] = useState(false);
+    const [isPreloaded, setIsPreloaded] = useState(false);
+    const [selectedCollectable, setSelectedCollectable] = useState<any>(null);
+    
+    // Preload the collectable imgs when component mounts
+    useEffect(() => {
+        if (!result?.cols?.length) return;
+        const preloadImages = result.cols.filter(
+            (col: any) => col.Collectable?.Filename && col.Collectable.Type === "image"
+        );
+        if (preloadImages.length === 0) {
+            setIsPreloaded(true);
+            return;
+        }
+        let loadedCount = 0;
+        preloadImages.forEach((col: any) => {
+            const img = new Image();
+            img.onload = () => {
+                loadedCount++;
+                if (loadedCount === preloadImages.length) {
+                    setIsPreloaded(true);
+                }
+            };
+            img.onerror = () => {
+                loadedCount++;
+                if (loadedCount === preloadImages.length) {
+                    setIsPreloaded(true);
+                }
+            };
+            img.src = getImageURL(col.Collectable.Filename);
+        });
+    }, [result?.cols?.length]);
+
+    const handleInteraction = () => {
+        if (animationState === 'waiting') {
+            setAnimationState('animating');
+            // Simulate animation duration
+            setTimeout(() => {
+                setAnimationState('complete');
+            }, 600);
+        } else if (animationState === 'complete') {
+            onComplete();
+        }
+    };
+
+    return (
+        <div className="mx-auto px-8 pt-4 w-8/10 justify-self-center justify-items-center mt-3">
+            <MagnifiedMediaModal showMagnified={showMagnified} setShowMagnified={setShowMagnified} collectable={selectedCollectable} />
+            <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 mt-4 max-w-6xl mx-auto">
+                <div className="text-center">
+                    {animationState === 'waiting' && (
+                        <div
+                            className="cursor-pointer select-none"
+                            onClick={handleInteraction}
+                        >
+                            <h2 className="text-2xl font-bold text-gray-800 mb-6">Ready to Open!</h2>
+                            <div className="animate-bounce text-6xl mb-4">📦</div>
+                            <p className="text-gray-600">Click to open your lootboxes</p>
+                            {!isPreloaded && (
+                                <div className="mt-4 flex items-center justify-center gap-2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                                    <span className="text-xs text-gray-500">Preparing squids...</span>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {animationState === 'animating' && (
+                        <div className="select-none">
+                            <h2 className="text-2xl font-bold text-gray-800 mb-6">Opening...</h2>
+                            <div className="animate-bounce text-6xl mb-4">📦</div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-500 mx-auto"></div>
+                        </div>
+                    )}
+
+                    {animationState === 'complete' && result && (
+                        <div
+                            className="cursor-pointer select-none"
+                            onClick={handleInteraction}
+                        >
+                            <h2 className="text-2xl font-bold text-green-600 mb-6">🎉 Lootboxes Opened!</h2>
+
+                            <div className="flex flex-wrap justify-center gap-4 mb-6">
+                                {result.cols && result.cols.map((col: any, index: number) => (
+                                    <div className="flex flex-col items-center w-32 sm:w-36 md:w-40" key={index}>
+                                        <CollectableMedia
+                                            collectable={col.Collectable}
+                                            onClick={(e: React.MouseEvent) => {
+                                                e.stopPropagation();
+                                                if (!showMagnified) {
+                                                    setSelectedCollectable(col.Collectable);
+                                                    setShowMagnified(true);
+                                                }
+                                            }}
+                                            lootboxView={true}
+                                        />
+                                        <p className="text-sm text-gray-600 mt-2">{filenameToTitle(col.Collectable.Name)}</p>
+                                    </div>
+                                ))}
+                            </div>
                             <p className="text-gray-500 text-sm">Click here to return to previous screen</p>
                         </div>
                     )}
