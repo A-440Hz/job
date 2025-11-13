@@ -65,15 +65,33 @@ export async function logoutUser() {
 }
 
 export async function openOneLootbox(): Promise<any> {
+    const req = {award_ten: false};
     const res = await fetch(openLootboxEndpoint, {
-        method: 'GET',
+        method: 'POST',
         credentials: 'include',
         cache: 'no-cache',
+        body: JSON.stringify(req),
     });
     if (!res.ok) {
         throw new Error(`Failed to open lootbox: ${res.statusText}`);
     }
     const data = await res.json();
     console.log("opened one lootbox:", data);
+    return data;
+}
+
+export async function openTenLootboxes(): Promise<any> {
+    const req = {award_ten: true};
+    const res = await fetch(openLootboxEndpoint, {
+        method: 'POST',
+        credentials: 'include',
+        cache: 'no-cache',
+        body: JSON.stringify(req),
+    });
+    if (!res.ok) {
+        throw new Error(`Failed to open lootboxes: ${res.statusText}`);
+    }
+    const data = await res.json();
+    console.log("opened ten lootboxes:", data);
     return data;
 }

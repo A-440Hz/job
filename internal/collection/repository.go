@@ -116,6 +116,10 @@ func (r *Repository) deleteUserInventory(u *UserInventory) error {
 	return nil
 }
 
+func (r *Repository) beginCollectablesTransaction() *gorm.DB {
+	return r.db.Begin()
+}
+
 func (r *Repository) createUserCollectable(u *UserCollectable) (*UserCollectable, error) {
 	res := r.db.Create(u)
 	if res.Error != nil {

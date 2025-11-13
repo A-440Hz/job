@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { CollectableMedia, MagnifiedMediaModal, valueToRarity } from "./Collectables"
 import { useCollectablesData } from "./CollectablesDataContext";
 // import { useScreenSize } from "./ScreenSizeProvider";
-import { openOneLootbox } from "./api/user";
+import { openOneLootbox, openTenLootboxes } from "./api/user";
 import { getImageURL, filenameToTitle } from "./api/collectable";
 
 
@@ -225,9 +225,5 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
         </div>
     );    
 }
-
-
-
-
 
 export default LootboxPage;

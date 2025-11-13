@@ -212,11 +212,31 @@ func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) HandleAwardCollectableRequest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	var req struct {
+		AwardTen bool `json:"award_ten"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	if req.AwardTen {
+		cols, err := h.CollectionService.AwardTenRandomCollectables(uuid)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]any{
+			"cols": cols,
+		})
 		return
 	}
 	col, err := h.CollectionService.AwardOneRandomCollectable(uuid)
