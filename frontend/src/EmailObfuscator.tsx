@@ -66,7 +66,7 @@ const EmailObfuscator = ({ aeilm }: { aeilm: string }) => {
             onMouseOut={() => setEmailObfuscation(true)}
             onFocus={() => setEmailObfuscation(false)}
             onBlur={() => setEmailObfuscation(true)}
-            className={`flex select-none mr-4 ${isObfuscated && "cursor-not-allowed"}`}
+            className={`select-none transition hover:scale-105 ${isObfuscated && "cursor-not-allowed"}`}
             target="_blank"
             rel="noreferrer noopener"
         >

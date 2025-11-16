@@ -38,12 +38,11 @@ export function About() {
     }, [openPopup]);
 
     // Preload and cache captcha images on component mount
-    useEffect(() => {
-        const imagesToPreload = [
+    const imagesToPreload = [
             '/1.jpg', '/2.jpg', '/3.jpg', '/4.jpg', '/5.jpg',
             '/6.jpg', '/7.jpg', '/8.jpg', '/9.jpg', '/moto.png', 'https://icons.duckduckgo.com/ip3/www.linkedin.com.ico'
         ];
-
+    useEffect(() => {
         imagesToPreload.forEach(src => {
             const img = new Image();
             img.src = src;
@@ -79,10 +78,7 @@ export function About() {
     };
 
     const verify = (): boolean => {
-        let res = 1;
-        activeImages.forEach(id => {
-            res = res * Number(id);
-        });
+        let res = [...activeImages].reduce((a, b) => a * Number(b), 1);
         return res === 51840 || res === 362880;
     };
 
@@ -158,25 +154,25 @@ export function About() {
     };
 
     return (
-        <div className="mx-auto px-8 pt-4 max-w-8/10 justify-self-center justify-items-center mt-3">
-            <h2 className='justify-self-center text-4xl text-center mb-2'>Welcome to my webapp</h2>
-            <h3 className='justify-self-center text-xl text-center my-4'>I wanted to hone my skills while creating something meaningful to myself.</h3>
-            <h3 className='justify-self-center text-xl text-center my-4'>Watch the video below if you want to hear me talk about my process.</h3>
-            <div className="flex justify-center rounded-2xl border-2 px-40 py-20 bg-slate-500">
+        <div className="block mx-auto px-8 pt-4 mt-3">
+            <h2 className='text-4xl text-center mb-2'>Welcome to my webapp</h2>
+            <h3 className='text-xl text-center my-4'>I wanted to hone my skills while creating something meaningful to myself.</h3>
+            <h3 className='text-xl text-center my-4'>Watch the video below if you want to hear me talk about my process.</h3>
+            <div className="flex mx-auto justify-center rounded-2xl border-2 py-18 bg-slate-500">
                 {"...TBD "}
             </div>
-            <h3 className='justify-self-center text-xl text-center my-4'>To leave feedback or offer me a job, contact me here:</h3>
-            <div className="action-bar">
-                <span className="flex justify-center space-x-4 py-0.5 mx-4 bg-slate-400 rounded-2xl border-2">
+            <h3 className='text-xl text-center my-4'>To leave feedback or offer me a job, contact me here:</h3>
+            <div className="flex mx-auto justify-center mb-4">
+                <div className="flex justify-center space-x-4 py-1 px-5 bg-slate-400 rounded-2xl border-2">
                     <a href="https://www.linkedin.com/in/a440" target="_blank" rel="noreferrer noopener">
-                    <img height="32" width="32" src='https://icons.duckduckgo.com/ip3/www.linkedin.com.ico' alt='add me on LinkedIn!' className="flex select-none rounded-xl ml-4"/>
+                    <img height="32" width="32" src='https://icons.duckduckgo.com/ip3/www.linkedin.com.ico' alt='add me on LinkedIn!' className="select-none rounded-xl transition hover:scale-105"/>
                     </a>
                     <EmailObfuscator aeilm="161a12170f1441130f013b191e09101e171e02551e1f0e44080e19111e180f463134395b343d3d3e29" />
-                </span>
+                </div>
             </div>
-            <h3 className='justify-self-center text-xl text-center my-4'>If you're interested in my resume, you can download it below:</h3>
+            <h3 className='text-xl text-center'>If you're interested in my resume, you can download it below:</h3>
             <button
-                className="flex text-nowrap px-4 py-2 m-8 cursor-pointer border-3 rounded-2xl bg-slate-400 hover:opacity-75"
+                className="block mx-auto text-nowrap px-4 py-1.5 m-8 cursor-pointer border-2 rounded-2xl bg-slate-400 hover:opacity-75"
                 type="button"
                 onClick={() => setOpenPopup(true)}
             >
