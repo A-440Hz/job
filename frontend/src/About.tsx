@@ -158,7 +158,7 @@ export function About() {
             <h2 className='text-4xl text-center mb-2'>Welcome to my webapp</h2>
             <h3 className='text-xl text-center my-4'>I wanted to hone my skills while creating something meaningful to myself.</h3>
             <h3 className='text-xl text-center my-4'>Watch the video below if you want to hear me talk about my process.</h3>
-            <div className="flex mx-auto justify-center rounded-2xl border-2 py-18 bg-slate-500">
+            <div className="flex mx-auto justify-center aspect-video max-w-[20rem] rounded-2xl border-2 py-18 bg-slate-500">
                 {"...TBD "}
             </div>
             <h3 className='text-xl text-center my-4'>To leave feedback or offer me a job, contact me here:</h3>

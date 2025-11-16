@@ -93,7 +93,7 @@ function LootboxPage() {
 
     // Inventory view
     return (
-        <div className="mx-auto px-8 pt-4 max-w-8/10 justify-self-center justify-items-center mt-3">
+        <div className="mx-auto px-8 pt-4 max-w-90 justify-items-center mt-3">
             <div className="bg-slate-50 rounded-xl p-6 shadow-md border border-gray-100 mt-4 max-w-md mx-auto">
                 <div className="text-center select-none">
                     <div className="text-4xl font-bold text-yellow-600 mb-2">

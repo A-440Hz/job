@@ -35,7 +35,7 @@ function JobAppTrackerPage() {
   if (!user || !tracker) return <div className='text-center justify-self-center'>I'm on the free version</div>;
 
   return (
-    <div className="grid mx-auto px-8 pt-4 min-w-8/10 max-w-10/10 justify-self-center border-blue-200 border mt-3">
+    <div className="grid mx-auto px-8 pt-4 min-w-8/10 max-w-10/10 justify-self-center mt-3">
       <h1 className="vp-mid mb-4 text-5xl font-semibold select-none text-center text-blue-200 text-shadow-2xs text-shadow-violet-900">
         {isDesktop ?
           (<>
