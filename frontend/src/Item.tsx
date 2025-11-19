@@ -61,7 +61,7 @@ const Item = React.memo(function Item({
     <>
       {isEditing && <div className="item-modal" onClick={exitEditing} />}
       <li
-        className={`py-4 px-6 rounded bg-orange-200 shadow group relative ${
+        className={`py-4 px-6 rounded bg-amber-100 shadow group relative ${
           isEditing ? "item-editing" : ""
         } ${
         saveHighlight? "hover:border-emerald-500" : "hover:border-blue-200"
@@ -82,7 +82,7 @@ const Item = React.memo(function Item({
               />
               {!isNewItem && (
                 <button
-                  className="delete rounded-[2vw] text-sm bg-orange-200 border-amber-50 border-2 px-1 text-amber-800 hover:bg-rose-400"
+                  className="delete rounded-[2vw] text-sm bg-rose-400 border-rose-400 border-2 px-1 text-red-700 hover:bg-rose-400 hover:scale-96 transition-all"
                   onClick={() => handleDelete(item.ID)}
                   onMouseOver={() => setSaveHighlight(false)}
                   onMouseLeave={() => setSaveHighlight(true)}
@@ -103,10 +103,10 @@ const Item = React.memo(function Item({
           </div>
             <div className="flex items-baseline justify-between">
               {!isNewItem && <p className="text-xs text-gray-900">Created - {formatDate(item.CreatedAt).toLocaleDateString()}</p>}
-              <span className="float-right flex border-1 border-amber-500">
+              <span className="float-right flex">
                 <button
-                  className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 ${
-                    saveHighlight ? "group-hover:bg-emerald-500 group-hover:opacity-35" : ""
+                  className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 border-emerald-600 text-emerald-600 bg-lime-200 hover:scale-96 transition-all ${
+                    saveHighlight ? "group-hover:bg-emerald-500 group-hover:opacity-75" : ""
                   }`}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -116,7 +116,7 @@ const Item = React.memo(function Item({
                   Save
                 </button>
                 <button
-                  className="cancel ml-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 bg-rose-400 opacity-35 group-hover:bg-orange-200 group-hover:opacity-100 hover:bg-rose-400 hover:opacity-35"
+                  className="cancel ml-2 rounded-[2vw] text-sm text-red-700 px-1 py-0.5 border-2 border-rose-600 bg-rose-400  group-hover:bg-orange-200 group-hover:opacity-100 hover:opacity-100 hover:scale-96 hover:bg-rose-400 transition-all"
                   onClick={(e) => {
                     e.stopPropagation();
                     exitEditing();
@@ -140,7 +140,7 @@ const Item = React.memo(function Item({
                 Edit
               </button>
             </span>
-            <p className="item-body">{item.Body}</p>
+            <p className="item-body overflow-wrap">{item.Body}</p>
             <p className="item-timestamp">Created - {formatDate(item.CreatedAt).toLocaleDateString()}</p>
           </div>
         )}

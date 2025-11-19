@@ -61,10 +61,10 @@ export async function createTrackerItem(title: string, body: string): Promise<an
 }
 
 // TODO: implement status updates
-export async function updateTrackerItem(id: string, title?: string, body?: string): Promise<any> {
+export async function updateTrackerItem(id: string, body: string, title?: string): Promise<any> {
     const item: Record<string, any> = { id };
     if (title) item.title = title;
-    if (body) item.body = body;
+    item.body = body;
 
     const res = await fetch(trackerEndpoint + '?id=' + id, {
         method: 'PUT',

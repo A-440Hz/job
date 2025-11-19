@@ -422,7 +422,7 @@ function ItemsList() {
   const handleEdit = async (item: any, newTitle: string, newBody: string) => {
     if (item.Title === newTitle && item.Body === newBody) return;
     try {
-      const newData = await updateTrackerItem(item.ID, newTitle, newBody);
+      const newData = await updateTrackerItem(item.ID, newBody, newTitle);
       newData.tracker ? setTracker(newData.tracker) : console.error("Error finding data from Backend");
     } catch (error: any) {
       console.error(error.message);

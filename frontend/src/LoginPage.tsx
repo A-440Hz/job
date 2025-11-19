@@ -34,18 +34,18 @@ function LoginPage() {
 
 	return (
 		<div className="flex items-center justify-center min-h-screen ">
-			<form
-				className="bg-orange-200 border-2 border-blue-200 rounded-xl shadow-lg px-8 py-8 w-full max-w-md flex flex-col items-center"
+				<form
+					className="bg-amber-100 border-2 border-amber-300 rounded-xl shadow-lg px-8 py-8 w-full max-w-md flex flex-col items-center"
 				onSubmit={handleSubmit}
 			>
-				<h2 className="text-3xl font-bold text-neutral-700 mb-6 text-center select-none">
+				<h2 className="text-3xl font-bold text-yellow-700 mb-6 text-center select-none">
 					{isRegister ? 'Register' : 'Login'}
 				</h2>
 				<div className="w-full mb-4">
-					<label className="block text-left text-md font-semibold text-neutral-700 mb-1" htmlFor="username">Username</label>
+					<label className="block text-left text-md font-semibold text-yellow-900 mb-1" htmlFor="username">Username</label>
 					<input
 						id="username"
-						className="input-box px-3 py-2 rounded w-full border-2 border-blue-200 text-neutral-600 focus:border-blue-400 focus:outline-none"
+						className="input-box px-3 py-2 rounded w-full border-2 border-yellow-200 text-neutral-700 focus:border-yellow-500 focus:outline-none"
 						type="text"
 						value={username}
 						onChange={e => setUsername(e.target.value)}
@@ -54,10 +54,10 @@ function LoginPage() {
 					/>
 				</div>
 				<div className="w-full mb-4">
-					<label className="block text-left text-md font-semibold text-neutral-700 mb-1" htmlFor="password">Password</label>
+					<label className="block text-left text-md font-semibold text-yellow-900 mb-1" htmlFor="password">Password</label>
 					<input
 						id="password"
-						className="input-box px-3 py-2 rounded w-full border-2 border-blue-200 text-neutral-600 focus:border-blue-400 focus:outline-none"
+						className="input-box px-3 py-2 rounded w-full border-2 border-yellow-200 text-neutral-700 focus:border-yellow-500 focus:outline-none"
 						type="password"
 						value={password}
 						onChange={e => setPassword(e.target.value)}
@@ -67,10 +67,10 @@ function LoginPage() {
 				</div>
 				{isRegister && (
 					<div className="w-full mb-4">
-						<label className="block text-left text-md font-semibold text-neutral-700 mb-1" htmlFor="email">Email <span className="text-xs text-gray-400">(optional)</span></label>
+						<label className="block text-left text-md font-semibold text-yellow-900 mb-1" htmlFor="email">Email <span className="text-xs text-gray-400">(optional)</span></label>
 						<input
 							id="email"
-							className="input-box px-3 py-2 rounded w-full border-2 border-blue-200 text-neutral-700 focus:border-blue-400 focus:outline-none"
+							className="input-box px-3 py-2 rounded w-full border-2 border-yellow-200 text-neutral-700 focus:border-yellow-500 focus:outline-none"
 							type="email"
 							value={email}
 							onChange={e => setEmail(e.target.value)}
@@ -82,17 +82,17 @@ function LoginPage() {
 				{success && <div className="text-green-600 mb-2 text-center">{success}</div>}
 				<button
 					type="submit"
-					className="w-full py-2 mt-2 mb-2 rounded bg-slate-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
+					className="w-full py-2 mt-2 mb-2 rounded bg-yellow-500 text-white font-semibold hover:bg-yellow-600 transition-colors"
 				>
 					{isRegister ? 'Register' : 'Login'}
 				</button>
 				<button
 					type="button"
-					className="w-full py-2 rounded border-2 border-indigo-400 text-indigo-700 font-semibold hover:bg-indigo-50 mt-1"
+					className="w-full py-2 rounded border-2 border-yellow-600 text-yellow-800 font-semibold hover:bg-yellow-100 mt-1"
 					onClick={() => setIsRegister(!isRegister)}
 					title={isRegister ? 'Log in to an existing account' : 'Create a new account and secure your current progress'}
 				>
-					{isRegister ? 'Switch to Login page' : 'Register a new account'}
+					{isRegister ? 'Login to an existing account' : 'Register a new account'}
 				</button>
 			</form>
 		</div>

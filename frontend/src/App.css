@@ -28,6 +28,9 @@ root {
   text-wrap: wrap;
   font-size: var(--text-sm) /* 0.875rem = 14px */;
   line-height: var(--tw-leading, var(--text-sm--line-height) /* calc(1.25 / 0.875) ≈ 1.4286 */);
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
   color: var(--color-gray-500)
 }
 
@@ -40,8 +43,8 @@ root {
 .input-box {
   width: 100%;
   border-style: dashed solid;
-  border-width: 2px;
-  border-color: var(--color-blue-200);
+  border-width: 1px;
+  border-color: var(--color-yellow-600);
   resize: vertical;
   overflow-y: auto;
   line-height: 1.5;

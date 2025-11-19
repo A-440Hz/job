@@ -164,10 +164,11 @@ export function Navbar({ user, onLogout }: { user: any, onLogout?: () => void })
 
 export function Login({ user, onLogout }: { user: any; onLogout?: () => void }) {
   if (!user) return <div></div>;
+  const loc = useLocation();
   if (user.Registered === true) {
     return (
       <button
-        className="text-text-secondary hover:opacity-60"
+        className="hover:opacity-60"
         id="navbar_sign_in_button"
         onClick={() => onLogout && onLogout()}
       >
@@ -175,7 +176,7 @@ export function Login({ user, onLogout }: { user: any; onLogout?: () => void }) 
       </button>
     );
   } else {
-    return <a className="text-text-secondary pr-1.5 md:pr-3 hover:opacity-60" id="navbar_sign_in_button" href="/Login">Login/Register</a>
+    return <a className={`pr-1.5 md:pr-3 hover:opacity-60 ${loc.pathname === "/Login" && 'text-amber-300'}`} id="navbar_sign_in_button"  href="/Login">Login/Register</a>
   }
 }
 
