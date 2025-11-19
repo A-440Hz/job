@@ -4,16 +4,21 @@ import { getImageURL, filenameToTitle } from "./api/collectable";
 import ReactPlayer from "react-player";
 
 
-const rarityMap: Map<string, string> = new Map([
-    ["C", "Common"],
-    ["B", "Rare"],
-    ["A", "Epic"],
-    ["S", "Legendary"],
+const rarityMap: Map<string, [string, string]> = new Map([
+    ["C", ["Common", "text-green-600"]],
+    ["B", ["Rare", "text-cyan-600"]],
+    ["A", ["Epic", "text-purple-500"]],
+    ["S", ["Legendary", "text-yellow-500"]],
 ]);
 
 export function valueToRarity(v: string): string {
     // TODO: can return color and styled element
-    return rarityMap.get(v) || "Unknown";
+    return rarityMap.get(v)?.[0] || "Unknown";
+}
+
+export function valueToColor(v: string): string {
+    // TODO: can return color and styled element
+    return rarityMap.get(v)?.[1] || "Unknown";
 }
 
 export function CollectableMedia({ collectable, onClick, lootboxView }: { collectable: any, onClick?: (e: React.MouseEvent) => void, lootboxView?: boolean }) {
@@ -142,11 +147,11 @@ export function viewAllCollectables({earned_collectables, all_collectables, hand
                                 lootboxView={false}
                             />
                             <div className="text-center mt-2">
-                                <p className="text-xs font-medium text-yellow-700 truncate max-w-full">
-                                    {filenameToTitle(ac.Name) || 'Unknown'}
+                                <p className={`text-xs font-medium ${valueToColor(ac.Value)} truncate max-w-full`}>
+                                    <strong>{filenameToTitle(ac.Name) || 'Unknown'}</strong>
                                 </p>
-                                <p className="text-xs text-gray-500 mt-0.75">{valueToRarity(ac.Value)}</p>
-                                <p className="text-xs text-gray-500 mt-0.5">
+                                <p className={`text-xs text-gray-300 mt-0.75`}>{valueToRarity(ac.Value)}</p>
+                                <p className="text-xs text-gray-300 mt-0.5">
                                     Quantity: {earned?.Quantity}
                                 </p>
                             </div>
@@ -155,11 +160,11 @@ export function viewAllCollectables({earned_collectables, all_collectables, hand
                         <div key={ac.ID} className="relative">
                             {unearnedCollectable()}
                             <div className="text-center mt-2">
-                                <p className="text-xs font-medium text-yellow-700 truncate max-w-full">
-                                    {filenameToTitle(ac.Name) || 'Unknown'}
+                                <p className="text-xs font-medium truncate max-w-full text-gray-400">
+                                    ???
                                 </p>
-                                <p className="text-xs text-gray-500 mt-0.75">{valueToRarity(ac.Value)}</p>
-                                <p className="text-xs text-gray-500 mt-0.5">
+                                <p className="text-xs text-gray-400 mt-0.75 invisible">?</p>
+                                <p className="text-xs text-gray-400 mt-0.5 invisible">
                                     Quantity: 0
                                 </p>
                             </div>

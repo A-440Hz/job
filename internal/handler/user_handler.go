@@ -94,26 +94,32 @@ func (h *Handler) HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
 	uf, err := getUserUpdateFields(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	repoUser, err := h.UserService.LoginUser(uf)
 	if err != nil {
-		// the service returns safe errors
+		// report the error but dont propagate it to the client
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-	// if userID succeeds, session expiry is automatically updated
-	// if fail, old session
-	clientUserID, err := h.UserService.GetUserIDFromCookie(r, w)
+
+	// Manage session state after successful login:
+	clientUserID, err := h.UserService.GetUserIDFromCookie(r, w) // note the the current session cookie is cleared when this function errors
 	if err != nil {
 		sn, err := h.UserService.CreateNewSession(repoUser.GetID())
 		if err != nil {
+			// the session is not created in repo when CreateNewSession errors so it's fine to exit here
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		h.UserService.SetSessionCookie(w, sn.ID)
 	} else if clientUserID != repoUser.GetID() {
+		// delete the demo user session from the repo and leave the structs to be cleaned up by cron
 		h.UserService.DeleteSession(h.UserService.GetSessionIDFromCookie(r, w))
 		sn, err := h.UserService.CreateNewSession(repoUser.GetID())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		h.UserService.SetSessionCookie(w, sn.ID)
 	}

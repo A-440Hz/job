@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { CollectableMedia, MagnifiedMediaModal, valueToRarity } from "./Collectables"
+import { CollectableMedia, MagnifiedMediaModal, valueToColor, valueToRarity } from "./Collectables"
 import { useCollectablesData } from "./CollectablesDataContext";
 // import { useScreenSize } from "./ScreenSizeProvider";
 import { openOneLootbox, openTenLootboxes } from "./api/user";
@@ -219,7 +219,7 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
                                 <div className="text-sm text-gray-600">
                                     {result.col ? (
                                         <div>
-                                            <p><strong>Name:</strong> {filenameToTitle(result.col.Collectable.Name) || 'Unknown Item'}</p>
+                                            <p className={valueToColor(result.col.Collectable.Value)}><strong>Name:</strong> {filenameToTitle(result.col.Collectable.Name) || 'Unknown Item'}</p>
                                             <p><strong>Rarity:</strong> {valueToRarity(result.col.Collectable.Value)}</p>
                                             <p><strong>Number Owned:</strong> {String(result.col.Quantity) || 'Uncertain' }</p>
                                         </div>

@@ -3,7 +3,7 @@ import { useCollectablesData } from "./CollectablesDataContext";
 import {useSearchParams} from "react-router-dom";
 // import { useScreenSize } from "./ScreenSizeProvider";
 import { filenameToTitle } from "./api/collectable";
-import { MagnifiedMediaModal, CollectableMedia, valueToRarity, viewAllCollectables } from "./Collectables";
+import { MagnifiedMediaModal, CollectableMedia, valueToRarity, viewAllCollectables, valueToColor } from "./Collectables";
 
 export default function CollectablesPage() {
     const { user, earned_collectables, all_collectables, error, refreshData } = useCollectablesData();
@@ -77,11 +77,11 @@ export default function CollectablesPage() {
                                 />
                             </div>
                             <div className="text-center mt-2">
-                                <p className="text-xs font-medium text-yellow-700 truncate max-w-full">
-                                    {filenameToTitle(item.Collectable?.Name) || 'Unknown'}
+                                <p className={`text-xs font-medium ${valueToColor(item.Collectable?.Value)} truncate max-w-full`}>
+                                    <strong>{filenameToTitle(item.Collectable?.Name) || 'Unknown'}</strong>
                                 </p>
-                                <p className="text-xs text-gray-500 mt-0.75">{valueToRarity(item.Collectable?.Value)}</p>
-                                <p className="text-xs text-gray-500 mt-0.5">
+                                <p className={`text-xs text-gray-300 mt-0.75`}>{valueToRarity(item.Collectable?.Value)}</p>
+                                <p className="text-xs text-gray-300 mt-0.5">
                                     Quantity: {item.Quantity}
                                 </p>
                             </div>

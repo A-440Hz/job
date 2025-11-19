@@ -28,14 +28,14 @@ function LoginPage() {
 				navigate('/');
 			}
 		} catch (err: any) {
-			setError(err.message || 'An error occurred');
+			setError(isRegister ? err.message : 'Invalid username or password');
 		}
 	};
 
 	return (
 		<div className="flex items-center justify-center min-h-screen ">
 			<form
-				className="bg-amber-100 border-2 border-blue-200 rounded-xl shadow-lg px-8 py-8 w-full max-w-md flex flex-col items-center"
+				className="bg-orange-200 border-2 border-blue-200 rounded-xl shadow-lg px-8 py-8 w-full max-w-md flex flex-col items-center"
 				onSubmit={handleSubmit}
 			>
 				<h2 className="text-3xl font-bold text-neutral-700 mb-6 text-center select-none">
@@ -82,7 +82,7 @@ function LoginPage() {
 				{success && <div className="text-green-600 mb-2 text-center">{success}</div>}
 				<button
 					type="submit"
-					className="w-full py-2 mt-2 mb-2 rounded bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
+					className="w-full py-2 mt-2 mb-2 rounded bg-slate-600 text-white font-semibold hover:bg-indigo-700 transition-colors"
 				>
 					{isRegister ? 'Register' : 'Login'}
 				</button>
