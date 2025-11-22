@@ -82,7 +82,7 @@ const Item = React.memo(function Item({
               />
               {!isNewItem && (
                 <button
-                  className="delete rounded-[2vw] text-sm bg-rose-400 border-rose-400 border-2 px-1 text-red-700 hover:bg-rose-400 hover:scale-96 transition-all"
+                  className="delete rounded-[2vw] text-sm bg-orange-50 border-rose-400 border-2 px-1 text-red-700 hover:bg-rose-400 hover:scale-96 transition-all"
                   onClick={() => handleDelete(item.ID)}
                   onMouseOver={() => setSaveHighlight(false)}
                   onMouseLeave={() => setSaveHighlight(true)}
@@ -105,8 +105,8 @@ const Item = React.memo(function Item({
               {!isNewItem && <p className="text-xs text-gray-900">Created - {formatDate(item.CreatedAt).toLocaleDateString()}</p>}
               <span className="float-right flex">
                 <button
-                  className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 border-emerald-600 text-emerald-600 bg-lime-200 hover:scale-96 transition-all ${
-                    saveHighlight ? "group-hover:bg-emerald-500 group-hover:opacity-75" : ""
+                  className={`mr-2 rounded-[2vw] text-sm px-1 py-0.5 border-2 border-emerald-600 text-emerald-600 bg-orange-50 hover:scale-96 transition-all ${
+                    saveHighlight ? "group-hover:bg-emerald-500 group-hover:opacity-75 group-hover:scale-96" : ""
                   }`}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -116,7 +116,7 @@ const Item = React.memo(function Item({
                   Save
                 </button>
                 <button
-                  className="cancel ml-2 rounded-[2vw] text-sm text-red-700 px-1 py-0.5 border-2 border-rose-600 bg-rose-400  group-hover:bg-orange-200 group-hover:opacity-100 hover:opacity-100 hover:scale-96 hover:bg-rose-400 transition-all"
+                  className="cancel ml-2 rounded-[2vw] text-sm text-red-700 px-1 py-0.5 border-2 border-rose-600 bg-rose-400 scale-96 group-hover:bg-orange-50 group-hover:opacity-75 group-hover:scale-100 hover:opacity-100 hover:scale-96 hover:bg-rose-400 transition-all"
                   onClick={(e) => {
                     e.stopPropagation();
                     exitEditing();
@@ -130,11 +130,11 @@ const Item = React.memo(function Item({
             </div>
           </>
         ) : (
-          <div className="select-none">
+          <div className="select-none group">
             <span className="flex justify-between items-start">
               <p className="item-title">{item.Title}</p>
               <button
-                className="rounded-[2vw] text-sm bg-slate-100 border-slate-300 border-2 px-1 text-amber-800 hover:bg-slate-200"
+                className="rounded-[2vw] text-sm bg-slate-100 border-slate-300 border-2 px-1 text-slate-500 hover:bg-slate-200 hover:scale-96 transition-all group-hover:scale-96 group-hover:bg-slate-200"
                 onClick={() => setEditingId(item.ID)}
               >
                 Edit
