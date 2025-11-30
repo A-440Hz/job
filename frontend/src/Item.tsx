@@ -21,6 +21,7 @@ const Item = React.memo(function Item({
   handleNew: (title: string, body: string) => void;
 }) {
   const [title, setTitle] = useState(item.Title);
+  const [url, setUrl] = useState(item.Url);
   const [body, setBody] = useState(item.Body);
   const [saveHighlight, setSaveHighlight] = useState(true);
 
@@ -90,6 +91,17 @@ const Item = React.memo(function Item({
                   Delete
                 </button>
               )}
+            </span>
+            <span className="flex items-start justify-between">
+              <div className="flex w-7 justify-center bg-slate-200 border aspect-square select-none transition hover:scale-79">AI</div>
+              <input
+                  className="text-amber-700 input-box"
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  placeholder=" url"
+                  onMouseOver={() => setSaveHighlight(false)}
+                  onMouseLeave={() => setSaveHighlight(true)}
+              />
             </span>
             <textarea
               className="item-body input-box"
