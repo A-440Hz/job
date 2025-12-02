@@ -408,21 +408,21 @@ function ItemsList() {
 
   if (error) return <div>Error loading backend: {error}</div>;
 
-  const blankItem = { Title: "", Body: "" };
+  const blankItem = { Title: "", Body: "", Url: "" };
 
-  const handleNew = async (newTitle: string, newBody: string) => {
+  const handleNew = async (newTitle: string, newBody: string, newUrl: string) => {
     try {
-      const newData = await createTrackerItem(newTitle, newBody);
+      const newData = await createTrackerItem(newTitle, newBody, newUrl);
       newData.tracker ? setTracker(newData.tracker) : console.error("Error finding data from Backend");
     } catch (error: any) {
       console.error(error.message);
     }
   };
 
-  const handleEdit = async (item: any, newTitle: string, newBody: string) => {
-    if (item.Title === newTitle && item.Body === newBody) return;
+  const handleEdit = async (item: any, newTitle: string, newBody: string, newUrl: string) => {
+    if (item.Title === newTitle && item.Body === newBody && item.Url === newUrl) return;
     try {
-      const newData = await updateTrackerItem(item.ID, newBody, newTitle);
+      const newData = await updateTrackerItem(item.ID, newBody, newTitle, newUrl);
       newData.tracker ? setTracker(newData.tracker) : console.error("Error finding data from Backend");
     } catch (error: any) {
       console.error(error.message);
