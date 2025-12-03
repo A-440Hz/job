@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { formatDate } from './api/datetime';
-import { fetchScraperData } from './api/scraper';
+import { fetchScraperData, summarizeScrapedData } from './api/scraper';
 
 // https://tw-elements.com/docs/standard/components/spinners/
 const spinner = (
@@ -29,9 +29,9 @@ const Item = React.memo(function Item({
   isNewItem: boolean;
   setIsNewItem: (v: boolean) => void;
   setEditingId: (v: string | null) => void;
-  handleEdit: (item: any, title: string, body: string, url: string) => void;
+  handleEdit: (item: any, title: string, body: string, url: string) => Promise<boolean>;
   handleDelete: (id: string) => void;
-  handleNew: (title: string, body: string, url: string) => void;
+  handleNew: (title: string, body: string, url: string) => Promise<boolean>;
 }) {
   const [title, setTitle] = useState(item.Title);
   const [url, setUrl] = useState(item.Url);
@@ -53,10 +53,13 @@ const Item = React.memo(function Item({
 }, [item.Title, item.Body, isEditing]);
 
   useEffect(() => {
-    if (queryState === 'processed') {
-      submitChanges()
-      setQueryState('noQuery');
+    const autoSubmit = async () => {
+      if (queryState === 'processed') {
+        await submitChanges()
+        setQueryState('noQuery');
+      }
     }
+    autoSubmit();
   }, [queryState]);
 
   const exitEditing = () => {
@@ -66,6 +69,22 @@ const Item = React.memo(function Item({
     }
   };
 
+  const requestSummary = async (content: string, itemId: string) => {
+    summarizeScrapedData(content, itemId)
+      .then(data => {
+        if (data && data.summary) { // TODO: check for non-cancelled state before setting
+          console.log(data);
+          setBody(data.summary);
+          setTitle(data.position_name + ' -- ' + data.company_name);
+          setQueryState('processed');
+        }
+      })
+      .catch(error => {
+        console.error('Error summarizing scraped data:', error);
+        setQueryState('noQuery');
+    });
+  };
+
   const submitURL = () => {
     if (!url || queryState !== 'noQuery') return;
     setQueryState('scraping');
@@ -73,9 +92,10 @@ const Item = React.memo(function Item({
       .then((data) => {
         if (data && data.content) {
           setBody(data.content);
-          // 
-          setQueryState('processed');
-        }})
+          setQueryState('processing');
+          requestSummary(data.content, item.ID);
+        }
+      })
       .catch((err) => {
         console.error('Error fetching scraper data:', err);
         setQueryState('noQuery');
@@ -84,12 +104,18 @@ const Item = React.memo(function Item({
       });
   }
 
-  const submitChanges = () => {
+  const submitChanges = async () => {
     if (item.ID === undefined) {
       if (!title) return; // Prevent blank titles. TODO:a flashing animation for the title input border 
-      handleNew(title, body, url);
+      let success = await handleNew(title, body, url);
+      if (success === true && (queryState === 'scraping' || queryState === 'processing')) {
+        setQueryState('noQuery');
+      }
     } else {
-      handleEdit(item, title, body, url);
+      let success = await handleEdit(item, title, body, url);
+      if (success === true && (queryState === 'scraping' || queryState === 'processing')) {
+        setQueryState('noQuery');
+      }
     }
     exitEditing();
   };

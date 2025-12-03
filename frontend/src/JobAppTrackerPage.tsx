@@ -410,23 +410,35 @@ function ItemsList() {
 
   const blankItem = { Title: "", Body: "", Url: "" };
 
-  const handleNew = async (newTitle: string, newBody: string, newUrl: string) => {
+  const handleNew = async (newTitle: string, newBody: string, newUrl: string) : Promise<boolean> => {
     try {
       const newData = await createTrackerItem(newTitle, newBody, newUrl);
-      newData.tracker ? setTracker(newData.tracker) : console.error("Error finding data from Backend");
+      if (newData.tracker) {
+        setTracker(newData.tracker);
+        return true;
+      } else {
+        console.error("Error finding data from Backend");
+      }
     } catch (error: any) {
       console.error(error.message);
     }
+    return false;
   };
 
-  const handleEdit = async (item: any, newTitle: string, newBody: string, newUrl: string) => {
-    if (item.Title === newTitle && item.Body === newBody && item.Url === newUrl) return;
+  const handleEdit = async (item: any, newTitle: string, newBody: string, newUrl: string) : Promise<boolean> => {
+    if (item.Title === newTitle && item.Body === newBody && item.Url === newUrl) return false;
     try {
       const newData = await updateTrackerItem(item.ID, newBody, newTitle, newUrl);
-      newData.tracker ? setTracker(newData.tracker) : console.error("Error finding data from Backend");
+      if (newData.tracker) {
+        setTracker(newData.tracker);
+        return true;
+      } else {
+        console.error("Error finding data from Backend");
+      }
     } catch (error: any) {
       console.error(error.message);
     }
+    return false;
   };
 
   const handleDelete = async (id: string) => {
