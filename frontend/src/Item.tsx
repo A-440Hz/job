@@ -75,7 +75,7 @@ const Item = React.memo(function Item({
         if (data && data.summary) { // TODO: check for non-cancelled state before setting
           console.log(data);
           setBody(data.summary);
-          setTitle(data.position_name + ' -- ' + data.company_name);
+          setTitle(data.position_name + ' - ' + data.company_name);
           setQueryState('processed');
         }
       })
@@ -86,14 +86,46 @@ const Item = React.memo(function Item({
   };
 
   const submitURL = () => {
-    if (!url || queryState !== 'noQuery') return;
+    if (queryState !== 'noQuery') return;
+    if (!url && body === '') return;
+
+    // send directly to processing if no url provided
+    if (!url && body !== '') {
+      setQueryState('processing');
+      let content = body;
+      if (title !== '') {
+        content = title + "\n\n" + content;
+      }
+      requestSummary(content, item.ID);
+      return;
+    }
+
+    // send to scraper if url exists
     setQueryState('scraping');
     fetchScraperData(url, item.ID)
       .then((data) => {
+        if (data && data.code == 403) {
+          console.error('url refused to be scraped.');
+          if (body === '') {
+            console.log('Try pasting the job description into notes and pressing "AI" again to directly process it.');
+          } else {
+            console.log('Sending current notes to LLM to generate a summary...');
+            setQueryState('processing');
+            requestSummary(body, item.ID);
+          }
+          setQueryState('noQuery');
+          return;
+        }
         if (data && data.content) {
           setBody(data.content);
           setQueryState('processing');
           requestSummary(data.content, item.ID);
+          return;
+        }
+        if (data && data.code !== 200) {
+          console.error('Error fetching scraper data:', data.error ? data.error : 'Unknown error');
+          setQueryState('noQuery');
+          return;
         }
       })
       .catch((err) => {
