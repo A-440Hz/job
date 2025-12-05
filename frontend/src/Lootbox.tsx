@@ -199,7 +199,7 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
                             className="cursor-pointer select-none"
                             onClick={handleInteraction}
                         >
-                            <h2 className="text-2xl font-bold text-green-600 mb-6">🎉 Lootbox Opened!</h2>
+                            <h2 className="text-2xl font-bold text-green-600 mb-6"> Lootbox Opened!</h2>
 
                             {result.col && result.col.Collectable.Filename && (
                                 <div className="mb-6">
