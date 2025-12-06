@@ -47,7 +47,8 @@ func GetDefaultTimezone() *Timezone {
 	return NewTimezoneWithOffset(defaultTimezoneOffset)
 }
 
-// GetDefaultCycleDeadline returns 1AM at location l, defaulting to DefaultTimezone
+// GetDefaultCycleDeadline returns 1AM in 6 days at location l, defaulting to DefaultTimezone
+// 6 days because it is an easy value to get consistent test results from the scheduler
 func GetDefaultCycleDeadline(z *Timezone) time.Time {
 	var l *time.Location
 	if z == nil {
@@ -57,11 +58,11 @@ func GetDefaultCycleDeadline(z *Timezone) time.Time {
 		l = z.Location
 	}
 	now := time.Now()
-	return time.Date(now.Year(), now.Month(), now.Day()+1, 1, 0, 0, 0, l)
+	return time.Date(now.Year(), now.Month(), now.Day()+6, 1, 0, 0, 0, l)
 }
 
 func GetCurrentServerDay() time.Time {
-	return time.Now().Round(24 * time.Hour)
+	return time.Now().Truncate(24 * time.Hour)
 }
 
 // OneDayApart is intended for use with truncated times from GetCurrentServerDay
@@ -74,23 +75,23 @@ func OneDayApart(new, old time.Time) bool {
 // offsetSeconds represents seconds east of UTC, used for time.FixedZone syntax. UTC-7 is -7 * 60 * 60 = -25200
 type Timezone struct {
 	Location      *time.Location
-	offsetSeconds int64
+	OffsetSeconds int64
 }
 
 func NewTimezoneWithOffset(o int64) *Timezone {
 	return &Timezone{
 		Location:      time.FixedZone("", int(o)),
-		offsetSeconds: o,
+		OffsetSeconds: o,
 	}
 }
 
 // GetOffset is used for testing only
 func (t *Timezone) GetOffset() int64 {
-	return t.offsetSeconds
+	return t.OffsetSeconds
 }
 
 func (t *Timezone) Value() (driver.Value, error) {
-	return t.offsetSeconds, nil
+	return t.OffsetSeconds, nil
 }
 
 func (t *Timezone) Scan(value any) error {
@@ -102,7 +103,7 @@ func (t *Timezone) Scan(value any) error {
 		return fmt.Errorf("invalid timezone type scanned: %T", value)
 	}
 	t.Location = time.FixedZone("", int(offset))
-	t.offsetSeconds = offset
+	t.OffsetSeconds = offset
 	return nil
 }
 
@@ -113,5 +114,5 @@ func (t *Timezone) Equal(other *Timezone) bool {
 	if t == nil || other == nil {
 		return false
 	}
-	return t.offsetSeconds == other.offsetSeconds
+	return t.OffsetSeconds == other.OffsetSeconds
 }

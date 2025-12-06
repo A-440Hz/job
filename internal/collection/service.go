@@ -2,6 +2,7 @@ package collection
 
 import (
 	"errors"
+	"log"
 	"math/rand"
 	"time"
 
@@ -30,6 +31,9 @@ func (s *Service) AssignBoxes(userID string, lootboxDelta int) (*UserInventory, 
 	repoInv, err := s.repo.lookupUserInventory(userID)
 	if err != nil {
 		return nil, err
+	}
+	if lootboxDelta == 0 {
+		return repoInv, nil
 	}
 	repoInv.NumLootboxes = max(0, repoInv.NumLootboxes+lootboxDelta)
 	_, err = s.repo.updateUserInventoryFields(repoInv, []string{numLootboxesField})
@@ -117,6 +121,40 @@ func (s *Service) AwardOneRandomCollectable(userID string) (*UserCollectable, er
 	col, err := s.repo.lookupUserCollectable(userID, cID)
 	errs = append(errs, err)
 	return col, errors.Join(errs...)
+}
+
+func (s *Service) AwardTenRandomCollectables(userID string) ([]*UserCollectable, error) {
+	ui, err := s.LookupUserInventory(userID)
+	if err != nil {
+		return nil, err
+	}
+	if ui.NumLootboxes < 10 {
+		return nil, errors.New("user not enough lootboxes to open")
+	}
+	// cancel all db transactions if any of them fail
+	tx := s.repo.beginCollectablesTransaction()
+	defer func() {
+		// rollback transactions on panic
+		if r := recover(); r != nil {
+			log.Print("recovering transaction due to panic")
+			tx.Rollback()
+		}
+	}()
+	var collectables []*UserCollectable
+	for range 10 {
+		coll, err := s.AwardOneRandomCollectable(userID)
+		if err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+		collectables = append(collectables, coll)
+	}
+	err = tx.Commit().Error
+	if err != nil {
+		log.Print("failed to commit transaction")
+		return nil, err
+	}
+	return collectables, nil
 }
 
 func (s *Service) UpdateUserCollectableFields(userID string, collecatbleID int, fields *UserCollectableUpdateFields) (*UserCollectable, error) {

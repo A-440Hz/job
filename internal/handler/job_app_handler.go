@@ -28,7 +28,13 @@ func getJobAppItemUpdateFields(r *http.Request) (*tracker.JobAppItemUpdateFields
 }
 
 func (h *Handler) ServeMainPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, PATCH, POST, PUT, UPDATE, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
 	switch r.Method {
+	case http.MethodOptions:
+		w.WriteHeader(http.StatusOK)
 	case http.MethodGet:
 		h.GetUserAndTrackerItems(w, r)
 	case http.MethodPatch:
@@ -88,8 +94,9 @@ func (h *Handler) GetUserAndTrackerItems(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"user":    user,
-		"tracker": tracker,
+		"user":      user,
+		"tracker":   tracker,
+		"serverDay": h.TrackerService.ServerDay,
 	})
 }
 
@@ -113,17 +120,13 @@ func (h *Handler) UpdateJobAppTrackerFields(w http.ResponseWriter, r *http.Reque
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(t)
+	json.NewEncoder(w).Encode(map[string]any{
+		"tracker": t,
+	})
 }
 
 func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {
 	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	t, err := h.TrackerService.LookupJobAppTrackerFromUserID(uuid)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -135,14 +138,16 @@ func (h *Handler) CreateJobAppItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err = h.TrackerService.CreateJobAppItem(uuid, uf)
+	t, err := h.TrackerService.CreateJobAppItem(uuid, uf)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(t)
+	json.NewEncoder(w).Encode(map[string]any{
+		"tracker": t,
+	})
 }
 
 func (h *Handler) UpdateJobAppItemFields(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +171,9 @@ func (h *Handler) UpdateJobAppItemFields(w http.ResponseWriter, r *http.Request)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(t)
+	json.NewEncoder(w).Encode(map[string]any{
+		"tracker": t,
+	})
 }
 
 func (h *Handler) DeleteJobAppItem(w http.ResponseWriter, r *http.Request) {
@@ -184,4 +191,5 @@ func (h *Handler) DeleteJobAppItem(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(itemID)
 }

@@ -90,3 +90,45 @@ func Test_AwardRandomCollectable(t *testing.T) {
 	}
 	db.CleanDB(*dBase, &User{}, &collection.UserInventory{}, &collection.UserCollectable{})
 }
+
+func Test_AwardTenRandomCollectables(t *testing.T) {
+	db.SetEnvForTesting()
+	dBase, err := db.InitGormTestDB()
+	require.NoError(t, err)
+	db.CleanDB(*dBase, &User{}, &collection.UserInventory{}, &collection.UserCollectable{}, &collection.Collectable{})
+	cSvc := collection.NewService(collection.NewRepository(dBase))
+	uSvc := NewService(NewRepository(dBase), cSvc)
+
+	t.Run("award-10-boxes", func(t *testing.T) {
+		user, err := uSvc.CreateNewUser(nil)
+		require.NoError(t, err)
+
+		_, err = uSvc.collection.AssignBoxes(user.GetID(), 10)
+		require.NoError(t, err)
+
+		cols, err := uSvc.collection.AwardTenRandomCollectables(user.GetID())
+		require.NoError(t, err)
+		require.NotNil(t, cols)
+		require.Len(t, cols, 10)
+
+		userCollectables, err := uSvc.collection.GetAllCollectablesForUser(user.GetID())
+		require.NoError(t, err)
+
+		total := 0
+		for _, c := range userCollectables {
+			total += c.Quantity
+		}
+		assert.Equal(t, 10, total)
+	})
+
+	t.Run("not-enough-boxes", func(t *testing.T) {
+		user, err := uSvc.CreateNewUser(nil)
+		require.NoError(t, err)
+
+		cols, err := uSvc.collection.AwardTenRandomCollectables(user.GetID())
+		assert.Nil(t, cols)
+		assert.ErrorContains(t, err, "not enough lootboxes")
+	})
+
+	db.CleanDB(*dBase, &User{}, &collection.UserInventory{}, &collection.UserCollectable{})
+}

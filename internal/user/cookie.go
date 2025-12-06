@@ -18,6 +18,7 @@ const (
 func (s *Service) GetUserIDFromCookie(r *http.Request, w http.ResponseWriter) (string, error) {
 	// https://www.alexedwards.net/blog/working-with-cookies-in-go
 	cookie, err := r.Cookie(sessionCookieName)
+	// TODO: this is mutative behavior and probably wrong
 	if err != nil {
 		s.ClearSessionCookie(w)
 		return "", err
@@ -57,8 +58,8 @@ func (s *Service) SetSessionCookie(w http.ResponseWriter, sessionID string) {
 		MaxAge:   sessionCookieExpiry,
 		Path:     "/",
 		Secure:   true,
-		HttpOnly: true, // prevents client-side JS from accessing the cookie
-		SameSite: http.SameSiteStrictMode,
+		HttpOnly: true,                  // prevents client-side JS from accessing the cookie
+		SameSite: http.SameSiteNoneMode, // switch to this to try to get site to work on Edge browser
 	}
 	http.SetCookie(w, &cookie)
 }
@@ -72,7 +73,7 @@ func (s *Service) ClearSessionCookie(w http.ResponseWriter) {
 		Path:     "/",
 		Secure:   true,
 		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteNoneMode,
 	}
 	http.SetCookie(w, &cookie)
 }

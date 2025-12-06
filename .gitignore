@@ -25,4 +25,5 @@ go.work.sum
 .env
 
 plan.md
-data/*
+frontend/pkg*
+cmd/*__debug_bin*

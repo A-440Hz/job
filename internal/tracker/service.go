@@ -17,10 +17,11 @@ type Service struct {
 	repo       *Repository
 	scheduler  *scheduler.Scheduler
 	collection *collection.Service
+	ServerDay  time.Time
 }
 
 func NewService(r *Repository, s *scheduler.Scheduler, c *collection.Service) *Service {
-	return &Service{repo: r, scheduler: s, collection: c}
+	return &Service{repo: r, scheduler: s, collection: c, ServerDay: scheduler.GetCurrentServerDay()}
 }
 
 // This method functions like a create hook for UnderlyingTracker.
@@ -90,7 +91,7 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 	}
 
 	// the front end should also avoid sending update reqs for identical deadlines and frequencies
-	if repoTracker.CycleDeadline == updateTracker.CycleDeadline {
+	if repoTracker.CycleDeadline.Equal(updateTracker.CycleDeadline) {
 		updateFields = slices.DeleteFunc(updateFields, func(f string) bool {
 			return f == cycleDeadlineField
 		})
@@ -115,16 +116,35 @@ func (s *Service) UpdateJobAppTrackerFields(uuid string, fields *JobAppTrackerUp
 			updateTracker.CycleFrequency = repoTracker.CycleFrequency
 		}
 		updateTracker.TrackerType = repoTracker.TrackerType
-		err = s.scheduler.ReplaceTrackerGoal(repoTracker.ToTrackerGoal(), updateTracker.ToTrackerGoal())
+		oldGoal := repoTracker.ToTrackerGoal()
+		newGoal := updateTracker.ToTrackerGoal()
+		// set oldGoal.CycleDeadline as the value to be adjusted (see AdjustNewDeadline description)
+		if slices.Contains(updateFields, cycleDeadlineField) {
+			oldGoal.CycleDeadline = newGoal.CycleDeadline
+		}
+		// set new CycleDeadline value using AdjustNewDeadline
+		adjustedGoal := scheduler.AdjustNewDeadline(*oldGoal, *newGoal)
+		err = s.scheduler.ReplaceTrackerGoal(repoTracker.ToTrackerGoal(), adjustedGoal)
 		if err != nil {
 			// fail scheduler gracefully?
 			log.Print("scheduler replace failed:", err)
+		}
+		if adjustedGoal.CycleDeadline != oldGoal.CycleDeadline {
+			_, err := s.repo.updateJobAppTrackerFields(&JobAppTracker{UnderlyingTracker: UnderlyingTracker{
+				ID:            repoTracker.GetID(),
+				CycleDeadline: adjustedGoal.CycleDeadline,
+			}}, []string{cycleDeadlineField})
+			if err != nil {
+				log.Print("repo deadline adjust failed:", err)
+			}
 		}
 	}
 
 	// validate counters and score tracker if needed (technically curScorableItemsField should never be manually updated by the service update function)
 	if slices.Contains(updateFields, goalQuantityField) || slices.Contains(updateFields, curScorableItemsField) {
-		return s.updateTrackerState(repoTracker.GetID())
+		if err = s.updateTrackerState(repoTracker.GetID()); err != nil {
+			return nil, err
+		}
 	}
 
 	t, err := s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
@@ -184,9 +204,16 @@ func (s *Service) CreateJobAppItem(userID string, fields *JobAppItemUpdateFields
 	}
 
 	if i.IsScorable() {
-		return s.addOneScorableItem(t)
+		if err = s.addOneScorableItem(t); err != nil {
+			return nil, err
+		}
 	}
-	return s.repo.getJobAppTrackerWithItemsFromUserID(userID)
+	t, err = s.repo.getJobAppTrackerWithItemsFromUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+	t.CheckIfLit()
+	return t, nil
 }
 
 // TODO: remove this method if not needed
@@ -221,13 +248,22 @@ func (s *Service) UpdateJobAppItemFields(uuid string, itemID string, fields *Job
 	if repoItem.IsScorable() {
 		// decrement tracker CurScorableItems if this update makes it no longer scorable
 		if slices.Contains(updateFields, statusField) && updateItem.Status != StatusComplete {
-			return s.subOneScorableItem(t)
+			if err = s.subOneScorableItem(t); err != nil {
+				return nil, err
+			}
 		}
 	} else if !repoItem.IsAttributed && slices.Contains(updateFields, statusField) && updateItem.Status == StatusComplete {
 		// increment it if this update makes the item scorable
-		return s.addOneScorableItem(t)
+		if err = s.addOneScorableItem(t); err != nil {
+			return nil, err
+		}
 	}
-	return s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
+	t, err = s.repo.getJobAppTrackerWithItemsFromUserID(uuid)
+	if err != nil {
+		return nil, err
+	}
+	t.CheckIfLit()
+	return t, nil
 }
 
 func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
@@ -242,8 +278,7 @@ func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
 	}
 	// decrement tracker scorable item count if needed
 	if repoItem.IsScorable() {
-		_, err = s.subOneScorableItem(t)
-		if err != nil {
+		if err = s.subOneScorableItem(t); err != nil {
 			return err
 		}
 	}
@@ -254,28 +289,29 @@ func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
 
 // updateTrackerState checks for overflow of CurScorableItems and goalQuantity and adjusts
 // curBoxesAwarded and CurScorableItems, performing a repo update if needed.
-func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
+func (s *Service) updateTrackerState(tid string) error {
 	// I went back and forth on this for a while but I decided to just go with a lot (+2) of lookup calls
 	// and have this function be easier to use (just require a valid id)
 	repoTracker, err := s.repo.getJobAppTrackerWithItemsFromTrackerID(tid)
 	if err != nil {
-		return nil, err
-	}
-	if repoTracker.CurScorableItems < repoTracker.GoalQuantity {
-		return repoTracker, nil
+		return err
 	}
 
 	// check if tracker needs to be scored; exit early if not
-	n := time.Now()
 	numToAward := repoTracker.CurScorableItems / repoTracker.GoalQuantity
+	if numToAward == 0 {
+		return nil
+	}
+
+	n := time.Now()
 	items, err := s.repo.getScorableJobAppItems(repoTracker)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if len(items) < repoTracker.GoalQuantity*numToAward {
 		log.Print("mismatch between number of scorable items and tracker current items completed: " + fmt.Sprintf("%d < %d", len(items), repoTracker.CurScorableItems))
 		// is it good to set curScorableItems to len(items) here?
-		return nil, errors.New("mismatch between number of scorable items and tracker current items completed: " + fmt.Sprintf("%d < %d", len(items), repoTracker.CurScorableItems))
+		return errors.New("mismatch between number of scorable items and tracker current items completed: " + fmt.Sprintf("%d < %d", len(items), repoTracker.CurScorableItems))
 	}
 
 	// score n items. They should be already sorted by create time
@@ -299,7 +335,7 @@ func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
 		for id, v := range badFields {
 			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
 		}
-		return nil, err
+		return err
 	}
 
 	updateFields := []string{curScorableItemsField, curBoxesAwardedField, totalBoxesAwardedField}
@@ -336,10 +372,7 @@ func (s *Service) updateTrackerState(tid string) (*JobAppTracker, error) {
 	repoTracker.CurBoxesAwarded = repoTracker.CurBoxesAwarded + numToAward
 	repoTracker.TotalBoxesAwarded = repoTracker.TotalBoxesAwarded + numToAward
 	_, err = s.repo.updateJobAppTrackerFields(repoTracker, updateFields)
-	if err != nil {
-		return nil, err
-	}
-	return s.repo.getJobAppTrackerWithItemsFromTrackerID(repoTracker.GetID())
+	return err
 }
 
 func (s *Service) updateJobAppItemFields(t *JobAppTracker, itemID string, fields *JobAppItemUpdateFields) error {
@@ -363,8 +396,7 @@ func (s *Service) updateJobAppItemFields(t *JobAppTracker, itemID string, fields
 
 // addOneScorableItem increments the CurScorableItems count for the tracker
 // t needs a valid tracker ID and accurate CurScorableItems count (to be incremented by 1)
-// it returns the updated tracker with all its items
-func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
+func (s *Service) addOneScorableItem(t *JobAppTracker) error {
 	n := scheduler.GetCurrentServerDay()
 	t.CurScorableItems = t.CurScorableItems + 1
 	fields := []string{curScorableItemsField}
@@ -374,15 +406,15 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 		fields = append(fields, firstCompletedField)
 	}
 	// populate LastCompleted and manage daily streak
-	if t.LastCompleted == nil || scheduler.OneDayApart(n, *t.LastCompleted) {
+
+	if t.LastCompleted == nil || !t.DailyStreakMet() {
 		t.CurDailyStreak += 1
-		fields = append(fields, curDailyStreakField)
+		t.ContinueDailyStreak = true
+		t.MaxDailyStreak = max(t.CurDailyStreak, t.MaxDailyStreak)
+		fields = append(fields, curDailyStreakField, maxDailyStreakField, continueDailyStreakField)
 		// TODO: I can add counters for rewards or give rewards every time here.
 		// I think some coins is a better philosophy than lootboxes
 		// that way it makes more sense when there's multiple trackers too.
-	} else if !t.DailyStreakMet() {
-		t.CurDailyStreak = 0
-		fields = append(fields, curDailyStreakField)
 	}
 	t.LastCompleted = &n
 	fields = append(fields, lastCompletedField)
@@ -395,7 +427,7 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 	if err != nil {
 		badFields["tracker"] = err.Error()
 	}
-	repoTracker, err := s.updateTrackerState(t.GetID())
+	err = s.updateTrackerState(t.GetID())
 	if err != nil {
 		badFields["tracker state"] = err.Error()
 	}
@@ -405,17 +437,16 @@ func (s *Service) addOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 			err = errors.Join(err, fmt.Errorf("%q: %q, ", id, v))
 		}
 	}
-	return repoTracker, err
+	return err
 }
 
 // subOneScorableItem decrements the CurScorableItems count for the tracker
 // t needs a valid tracker ID and accurate CurScorableItems count (to be decremented by 1)
-// it returns the updated tracker with all its items
-func (s *Service) subOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
+func (s *Service) subOneScorableItem(t *JobAppTracker) error {
 	t.CurScorableItems = max(0, t.CurScorableItems-1)
 	_, err := s.repo.updateJobAppTrackerFields(t, []string{curScorableItemsField})
 	if err != nil {
-		return nil, err
+		return err
 	}
 	return s.updateTrackerState(t.GetID())
 }
@@ -425,6 +456,7 @@ func (s *Service) subOneScorableItem(t *JobAppTracker) (*JobAppTracker, error) {
 func (s *Service) Start() {
 	go s.scheduler.Start()
 	go s.startTrackerUpdateListener()
+	go s.startServerDayManager()
 	s.MigrateTrackersIntoScheduler()
 }
 
@@ -456,7 +488,7 @@ func (s *Service) resetTrackerDeadline(poppedTg *scheduler.TrackerGoal) error {
 	}
 
 	// reset goal streak if no boxes earned last cycle
-	if repoTracker.CurCycleItemsCompleted < repoTracker.GoalQuantity {
+	if repoTracker.CurBoxesAwarded < 1 {
 		updateTracker.CurGoalStreak = 0
 		updateFields = append(updateFields, curGoalStreakField)
 
@@ -471,10 +503,11 @@ func (s *Service) resetTrackerDeadline(poppedTg *scheduler.TrackerGoal) error {
 	}
 
 	// reset tracker cycle counters
-	updateFields = append(updateFields, curScorableItemsField, curBoxesAwardedField, curCycleItemsCompleted)
+	updateFields = append(updateFields, curScorableItemsField, curBoxesAwardedField, curCycleItemsCompleted, continueDailyStreakField)
 	updateTracker.CurScorableItems = curScorable
 	updateTracker.CurBoxesAwarded = 0
 	updateTracker.CurCycleItemsCompleted = 0
+	updateTracker.ContinueDailyStreak = false
 
 	updateTracker.ID = poppedTg.TrackerID
 	updateTracker.TrackerType = TrackerType(poppedTg.TrackerType)
@@ -489,8 +522,9 @@ func (s *Service) resetTrackerDeadline(poppedTg *scheduler.TrackerGoal) error {
 // getCycleUpdateFields extracts the updated Deadline and Frequency from a scheduler TrackerGoal,
 // returning it in the form of UpdateFields for an update function
 func getCycleUpdateFields(tg *scheduler.TrackerGoal) *UnderlyingTrackerUpdateFields {
+	tu := tg.CycleDeadline.Unix()
 	return &UnderlyingTrackerUpdateFields{
-		CycleDeadline:  &tg.CycleDeadline,
+		CycleDeadline:  &tu,
 		CycleFrequency: tg.CycleFrequency.StrPtr(),
 	}
 }
@@ -569,13 +603,55 @@ func (s *Service) MigrateTrackersIntoScheduler() {
 	}
 	for _, ut := range allUnderlying {
 		// plug them in. scheduler will automatically scale them to the next upcoming deadline
+		// assume the if the UserInventory is missing it is safe to delete the tracker
+		if _, err = s.collection.LookupUserInventory(ut.UserID); err == gorm.ErrRecordNotFound {
+			if err = s.repo.deleteUnderlyingTracker(&ut); err != nil {
+				log.Print(err)
+			}
+			continue
+		}
 		if err = s.scheduler.AddTrackerGoal(ut.ToTrackerGoal()); err != nil {
 			log.Print(err)
 		}
 	}
 }
 
+// startServerDayManager is run as a go function to advance the server day and call updateDailyStreaks for all trackers
+func (s *Service) startServerDayManager() {
+	for {
+		// TODO: if I ever update the s.ServerDay value outside of this function, I need to lock it with a mutex
+		s.ServerDay = scheduler.GetCurrentServerDay()
+		next := s.ServerDay.Add(24 * time.Hour)
+		time.Sleep(time.Until(next))
+		log.Println("Server day updated from ", s.ServerDay, "to", next)
+		s.ServerDay = next
+		go s.updateDailyStreaks()
+	}
+}
+
+// updateDailyStreaks is run when the server day changes to manage streak status
+func (s *Service) updateDailyStreaks() {
+	serverDay := s.ServerDay
+	// TODO: currently this is only updating job app trackers.. I am not sure of the design I want to implement for other tracker types
+	// maybe I should turn this select all into a decorator specifically for trackers that care about daily streaks.
+	trackers, err := s.repo.selectAllJobAppTrackers()
+	if err != nil {
+		log.Print("UpdateDailyStreaks failed:", err)
+		return
+	}
+	for _, t := range trackers {
+		// potentially preserve CurDailyStreak but always flip ContinueDailyStreak
+		t.ContinueDailyStreak = false
+		fields := []string{continueDailyStreakField}
+		if t.LastCompleted == nil || serverDay.Sub(*t.LastCompleted) > 24*time.Hour {
+			t.CurDailyStreak = 0
+			fields = append(fields, curDailyStreakField)
+		}
+		s.repo.updateJobAppTrackerFields(&t, fields)
+	}
+}
+
 // SelectAllJobAppTrackers is used for testing
 func (s *Service) SelectAllJobAppTrackers() ([]JobAppTracker, error) {
-	return s.repo.selectAllJobAppTrackers()
+	return s.repo.selectAllJobAppTrackersAndItems()
 }

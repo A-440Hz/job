@@ -84,26 +84,19 @@ func (s *Service) RegisterBaseUser(id string, uf *UserUpdateFields) (*User, erro
 		}
 		return nil, err
 	}
-	uf.sanitizeFields()
-	hashedPass, err := db.HashPassword(*uf.Password)
+	updateUser, updateFields, err := uf.formatForRepo()
 	if err != nil {
 		return nil, err
 	}
-
-	updateFields := []string{registeredField, usernameField, passwordField}
-	if uf.Email != nil {
-		repoUser.Email = uf.Email
-		updateFields = append(updateFields, emailField)
-	}
-	repoUser.Registered = true
-	repoUser.Username = uf.Username
-	repoUser.Password = &hashedPass
-
-	err = s.validateUniqueUsernameEmail(*repoUser)
+	err = s.validateUniqueUsernameEmail(*updateUser)
 	if err != nil {
 		return nil, err
 	}
-	_, err = s.repo.updateUserFields(repoUser, updateFields)
+	updateUser.ID = repoUser.GetID()
+	// after passing validations, mark Registered as true
+	updateUser.Registered = true
+	updateFields = append(updateFields, registeredField)
+	_, err = s.repo.updateUserFields(updateUser, updateFields)
 	if err != nil {
 		return nil, err
 	}
@@ -241,14 +234,15 @@ func (s *Service) DeleteUser(id string) error {
 // StartCleanupCron starts as a goroutine
 func (s *Service) StartCleanupCron() {
 	var start = func() {
-		timer := time.NewTimer(0)
-		for {
-			select {
-			case <-timer.C:
-				timer.Reset(sessionCronFrequency)
-				s.cleanupExpiredSessions()
-				s.cleanupExpiredDemoUsers()
-			}
+		// Run once immediately, then run on a regular ticker interval.
+		s.cleanupExpiredSessions()
+		s.cleanupExpiredDemoUsers()
+
+		ticker := time.NewTicker(sessionCronFrequency)
+		defer ticker.Stop()
+		for range ticker.C {
+			s.cleanupExpiredSessions()
+			s.cleanupExpiredDemoUsers()
 		}
 	}
 	go start()

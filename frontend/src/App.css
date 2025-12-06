@@ -1,0 +1,301 @@
+/* App.css is for styles specific to elements in App.tsx */
+
+:root {
+  --progress-color-deadline: var(--color-amber-900);
+  --progress-color-streak: var(--color-orange-500);
+  --progress-color-bg: var(--color-slate-300);
+}
+
+root {
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  justify-self: center;
+  display: flex;
+}
+
+.item-title {
+  --tw-font-weight: var(--font-weight-semibold) /* 600 */;
+  font-weight: var(--font-weight-semibold) /* 600 */;
+  font-size: var(--text-lg) /* 1.125rem = 18px */;
+  line-height: var(--tw-leading, var(--text-lg--line-height) /* calc(1.75 / 1.125) ≈ 1.5556 */);
+  color: var(--color-yellow-900);
+  /* margin-bottom: 1rem; */
+}
+
+.item-body {
+  text-wrap: wrap;
+  font-size: var(--text-sm) /* 0.875rem = 14px */;
+  line-height: var(--tw-leading, var(--text-sm--line-height) /* calc(1.25 / 0.875) ≈ 1.4286 */);
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
+  color: var(--color-gray-500)
+}
+
+.item-timestamp {
+  font-size: var(--text-xs) /* 0.75rem = 12px */;
+  line-height: var(--tw-leading, var(--text-xs--line-height) /* calc(1 / 0.75) ≈ 1.3333 */);
+  color: var(--color-gray-900)
+}
+
+.input-box {
+  width: 100%;
+  border-style: dashed solid;
+  border-width: 1px;
+  border-color: var(--color-yellow-600);
+  resize: vertical;
+  overflow-y: auto;
+  line-height: 1.5;
+  z-index: 30;
+}
+
+.item-editing {
+  border-width: 3px;
+  border-style: groove solid;
+  z-index: 20;
+}
+
+li:has(.delete:hover) {
+  border-color: var(--color-rose-600);
+}
+
+
+li:has(.cancel:hover) {
+  border-color: var(--color-rose-400);
+}
+
+.item-editing::marker {
+  content: "";
+}
+
+/* https://www.w3schools.com/howto/howto_css_modals.asp */
+.item-modal {
+  display: block;
+  position: fixed; /* Stay in place */
+  /* inset: calc(var(--spacing) * 0); */
+  z-index: 10; 
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0); /* Black w/ opacity */
+}
+
+.vp-mid {
+  /* display: none; */
+  @media (min-width >= 768) {
+    display: block;
+  }
+}
+
+::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+}
+
+/* progress bar: 
+  https://stackoverflow.com/questions/18368202/how-can-i-set-the-color-for-the-progress-element
+*/
+progress::-webkit-progress-bar {
+  background-color: var(--progress-color-bg);
+}
+
+progress::-webkit-progress-value {background-color: var(--progress-color-deadline);}
+progress::-moz-progress-bar {background-color: var(--progress-color-deadline);}
+progress.streak-bar::-webkit-progress-value {background-color: var(--progress-color-streak);}
+progress.streak-bar::-moz-progress-bar {background-color: var(--progress-color-streak);}
+
+progress {
+  background-color: var(--progress-color-bg);
+  color: var(--progress-color-deadline);
+  accent-color: var(--progress-color-deadline);
+  max-height: calc(var(--spacing) * 1.1);
+}
+
+progress.streak-bar {
+  background-color: var(--progress-color-bg);
+  color: var(--progress-color-streak);
+  accent-color: var(--progress-color-streak);
+  max-height: calc(var(--spacing) * 1.1);
+}
+
+/* 
+  horizontal banner
+  https://stackoverflow.com/questions/45847392/pure-css-continuous-horizontal-text-scroll-without-break
+*/
+.marquee {
+  /* margin: 0 auto; */
+  /* white-space: nowrap; */
+  overflow: hidden;
+  position: absolute;
+}
+
+.marquee span {
+  display: inline-block;
+  padding-left: 100%;
+  animation: marquee 20s linear infinite;
+}
+
+.marquee2 span {
+  animation-delay: 10s;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translate(0, 0);
+  }
+  100% {
+    transform: translate(-100%, 0);
+  }
+}
+
+/* remove or integrate the following classes */
+
+
+/* inspired by https://www.w3schools.com/howto/howto_css_modals.asp */
+.popup {
+  position: fixed;
+  z-index: 1;
+  /* background dimming effect */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+
+.popup-content {
+  position: relative;
+  background-color: #fefefe;
+  margin: auto;
+  height: fit-content;
+  padding: 0;
+  border: 1px solid #888;
+  top: 10%;
+  width: 410px;
+  display: grid;
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
+}
+
+.popup-header {
+  display: flex;
+  padding: 5px 8px;
+  background-color: #3343a1;
+  color: white;
+}
+
+.popup-header h4 {
+  margin: 1px;
+  padding-top: 5px;
+}
+
+.popup-header h2 {
+  margin: 1px;
+}
+
+.popup-header img {
+  padding-top: 6px;
+  margin-right: 16px;
+  max-width: 80px;
+  height: auto;
+  -webkit-user-drag: none;
+}
+
+.popup-footer {
+  margin: 0px 23px;
+}
+
+.popup-frame {
+  width: fit-content;
+  height: auto;
+  justify-self: center;
+  margin: 9px 9px 0px 9px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px 3px;
+}
+
+
+.capcha-img {
+  border-style: solid;
+  border-color: rgb(0,0,0,0.0);
+  border-width: 2px;
+  box-sizing: border-box;
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+.capcha-img.active {
+  opacity: 0.87;
+  transform: scale(0.88);
+  transform-origin: center;
+  border-style: solid;
+  border-color: blue;
+  border-width: 2px;
+  box-sizing: border-box;
+}
+
+.capcha-img:hover, 
+.capcha-img:focus {
+  opacity: 0.9;
+  cursor: pointer;
+}
+
+.close {
+  color: white;
+  /* float: right; */
+  font-size: 22px;
+  font-weight: bold;
+  position: absolute;
+  right: 10px;
+  top: 2px;
+  margin-bottom: 10px;
+  padding-bottom: 3px;
+}
+
+.close:hover,
+.close:focus {
+  color: rgb(0,0,0,0.5);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.err-msg {
+  margin-left: 18%;
+  color: red;
+  opacity: 0;
+}
+
+.btn {
+  text-wrap: nowrap;
+  box-sizing: border-box;
+  font-size: 20px;
+  border-radius: 3px;
+  border: none;
+  width: 100px;
+  padding: 12px 18px;
+  margin: 2px;
+  float: right;
+  cursor: pointer;
+  /* color:  rgb(217, 244, 244); */
+  opacity: 0.6;
+}
+
+.btn:active:hover {
+  transform: scale(0.97);
+  outline: 2px solid rgb(217, 244, 244);
+}
+
+.btn:hover {
+  opacity: 0.77;
+}
+
+.popup-footer button {
+  color: white;
+  background-color: blue;
+}

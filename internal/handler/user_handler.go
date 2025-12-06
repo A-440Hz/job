@@ -8,17 +8,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// func getUserID(r *http.Request) (string, error) {
-// 	var req struct {
-// 		ID string `json:"id"`
-// 	}
-// 	err := json.NewDecoder(r.Body).Decode(&req)
-// 	if err != nil {
-// 		return "", err
-// 	}
-// 	return req.ID, nil
-// }
-
 func getUserUpdateFields(r *http.Request) (*user.UserUpdateFields, error) {
 	var fields user.UserUpdateFields
 	err := json.NewDecoder(r.Body).Decode(&fields)
@@ -44,8 +33,7 @@ func (h *Handler) GetUserAndUserInventory(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	// uInv, err := h.CollectionService.LookupUserInventory(uuid)
-	coll, err := h.CollectionService.GetAllCollectablesForUser(uuid)
+	uColl, err := h.CollectionService.GetAllCollectablesForUser(uuid)
 
 	if err != nil && err != gorm.ErrRecordNotFound {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -59,14 +47,19 @@ func (h *Handler) GetUserAndUserInventory(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	json.NewEncoder(w).Encode(map[string]any{
 		"user":                user,
-		"earned_collectables": coll,
+		"earned_collectables": uColl,
 		"all_collectables":    aColl,
 	})
 }
 
 func (h *Handler) RegisterBaseUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
 	// parse request info
 	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
 	if err != nil {
@@ -86,45 +79,62 @@ func (h *Handler) RegisterBaseUser(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(true)
 	// do i return this? idk what react needs yet
 	// json.NewEncoder(w).Encode(u)
 }
 
 func (h *Handler) HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
+	// TODO: on happy path, check if current unregistered user session has 0 items and 0 inventory. if so, delete session from repo.
+	// not an essential task because empty demo user>tracker>sessions are cron deleted after 2 days
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
 	uf, err := getUserUpdateFields(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	repoUser, err := h.UserService.LoginUser(uf)
 	if err != nil {
-		// the service returns safe errors
+		// report the error but dont propagate it to the client
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
-	// if userID succeeds, session expiry is automatically updated
-	// if fail, old session
-	clientUserID, err := h.UserService.GetUserIDFromCookie(r, w)
+
+	// Manage session state after successful login:
+	clientUserID, err := h.UserService.GetUserIDFromCookie(r, w) // note the the current session cookie is cleared when this function errors
 	if err != nil {
 		sn, err := h.UserService.CreateNewSession(repoUser.GetID())
 		if err != nil {
+			// the session is not created in repo when CreateNewSession errors so it's fine to exit here
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		h.UserService.SetSessionCookie(w, sn.ID)
 	} else if clientUserID != repoUser.GetID() {
+		// delete the demo user session from the repo and leave the structs to be cleaned up by cron
 		h.UserService.DeleteSession(h.UserService.GetSessionIDFromCookie(r, w))
 		sn, err := h.UserService.CreateNewSession(repoUser.GetID())
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 		h.UserService.SetSessionCookie(w, sn.ID)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	// refer to tracker main page??
-	// json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(true)
 }
 
 // HandleLogoutRequest deletes the current session and clears the session cookie
 func (h *Handler) HandleLogoutRequest(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
 	sID := h.UserService.GetSessionIDFromCookie(r, w)
 	h.UserService.ClearSessionCookie(w)
 	if sID != "" {
@@ -135,6 +145,7 @@ func (h *Handler) HandleLogoutRequest(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(true)
 	// refer to main page
 }
 
@@ -158,7 +169,9 @@ func (h *Handler) UpdateUserFields(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(u)
+	json.NewEncoder(w).Encode(map[string]any{
+		"user": u,
+	})
 }
 
 // TODO: do cascade gorm delete or series of delete calls here
@@ -180,10 +193,17 @@ func (h *Handler) DeleteUserRequest(w http.ResponseWriter, r *http.Request) {
 	h.UserService.ClearSessionCookie(w)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(nil)
 }
 
 func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "GET, PATCH, DELETE, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Cache-Control")
 	switch r.Method {
+	case http.MethodOptions:
+		w.WriteHeader(http.StatusOK)
 	case http.MethodGet:
 		h.GetUserAndUserInventory(w, r)
 	case http.MethodPatch:
@@ -196,9 +216,33 @@ func (h *Handler) ServeUserMainPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) HandleAwardCollectableRequest(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	var req struct {
+		AwardTen bool `json:"award_ten"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+	if req.AwardTen {
+		cols, err := h.CollectionService.AwardTenRandomCollectables(uuid)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]any{
+			"cols": cols,
+		})
 		return
 	}
 	col, err := h.CollectionService.AwardOneRandomCollectable(uuid)
@@ -208,5 +252,7 @@ func (h *Handler) HandleAwardCollectableRequest(w http.ResponseWriter, r *http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(col)
+	json.NewEncoder(w).Encode(map[string]any{
+		"col": col,
+	})
 }

@@ -9,7 +9,7 @@ import (
 const (
 	ValueCommon    CollectableValue = "C"
 	ValueRare      CollectableValue = "B"
-	ValueUltraRare CollectableValue = "A"
+	ValueEpic      CollectableValue = "A"
 	ValueLegendary CollectableValue = "S"
 
 	FormatJpg CollectableFormat = "image"
@@ -18,7 +18,7 @@ const (
 
 type CollectableValue string
 
-var values map[CollectableValue]int = map[CollectableValue]int{ValueCommon: 5, ValueRare: 15, ValueUltraRare: 35, ValueLegendary: 135}
+var values map[CollectableValue]int = map[CollectableValue]int{ValueCommon: 5, ValueRare: 15, ValueEpic: 35, ValueLegendary: 135}
 
 func (c CollectableValue) ToPoints() int {
 	return values[c]

@@ -4,12 +4,42 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const seedFile = "data/collectables.json"
+const pathToCollectables = "pathToCollectables"
+
+func init() {
+	os.Setenv(pathToCollectables, "")
+}
+
+func SetEnvForTesting(dir string) {
+	os.Setenv(pathToCollectables, filepath.ToSlash(filepath.Join(dir, seedFile)))
+}
+
+func getSeedFilePath() string {
+
+	if p := os.Getenv(pathToCollectables); p != "" {
+		return p
+	}
+
+	// this has been stinky bad code but it was fine because it worked.
+	// this does not work with a built binary. It will loop forever unless it is placed in a specific location.
+	// TODO: make this better
+	baseDir, err := os.Executable()
+	if err != nil {
+		return seedFile
+	}
+	for filepath.Base(baseDir) != "internal" && filepath.Base(baseDir) != "cmd" {
+		baseDir = filepath.Clean(filepath.Join(baseDir, "../"))
+	}
+	return filepath.ToSlash(filepath.Join(filepath.Dir(baseDir), seedFile))
+}
 
 type Repository struct {
 	db   *gorm.DB
@@ -20,22 +50,29 @@ func NewRepository(d *gorm.DB) *Repository {
 	return &Repository{db: d}
 }
 
-// importCollectables deletes the collectables table and re-imports it from the json seedFile
+// importCollectables updates the collectables table by re-importing it from the json seedFile
 func (r *Repository) importCollectables() error {
-	r.db.Exec("TRUNCATE TABLE collectables RESTART IDENTITY CASCADE")
-	f, err := os.Open(seedFile)
-	defer f.Close()
+	f, err := os.Open(getSeedFilePath())
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	var collectables []Collectable
 	err = json.NewDecoder(f).Decode(&collectables)
 	if err != nil {
 		return err
 	}
 	r.size = len(collectables)
-	res := r.db.Create(&collectables)
-	return res.Error
+	for _, c := range collectables {
+		res := r.db.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "id"}},
+			UpdateAll: true,
+		}).Create(&c)
+		if res.Error != nil {
+			return res.Error
+		}
+	}
+	return nil
 }
 
 func (u *UserInventory) BeforeCreate(tx *gorm.DB) error {
@@ -79,6 +116,10 @@ func (r *Repository) deleteUserInventory(u *UserInventory) error {
 	return nil
 }
 
+func (r *Repository) beginCollectablesTransaction() *gorm.DB {
+	return r.db.Begin()
+}
+
 func (r *Repository) createUserCollectable(u *UserCollectable) (*UserCollectable, error) {
 	res := r.db.Create(u)
 	if res.Error != nil {
@@ -109,7 +150,9 @@ func (r *Repository) lookupUserCollectable(userId string, collectableID int) (*U
 
 func (r *Repository) getAllCollectablesForUser(userId string) ([]UserCollectable, error) {
 	u := []UserCollectable{}
-	res := r.db.Where("user_id = ?", userId).Preload("Collectable").Find(&u)
+	res := r.db.Where("user_id = ?", userId).Preload("Collectable", func(db *gorm.DB) *gorm.DB {
+		return db.Order("collectables.ID ASC")
+	}).Find(&u)
 	if res.Error != nil {
 		return nil, res.Error
 	}

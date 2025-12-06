@@ -16,6 +16,8 @@ const startingHeapCapacity = 32
 // other is to keep increasing the size
 const outputChannelSize = 50
 
+const deadlineResetCutoffDuration = time.Hour * 24 * 360 // 6 months
+
 // Scheduler always lives in memory and manages when to trigger and reset TrackerGoals
 type Scheduler struct {
 	g        *GoalHeap
@@ -39,23 +41,58 @@ type TrackerGoal struct {
 	TrackerType    string
 }
 
-func (tg *TrackerGoal) resetDeadline() {
-	now := time.Now()
-	// a loop should be fine as long as front end prevents setting a deadline a million years back
-	// for tg.CycleDeadline.Before(now) {
-	// 	tg.CycleDeadline = tg.CycleDeadline.Add(time.Duration(tg.CycleFrequency.NumDays()))
-	// }
-	if now.Before(tg.CycleDeadline) {
-		log.Printf("reset deadline passthrough on %v", tg.CycleDeadline)
-		return
+func (tg *TrackerGoal) resetDeadline() *TrackerGoal {
+	// the default time value 0001-01-01 and very early time values causes looping behavior with my scheduler algorithm.
+	// users will have to make do with a hard reset and the hope that I have enough safety checks to avoid such a scenario.
+	n := time.Now()
+	tDist := n.Sub(tg.CycleDeadline)
+	if tg.CycleDeadline.IsZero() || (tDist > time.Microsecond && tDist > deadlineResetCutoffDuration) || (tDist < time.Microsecond && tDist < -1*deadlineResetCutoffDuration) {
+		tg.CycleDeadline = n
 	}
-	prev := tg.CycleDeadline
-	numDaysBetween := int(now.Sub(tg.CycleDeadline).Round(time.Hour) / (time.Hour * 24))
-	log.Printf("numDaysBetween: %d, now: %v, prev: %v", numDaysBetween, now, prev)
-	log.Printf("tg.CycleFrequency.NumDays(): %d", tg.CycleFrequency.NumDays())
-	numDaysToNext := (numDaysBetween/tg.CycleFrequency.NumDays() + 1) * tg.CycleFrequency.NumDays()
-	tg.CycleDeadline = tg.CycleDeadline.Add(time.Hour * 24 * time.Duration(numDaysToNext))
-	log.Printf("reset %v to %v", prev, tg.CycleDeadline)
+	return AdjustNewDeadline(*tg, *tg)
+}
+
+/*
+AdjustNewDeadline returns an adjusted TrackerGoal with CycleDeadline set to the nearest upcoming multiple, newTg.CycleFrequency.NumDays() away from oldTg's deadline.
+I prefer not have to do a check for nil db values every time this function is run:
+
+	nilTime := time.Time{}
+	if newTg.CycleDeadline != nilTime {
+		oldTg.CycleDeadline = newTg.CycleDeadline
+	}
+
+... so oldTg.CycleDeadline will have to first be overwritten outside of this function, for the user to set a new deadline value
+oldTg.CycleDeadline is the actual time.Time value that will be calculated/truncated against
+*/
+func AdjustNewDeadline(oldTg, newTg TrackerGoal) *TrackerGoal {
+	now := time.Now()
+
+	// persist the old deadline if it hasn't passed AND we are not shortening the cycle frequency
+	if now.Before(oldTg.CycleDeadline) && (oldTg.CycleFrequency.NumDays() <= newTg.CycleFrequency.NumDays()) {
+		newTg.CycleDeadline = oldTg.CycleDeadline
+		return &newTg
+	}
+
+	// numDaysBetween is the integer number of days between now and the old deadline
+	// why was I rounding to the hour? It seems fine to just use the now.Sub duration
+	// ...because if I round by time.Hour and time.Now() is less than 30min ahead of oldTG.CycleDeadline, numDaysBetween will be 0
+	// ...and if numDaysBetween is 0, the deadline isn't moved even though it is before time.Now()
+	// numDaysBetween := int(now.Sub(oldTg.CycleDeadline).Round(time.Hour) / (time.Hour * 24))
+	numDaysBetween := int(now.Sub(oldTg.CycleDeadline) / (time.Hour * 24))
+	log.Printf("numDaysBetween: %d, now: %v, prev: %v", numDaysBetween, now, oldTg.CycleDeadline)
+	//	 If numDaysBetween is negative (the current deadline is in the the future), then we just set the next deadline to be NumDays() away from the current deadline
+	numDaysToNextDeadline := numDaysBetween
+	if numDaysBetween >= 0 {
+		// sets numDaysBetween to the smallest multiple of newTg.CycleFrequency.NumDays() that is greater than numDaysBetween
+		// e.g. if numDaysBetween is 8 and newTg.CycleFrequency.NumDays() is 7, then numDaysToNextDeadline becomes 14
+		// e.g. if numDaysBetween is 15 and newTg.CycleFrequency.NumDays() is 7, then numDaysToNextDeadline becomes 21
+		numDaysToNextDeadline = (numDaysBetween/newTg.CycleFrequency.NumDays() + 1) * newTg.CycleFrequency.NumDays()
+	}
+
+	// TODO: define behavior for negative numDaysBetween in test. As is i think it sets next deadline to be now, which counts as a failed cycle and resets on the next tick
+	// log.Printf("math test: %v, %v", numDaysToNextDeadline, (numDaysBetween + newTg.CycleFrequency.NumDays()))
+	newTg.CycleDeadline = oldTg.CycleDeadline.AddDate(0, 0, numDaysToNextDeadline)
+	return &newTg
 }
 
 func NewScheduler() *Scheduler {
@@ -159,7 +196,7 @@ func (s *Scheduler) ReplaceTrackerGoal(oldTg, newTg *TrackerGoal) error {
 		return nil
 	}
 	// update in place if we only need to change CycleFrequency
-	if oldTg.CycleDeadline == newTg.CycleDeadline {
+	if oldTg.CycleDeadline.Equal(newTg.CycleDeadline) {
 		s.g.heap[idx].CycleFrequency = newTg.CycleFrequency
 		return nil
 	}
@@ -193,9 +230,9 @@ func (s *Scheduler) Start() {
 			log.Printf("timer tick at %v", t)
 			tg := heap.Pop(s.g).(*TrackerGoal)
 			log.Printf("popped %v", tg.CycleDeadline)
-			tg.resetDeadline()
-			s.OutputCh <- tg
-			heap.Push(s.g, tg)
+			newTg := tg.resetDeadline()
+			s.OutputCh <- newTg
+			heap.Push(s.g, newTg)
 			s.updateTimer()
 			s.mutex.Unlock()
 		}
@@ -204,9 +241,4 @@ func (s *Scheduler) Start() {
 
 func (s *Scheduler) Stop() {
 	s.stopCh <- true
-}
-
-// Load reads all the trackers in the repo and loads them into the scheduler
-func (s *Scheduler) Load() {
-	// do the description
 }

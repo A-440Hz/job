@@ -20,6 +20,7 @@ const (
 
 	titleField           = "title"
 	bodyField            = "body"
+	urlField             = "url"
 	statusField          = "status"
 	isAttributedField    = "is_attributed"
 	attributionTimeField = "attribution_time"
@@ -35,6 +36,7 @@ type JobAppItem struct {
 	TrackerID    string `gorm:"index"`
 	Title        string // Company: Role
 	Body         string // optional description
+	Url          string
 	Status       ItemStatus
 	IsAttributed bool
 	// probably sync shenanigans to iron out? attempt sync on each item creation?
@@ -81,6 +83,7 @@ func (s *ItemStatus) Value() (driver.Value, error) {
 type JobAppItemUpdateFields struct {
 	Title           *string     `json:"title,omitempty"`
 	Body            *string     `json:"body,omitempty"`
+	Url             *string     `json:"url,omitempty"`
 	Status          *ItemStatus `json:"status,omitempty"`
 	IsAttributed    *bool       `json:"isAttributed,omitempty"`
 	attributionTime *time.Time  // no json tag here because this is set internally
@@ -97,6 +100,10 @@ func (uf *JobAppItemUpdateFields) formatForRepo() (*JobAppItem, []string, error)
 	if uf.Body != nil {
 		j.Body = *uf.Body
 		fields = append(fields, bodyField)
+	}
+	if uf.Url != nil {
+		j.Url = *uf.Url
+		fields = append(fields, urlField)
 	}
 	if uf.Status != nil {
 		if !slices.Contains(ValidJobAppItemStatus, *uf.Status) {

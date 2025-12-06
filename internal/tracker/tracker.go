@@ -19,7 +19,9 @@ const (
 	curBoxesAwardedField        = "cur_boxes_awarded"
 	missedGoalPenaltyField      = "missed_goal_penalty"
 	curDailyStreakField         = "cur_daily_streak"
+	maxDailyStreakField         = "max_daily_streak"
 	curGoalStreakField          = "cur_goal_streak"
+	continueDailyStreakField    = "continue_daily_streak"
 	maxGoalStreakField          = "max_goal_streak"
 	curCycleItemsCompleted      = "cur_cycle_items_completed"
 	totalItemsCompletedField    = "total_items_completed"
@@ -67,13 +69,15 @@ type UnderlyingTracker struct {
 	MissedGoalPenalty bool                `gorm:"default:false"` // if enabled, enacts a reward penalty on missed goal cycle
 
 	// stats
-	CurDailyStreak         int `gorm:"default:0"`
-	CurGoalStreak          int `gorm:"default:0"`
-	MaxGoalStreak          int `gorm:"default:0"`
-	CurCycleItemsCompleted int `gorm:"default:0"`
-	TotalItemsCompleted    int `gorm:"default:0"`
-	MaxCycleItemsCompleted int `gorm:"default:0"`
-	TotalBoxesAwarded      int `gorm:"default:0"`
+	CurDailyStreak         int  `gorm:"default:0"`
+	MaxDailyStreak         int  `gorm:"default:0"`
+	CurGoalStreak          int  `gorm:"default:0"`
+	ContinueDailyStreak    bool `gorm:"default:false"`
+	MaxGoalStreak          int  `gorm:"default:0"`
+	CurCycleItemsCompleted int  `gorm:"default:0"`
+	TotalItemsCompleted    int  `gorm:"default:0"`
+	MaxCycleItemsCompleted int  `gorm:"default:0"`
+	TotalBoxesAwarded      int  `gorm:"default:0"`
 	FirstCompleted         *time.Time
 	LastCompleted          *time.Time
 	CreatedAt              time.Time
@@ -93,16 +97,9 @@ type JobAppTracker struct {
 
 // TrackerStats is a json object for UnderlyingTracker to return
 // TODO: probably get rid of this.. actually how would i do AvgDailyCompleted then?
+// TODO: this is a placeholder for computed stats that are not stored in the db
 type TrackerStats struct {
-	CurDailyStreak         int        `json:"curDailyStreak"`
-	CurGoalStreak          int        `json:"curGoalStreak"`
-	MaxGoalStreak          int        `json:"maxGoalStreak"`
-	MaxCycleItemsCompleted int        `json:"maxCycleItemsCompleted"`
-	TotalItemsCompleted    int        `json:"totalItemsCompleted"`
-	TotalBoxesAwarded      int        `json:"totalBoxesAwarded"`
-	AvgDailyCompleted      float64    `json:"avgDailyCompleted"`
-	FirstCompleted         *time.Time `json:"firstCompleted"`
-	LastCompleted          *time.Time `json:"lastCompleted"`
+	AvgDailyCompleted float64 `json:"avgDailyCompleted"`
 	// What about AvgCycleCompleted? i think that's too difficult to accurately track given how every time the user
 	// updates CycleDeadline it counts as a new cycle
 }
@@ -117,10 +114,7 @@ func (t *JobAppTracker) GetUserID() string {
 }
 
 func (t *UnderlyingTracker) DailyStreakMet() bool {
-	if t.LastCompleted == nil {
-		return false
-	}
-	return t.LastCompleted.Equal(scheduler.GetCurrentServerDay())
+	return t.ContinueDailyStreak
 }
 
 // CheckIfLit populates the IsLitDailyStreak field for a streak effect
@@ -145,12 +139,12 @@ func (t *UnderlyingTracker) ToTrackerGoal() *scheduler.TrackerGoal {
 }
 
 type UnderlyingTrackerUpdateFields struct {
-	CycleDeadline     *time.Time `json:"cycleDeadline,omitempty"`
-	CycleFrequency    *string    `json:"cycleFrequency,omitempty"`
-	GoalQuantity      *int       `json:"goalQuantity,omitempty"`
-	MissedGoalPenalty *bool      `json:"missedGoalPenalty,omitempty"`
+	CycleDeadline     *int64  `json:"cycleDeadline,omitempty"`
+	CycleFrequency    *string `json:"cycleFrequency,omitempty"`
+	GoalQuantity      *int    `json:"goalQuantity,omitempty"`
+	MissedGoalPenalty *bool   `json:"missedGoalPenalty,omitempty"`
 
-	// TODO: I think these can get refactored out too
+	// Non-user settable fields:
 	CurScorableItems *int `json:"curScorableItems,omitempty"`
 	CurBoxesAwarded  *int `json:"curBoxesAwarded,omitempty"`
 }
@@ -159,7 +153,7 @@ func (uf *UnderlyingTrackerUpdateFields) formatForRepo() (*UnderlyingTracker, []
 	t := &UnderlyingTracker{}
 	fields := []string{}
 	if uf.CycleDeadline != nil {
-		t.CycleDeadline = *uf.CycleDeadline
+		t.CycleDeadline = time.Unix(*uf.CycleDeadline, 0)
 		fields = append(fields, cycleDeadlineField)
 	}
 	if uf.CycleFrequency != nil {

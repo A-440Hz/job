@@ -176,7 +176,7 @@ func (r *Repository) getExpiredSessions() ([]Session, error) {
 	return sessions, nil
 }
 
-// getExpiredDemoUsers selects unregistered (demo) users with 0 created items created before the grace period of (2) days,
+// getExpiredDemoUsers selects unregistered (demo) users with 0 created items created past the grace period of (2) days,
 // demo users whose last created item was over 60 days ago,
 // and registered users with 0 created items, account age > 60 days.
 func (r *Repository) getExpiredDemoUsers() ([]User, error) {
