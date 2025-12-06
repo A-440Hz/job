@@ -127,6 +127,11 @@ const Item = React.memo(function Item({
           setQueryState('noQuery');
           return;
         }
+        if (data && data.content === "") {
+          console.log('failed to scrape anything from the url.');
+          setQueryState('noQuery');
+          return;
+        }
       })
       .catch((err) => {
         console.error('Error fetching scraper data:', err);
