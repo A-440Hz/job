@@ -8,6 +8,8 @@ type TrackerDataContextType = {
     error: string | null;
     refreshData: () => void;
     setTracker: (d: any) => void;
+    modelName: string;
+    setModelName: (m: string) => void;
 };
 
 const TrackerDataContext = createContext<TrackerDataContextType>({
@@ -17,6 +19,8 @@ const TrackerDataContext = createContext<TrackerDataContextType>({
     error: null,
     refreshData: () => {},
     setTracker: () => {},
+    modelName: "",
+    setModelName: () => {},
 });
 
 export function useTrackerData() {
@@ -28,6 +32,7 @@ export function TrackerDataProvider({ children }: { children: React.ReactNode })
     const [tracker, setTracker] = useState<any>(null);
     const [serverDay, setServerDay] = useState<Date>();
     const [error, setError] = useState<string | null>(null);
+    const [modelName, setModelName] = useState<string>("tngtech/deepseek-r1t2-chimera:free");
 
     const fetchData = () => {
         fetchTrackerData()
@@ -42,7 +47,7 @@ export function TrackerDataProvider({ children }: { children: React.ReactNode })
     useEffect(fetchData, []);
 
     return (
-        <TrackerDataContext.Provider value={{ user, tracker, serverDay, error, refreshData: fetchData, setTracker }}>
+        <TrackerDataContext.Provider value={{ user, tracker, serverDay, error, refreshData: fetchData, setTracker, modelName, setModelName: setModelName }}>
             {children}
         </TrackerDataContext.Provider>
     );

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { formatDate } from './api/datetime';
 import { fetchScraperData, summarizeScrapedData } from './api/scraper';
+import { useTrackerData } from './JobAppTrackerDataContext';
 
 // https://tw-elements.com/docs/standard/components/spinners/
 const spinner = (
@@ -38,6 +39,7 @@ const Item = React.memo(function Item({
   const [body, setBody] = useState(item.Body);
   const [saveHighlight, setSaveHighlight] = useState(true);
   const [queryState, setQueryState] = useState<'noQuery' | 'scraping' | 'processing' | 'processed'>('noQuery');
+  const {modelName} = useTrackerData();
 
   useEffect(() => {
     if (item.ID === undefined) {
@@ -70,7 +72,7 @@ const Item = React.memo(function Item({
   };
 
   const requestSummary = async (content: string, itemId: string) => {
-    summarizeScrapedData(content, itemId)
+    summarizeScrapedData(content, itemId, modelName)
       .then(data => {
         if (data && data.summary) { // TODO: check for non-cancelled state before setting
           console.log(data);

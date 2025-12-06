@@ -216,7 +216,7 @@ function ProgressTracker( {onSettingsClick}: {onSettingsClick: () => void }) {
 }
 
 function TrackerBar() {
-  const { tracker, user, error, setTracker } = useTrackerData();
+  const { tracker, user, error, setTracker, modelName, setModelName } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
   
   const [isEditing, setIsEditing] = useState(false);
@@ -236,6 +236,7 @@ function TrackerBar() {
   const [quantity, setQuantity] = useState(Number(tracker.GoalQuantity));
   const [frequency, setFrequency] = useState(tracker.CycleFrequency);
   const [penalty, setPenalty] = useState(Boolean(tracker.MissedGoalPenalty));
+  const [selectedModel, setSelectedModel] = useState(modelName);
 
   const exitEditing = () => {
     setIsEditing(false);
@@ -265,6 +266,11 @@ function TrackerBar() {
       deadline?: number;
       quantity?: number;
     } = {};
+
+    // also handle the AI Model selection
+    if (selectedModel !== modelName) {
+      setModelName(selectedModel)
+    }
 
     if (frequency && frequency !== tracker.CycleFrequency) {changes.frequency = frequency;}
     // convert microseconds to seconds for backend
@@ -353,7 +359,7 @@ function TrackerBar() {
                 </select>
               </div>
 
-              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+              {/* <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
                 penalty !== tracker.MissedGoalPenalty ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
               }`}>
                 <label className='block text-sm font-medium text-gray-700'>
@@ -369,7 +375,30 @@ function TrackerBar() {
                   />
                   <span className='text-sm text-amber-600'>Enable penalty</span>
                 </label>
-              </div>
+              </div> */}
+
+              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+                  selectedModel !== modelName ? 'border-amber-400 bg-amber-50' :
+                'border-gray-200 bg-gray-50'
+                }`}>
+                  <label className='block text-sm font-medium text-gray-700'>
+                    AI Model
+                  </label>
+                  <p className='text-xs text-gray-500 mb-2'>Model used for
+                summarization</p>
+                  <select
+                    className='w-full text-amber-600 px-3 py-2 border border-gray-300
+                rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                  >
+                    <option value="tngtech/deepseek-r1t2-chimera:free">Deepseek R1T2 Chimera</option>
+                    <option value="nvidia/nemotron-nano-12b-v2-vl:free">NVIDIA Nemotron Nano 2 VL</option>
+                    <option value="kwaipilot/kat-coder-pro:free">KwaiKAT KAT-Coder-Pro V1</option>
+                    <option value="qwen/qwen3-coder:free">Qwen Qwen3-Coder-480B-A35B</option>
+                    <option value="openai/gpt-oss-20b:free">OpenAI gpt-oss-20b</option>
+                  </select>
+                </div>
             </div>
 
             <div className='flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200'>
