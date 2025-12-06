@@ -10,7 +10,7 @@ export async function fetchScraperData(url: string, itemID: string): Promise<any
     }
     const res = await fetch(scraperEndpoint, {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'omit',
         headers: {
             'Content-Type': 'application/json'
         },
@@ -32,7 +32,7 @@ export async function summarizeScrapedData(text: string, itemID: string, model?:
     }
     const res = await fetch(summarizeEndpoint, {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'omit',
         headers: {
             'Content-Type': 'application/json'
         },

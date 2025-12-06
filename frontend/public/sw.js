@@ -66,8 +66,8 @@ self.addEventListener('fetch', (event) => {
   // Check if it's a media request
   const url = new URL(event.request.url);
   const isMediaRequest = url.hostname === IMAGE_SOURCE ||
-                         event.request.destination === 'image' ||
-                         event.request.destination === 'video';
+    event.request.destination === 'image' ||
+    event.request.destination === 'video';
 
   if (!isMediaRequest) {
     return;

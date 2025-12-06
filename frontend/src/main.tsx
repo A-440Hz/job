@@ -7,7 +7,7 @@ import { TrackerDataProvider } from './JobAppTrackerDataContext';
 import { CollectablesDataProvider } from './CollectablesDataContext';
 import './index.css'
 
-// Register service worker for caching
+// Register service worker for cacheing
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
