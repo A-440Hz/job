@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { NavLink } from 'react-router-dom';
 import Item from './Item';
 import { createTrackerItem, deleteTrackerItem, updateTrackerItem, updateTracker } from './api/tracker'
 import { formatDate, dateToInputString, inputStringToDate, adjustTimezoneOffset, convertToBackendTime } from './api/datetime'
@@ -26,10 +27,8 @@ function JobAppTrackerPage() {
   // refresh data when user changes (login/logout),
   // trying to avoid refreshData causing a fetch loop.
   useEffect(() => {
-    if (user) {
-      refreshData();
-    }
-  }, [user?.UserID]);
+    refreshData();
+  }, [user?.ID]);
 
   if (error) return <div>Error loading backend: {error}</div>;
   if (!user || !tracker) return <div className='text-center justify-self-center'>I'm on the free version</div>;
@@ -56,13 +55,19 @@ function JobAppTrackerPage() {
 }
 
 function ProgressBoxes() {
-  const { tracker, error } = useTrackerData();
+  const { tracker, user, error, refreshData } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
 
   const gq = tracker.GoalQuantity;
   const completed = tracker.CurScorableItems % gq;
   const blocks = [];
+  const [hasLootboxes, setHasLootboxes] = useState(user.inventory?.NumLootboxes > 0);
 
+  useEffect(() => {
+    refreshData();
+    setHasLootboxes(user.inventory?.NumLootboxes > 0);
+  }, [completed, user.inventory?.NumLootboxes, tracker.CurBoxesAwarded])
+  
   for (let i = 0; i < gq; i++) {
     blocks.push(
     <li key={i} className={`h-3 min-w-4 flex-1 mx-1 rounded-md transition-all duration-300 ease-in-out ${(i < completed)? "bg-emerald-500 shadow-sm scale-105" : "bg-gray-300 hover:bg-gray-400"}`}> </li>);
@@ -74,9 +79,14 @@ function ProgressBoxes() {
         <span className='w-2 h-2 bg-emerald-500 rounded-full'></span>
         Goal Progress
       </h3>
-      <span className='text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-full'>
-        {tracker.CurBoxesAwarded} earned this deadline
-      </span>
+      {hasLootboxes ? 
+        <NavLink 
+          className='text-xs font-medium text-orange-400 bg-gray-50 px-2 py-1 rounded-full transition hover:scale-95 hover:cursor-pointer' 
+          to="/Lootbox"> {user.inventory.NumLootboxes} lootboxes available to open </NavLink> :
+        <span className='text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-full'>
+          {tracker.CurBoxesAwarded} earned this deadline
+        </span>
+      }
     </div>
     <div className='text-sm text-gray-600 mb-3'>
       Complete <span className='font-semibold text-emerald-600'>{tracker.GoalQuantity}</span> application{tracker.GoalQuantity > 1 && 's'} for a lootbox
@@ -216,7 +226,7 @@ function ProgressTracker( {onSettingsClick}: {onSettingsClick: () => void }) {
 }
 
 function TrackerBar() {
-  const { tracker, user, error, setTracker, modelName, setModelName } = useTrackerData();
+  const { tracker, user, error, setTracker, modelName, setModelName, refreshData } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
   
   const [isEditing, setIsEditing] = useState(false);
@@ -256,6 +266,7 @@ function TrackerBar() {
       newDeadline,
       newQuantity,
     );
+    refreshData();
     exitEditing();
   }
 
@@ -436,6 +447,10 @@ function ItemsList() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   if (error) return <div>Error loading backend: {error}</div>;
+
+  useEffect(() => {
+    refreshData()
+  }, [tracker?.UserID])
 
   const blankItem = { Title: "", Body: "", Url: "" };
 

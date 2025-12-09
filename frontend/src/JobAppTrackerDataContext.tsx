@@ -30,21 +30,35 @@ export function useTrackerData() {
 export function TrackerDataProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<any>(null);
     const [tracker, setTracker] = useState<any>(null);
-    const [serverDay, setServerDay] = useState<Date>();
+    const [serverDay, setServerDay] = useState<Date | undefined>();
     const [error, setError] = useState<string | null>(null);
-    const [modelName, setModelName] = useState<string>("tngtech/deepseek-r1t2-chimera:free");
 
-    const fetchData = () => {
-        fetchTrackerData()
-            .then((data) => {
-                setUser(data.user);
-                setTracker(data.tracker);
-                setServerDay(new Date(data.serverDay));
-            })
-            .catch((err) => setError(err.message));
+    // Load model preference from localStorage, or use default
+    const [modelName, setModelName] = useState<string>(() => {
+        const savedModel = localStorage.getItem('selectedModel');
+        return savedModel || "tngtech/deepseek-r1t2-chimera:free";
+    });
+
+    // Save model preference to localStorage whenever it changes
+    useEffect(() => {
+        localStorage.setItem('selectedModel', modelName);
+    }, [modelName]);
+
+    const fetchData = async () => {
+        try {
+            const data = await fetchTrackerData();
+            setUser(data.user);
+            setTracker(data.tracker);
+            setServerDay(new Date(data.serverDay));
+            setError(null); // Reset error state on successful fetch
+        } catch(err: any) {
+            setError(err.message);
+        }
     };
 
-    useEffect(fetchData, []);
+    useEffect(() => {
+        fetchData();
+    }, []);
 
     return (
         <TrackerDataContext.Provider value={{ user, tracker, serverDay, error, refreshData: fetchData, setTracker, modelName, setModelName: setModelName }}>

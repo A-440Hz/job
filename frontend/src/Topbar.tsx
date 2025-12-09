@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useCollectablesData } from './CollectablesDataContext';
+import { useTrackerData } from './JobAppTrackerDataContext';
 import { logoutUser } from './api/user';
 import { NavLink } from 'react-router-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -92,12 +93,7 @@ export function Navbar({ user, onLogout }: { user: any, onLogout?: () => void })
           }
           onClick={onClick}
         >
-          <span>Lootbox</span>
-          {user.inventory?.NumLootboxes > 0 && (
-            <span className="text-orange-300 ml-1">
-              ({user.inventory.NumLootboxes})
-            </span>
-          )}
+          Lootbox
         </NavLink>
 
         <NavLink
@@ -176,13 +172,14 @@ export function Login({ user, onLogout }: { user: any; onLogout?: () => void }) 
       </button>
     );
   } else {
-    return <a className={`pr-1.5 md:pr-3 hover:opacity-60 ${loc.pathname === "/Login" && 'text-amber-300'}`} id="navbar_sign_in_button"  href="/Login">Login/Register</a>
+    return <NavLink className={`pr-1.5 md:pr-3 hover:opacity-60 ${loc.pathname === "/Login" && 'text-amber-300'}`} id="navbar_sign_in_button"  to="/Login">Login/Register</NavLink>
   }
 }
 
 export default function Topbar() {
   // const isDesktop = useScreenSize();
   const {user, error, refreshData} = useCollectablesData();
+  const {refreshData: refreshTrackerData} = useTrackerData();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -192,9 +189,12 @@ export default function Topbar() {
     } catch (err) {
       console.error('Logout failed:', err);
     } finally {
+      // Clear user preferences from localStorage
+      localStorage.removeItem('selectedModel');
+
       // refresh client state and navigate home
       try {
-        await refreshData();
+        await Promise.all([refreshData(), refreshTrackerData()]);
       } catch (e) {
         console.error('refreshData failed after logout', e);
       }
@@ -208,7 +208,7 @@ export default function Topbar() {
   useEffect(() => {
     refreshData();
     // only re-run when pathname changes
-  }, [location.pathname]);
+  }, [user?.ID, location.pathname]);
 
   if (error) return <div>Error loading backend: {error}</div>;
   if (!user) return <div className='text-center justify-self-center pt-5'>Please bear with the loading time...</div>; 
