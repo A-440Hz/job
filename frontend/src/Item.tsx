@@ -106,14 +106,17 @@ const Item = React.memo(function Item({
     setQueryState('scraping');
     fetchScraperData(url, item.ID)
       .then((data) => {
-        if (data && data.code == 403) {
-          console.error('url refused to be scraped.');
+        if (data && (data.code !== 200 || data.content === "")) {
+          console.error('Error fetching scraper data:', data.error ? data.error : 'Unknown error');
+          console.log(data.content === "" && 'Failed to scrape anything from the url.');
+          // console.error('url refused to be scraped.');
           if (body === '') {
             console.log('Try pasting the job description into notes and pressing "AI" again to directly process it.');
           } else {
             console.log('Sending current notes to LLM to generate a summary...');
             setQueryState('processing');
             requestSummary(body, item.ID);
+            return;
           }
           setQueryState('noQuery');
           return;
@@ -122,16 +125,6 @@ const Item = React.memo(function Item({
           setBody(data.content);
           setQueryState('processing');
           requestSummary(data.content, item.ID);
-          return;
-        }
-        if (data && data.code !== 200) {
-          console.error('Error fetching scraper data:', data.error ? data.error : 'Unknown error');
-          setQueryState('noQuery');
-          return;
-        }
-        if (data && data.content === "") {
-          console.log('failed to scrape anything from the url.');
-          setQueryState('noQuery');
           return;
         }
       })

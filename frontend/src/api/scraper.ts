@@ -2,6 +2,7 @@ import { scraper_endpoint } from "./endpoint";
 
 const scraperEndpoint = scraper_endpoint + '/scrape';
 const summarizeEndpoint = scraper_endpoint + '/summarize';
+const healthEndpoint = scraper_endpoint + '/health';
 
 export async function fetchScraperData(url: string, itemID: string): Promise<any> {
     const req = {url: url, item_id: ""};
@@ -37,6 +38,20 @@ export async function summarizeScrapedData(text: string, itemID: string, model?:
             'Content-Type': 'application/json'
         },
         body: JSON.stringify(req)
+    });
+    if (!res.ok) {
+        throw new Error('Failed to summarize scraped data');
+    }
+    return res.json();
+}
+
+export async function wakeupScraper(): Promise<any> {
+    const res = await fetch(healthEndpoint, {
+        method: 'GET',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json'
+        },
     });
     if (!res.ok) {
         throw new Error('Failed to summarize scraped data');

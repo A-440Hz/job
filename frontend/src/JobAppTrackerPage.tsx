@@ -5,6 +5,7 @@ import { createTrackerItem, deleteTrackerItem, updateTrackerItem, updateTracker 
 import { formatDate, dateToInputString, inputStringToDate, adjustTimezoneOffset, convertToBackendTime } from './api/datetime'
 import { useTrackerData } from './JobAppTrackerDataContext';
 import { useScreenSize } from './ScreenSizeProvider';
+import { wakeupScraper } from './api/scraper';
 import flameHot from '/flame-hot-svgrepo-com.svg';
 import flameCold from '/flame-cold-svgrepo-com.svg';
 import gearIcon from '/gear-svgrepo-com.svg';
@@ -28,6 +29,16 @@ function JobAppTrackerPage() {
   // trying to avoid refreshData causing a fetch loop.
   useEffect(() => {
     refreshData();
+    // send health ping to microservice so it is ready to run
+    wakeupScraper()
+      .then((data) => {
+        if (data && data.status) {
+          console.log("health status from microservice: ", data.status);
+        }
+      })
+      .catch((err) => {
+        console.log("error from microservice: ", err);
+      });
   }, [user?.ID]);
 
   if (error) return <div>Error loading backend: {error}</div>;
