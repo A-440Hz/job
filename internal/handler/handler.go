@@ -26,6 +26,8 @@ func SetEnvForProduction() error {
 	if o, exists := os.LookupEnv("ALLOWED_ORIGINS"); exists {
 		allowOrigin = o
 		log.Println("Allowed origin is: ", allowOrigin)
+		// Configure cookie domain based on allowed origin
+		user.SetCookieDomain(allowOrigin)
 	} else {
 		return fmt.Errorf("ALLOWED_ORIGINS not set in production environment")
 	}

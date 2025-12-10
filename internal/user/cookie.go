@@ -3,14 +3,18 @@ package user
 import (
 	"errors"
 	"net/http"
+	"time"
 
 	"gorm.io/gorm"
 )
 
 const (
-	sessionCookieName   = "sessionCookie"
-	sessionCookieExpiry = 3600 * 24 * 365 // 1 year, but it refreshes every happy lookup
+	sessionCookieName      = "sessionCookie"
+	sessionCookieExpiry    = 3600 * 24 * 365     // 1 year, but it refreshes every happy lookup
+	cookieRefreshThreshold = 30 * 24 * time.Hour // only refresh cookie when within 30 days of expiry
 )
+
+var cookieDomain string // set from allowOrigin in production
 
 // GetUserIDFromCookie attempts to return the User ID from Session ID, clearing the cookie upon failure.
 // it lookups the current day and updates session and cookie expiry every successful call.
@@ -35,6 +39,18 @@ func (s *Service) GetSessionIDFromCookie(r *http.Request, w http.ResponseWriter)
 	return cookie.Value
 }
 
+// SetCookieDomain sets the domain for session cookies, extracted from the allowed origin URL
+// This should be called during initialization with the allowOrigin value
+func SetCookieDomain(allowOrigin string) {
+	// Extract domain from URL (e.g., "https://app.railway.app" -> ".railway.app")
+	// For localhost, leave empty to default to exact host match
+	if allowOrigin == "" || allowOrigin == "http://localhost:5173" {
+		cookieDomain = ""
+		return
+	}
+	cookieDomain = allowOrigin
+}
+
 func (s *Service) getUserIDFromSession(sID string, w http.ResponseWriter) (string, error) {
 	sn, err := s.repo.lookupSession(sID)
 	if err == gorm.ErrRecordNotFound {
@@ -44,10 +60,13 @@ func (s *Service) getUserIDFromSession(sID string, w http.ResponseWriter) (strin
 		s.ClearSessionCookie(w)
 		return "", err
 	}
-	// update repo session expiry
-	s.UpdateSessionExpiry(sn)
-	// update cookie expiry
-	s.SetSessionCookie(w, sn.ID)
+
+	// Only refresh cookie when close to expiring
+	if time.Until(sn.ExpiresAt) < cookieRefreshThreshold {
+		s.UpdateSessionExpiry(sn)
+		s.SetSessionCookie(w, sn.ID)
+	}
+
 	return sn.UserID, nil
 }
 
@@ -61,6 +80,12 @@ func (s *Service) SetSessionCookie(w http.ResponseWriter, sessionID string) {
 		HttpOnly: true,                  // prevents client-side JS from accessing the cookie
 		SameSite: http.SameSiteNoneMode, // switch to this to try to get site to work on Edge browser
 	}
+
+	// Set Domain if configured (for cross-origin cookie support)
+	if cookieDomain != "" {
+		cookie.Domain = cookieDomain
+	}
+
 	http.SetCookie(w, &cookie)
 }
 
@@ -75,5 +100,11 @@ func (s *Service) ClearSessionCookie(w http.ResponseWriter) {
 		HttpOnly: true,
 		SameSite: http.SameSiteNoneMode,
 	}
+
+	// Set Domain if configured (must match the domain used when setting the cookie)
+	if cookieDomain != "" {
+		cookie.Domain = cookieDomain
+	}
+
 	http.SetCookie(w, &cookie)
 }
