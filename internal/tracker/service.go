@@ -310,8 +310,14 @@ func (s *Service) updateTrackerState(tid string) error {
 	}
 	if len(items) < repoTracker.GoalQuantity*numToAward {
 		log.Print("mismatch between number of scorable items and tracker current items completed: " + fmt.Sprintf("%d < %d", len(items), repoTracker.CurScorableItems))
-		// is it good to set curScorableItems to len(items) here?
-		return errors.New("mismatch between number of scorable items and tracker current items completed: " + fmt.Sprintf("%d < %d", len(items), repoTracker.CurScorableItems))
+		log.Print("gracefully overwriting DB values to make everything smooth.")
+		// Overriding counts based on actual items found
+		repoTracker.CurScorableItems = len(items) // Update with current count
+		numToAward = repoTracker.CurScorableItems / repoTracker.GoalQuantity
+		// Exit early if there are no items to award
+		if numToAward == 0 {
+			return nil
+		}
 	}
 
 	// score n items. They should be already sorted by create time
