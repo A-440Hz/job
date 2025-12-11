@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchTrackerData } from './api/tracker';
+import { queryClient } from './queryClient';
 
 type TrackerDataContextType = {
     user: any;
@@ -28,11 +30,6 @@ export function useTrackerData() {
 }
 
 export function TrackerDataProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<any>(null);
-    const [tracker, setTracker] = useState<any>(null);
-    const [serverDay, setServerDay] = useState<Date | undefined>();
-    const [error, setError] = useState<string | null>(null);
-
     // Load model preference from localStorage, or use default
     const [modelName, setModelName] = useState<string>(() => {
         const savedModel = localStorage.getItem('selectedModel');
@@ -44,24 +41,34 @@ export function TrackerDataProvider({ children }: { children: React.ReactNode })
         localStorage.setItem('selectedModel', modelName);
     }, [modelName]);
 
-    const fetchData = async () => {
-        try {
-            const data = await fetchTrackerData();
-            setUser(data.user);
-            setTracker(data.tracker);
-            setServerDay(new Date(data.serverDay));
-            setError(null); // Reset error state on successful fetch
-        } catch(err: any) {
-            setError(err.message);
-        }
+    // Use React Query to fetch and cache tracker data
+    const { data, error, refetch } = useQuery({
+        queryKey: ['trackerData'],
+        queryFn: fetchTrackerData,
+    });
+
+    // Function to update tracker in cache without refetching
+    const setTracker = (newTracker: any) => {
+        queryClient.setQueryData(['trackerData'], (oldData: any) => {
+            if (!oldData) return oldData;
+            return {
+                ...oldData,
+                tracker: newTracker,
+            };
+        });
     };
 
-    useEffect(() => {
-        fetchData();
-    }, []);
-
     return (
-        <TrackerDataContext.Provider value={{ user, tracker, serverDay, error, refreshData: fetchData, setTracker, modelName, setModelName: setModelName }}>
+        <TrackerDataContext.Provider value={{
+            user: data?.user || null,
+            tracker: data?.tracker || null,
+            serverDay: data?.serverDay ? new Date(data.serverDay) : undefined,
+            error: error?.message || null,
+            refreshData: refetch,
+            setTracker,
+            modelName,
+            setModelName,
+        }}>
             {children}
         </TrackerDataContext.Provider>
     );
