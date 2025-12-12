@@ -1,19 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import LoadingSpin from './LoadingSpin';
 import { formatDate } from './api/datetime';
 import { fetchScraperData, summarizeScrapedData } from './api/scraper';
 import { useTrackerData } from './JobAppTrackerDataContext';
-
-// https://tw-elements.com/docs/standard/components/spinners/
-const spinner = (
-  <div
-    className="inline-block w-6 aspect-square mr-1 animate-spin rounded-full border-4 border-solid border-orange-400 border-e-transparent align-[-0.125em] text-surface motion-reduce:animate-[spin_1.5s_linear_infinite] dark:text-white"
-    role="status">
-    <span
-      className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
-        Loading...
-    </span>
-  </div>
-);
 
 const Item = React.memo(function Item({
   item,
@@ -187,7 +176,7 @@ const Item = React.memo(function Item({
               )}
             </span>
             <span className={`flex items-start justify-between ${queryState !== 'noQuery' && "select-none pointer-events-none"}`} >
-              {queryState === 'scraping' || queryState === 'processing' ? spinner : (
+              {queryState === 'scraping' || queryState === 'processing' ? <LoadingSpin /> : (
                 <div className="flex w-7 justify-center bg-slate-200 text-slate-700 border aspect-square select-none transition hover:bg-slate-300 hover:scale-79"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -247,7 +236,7 @@ const Item = React.memo(function Item({
           <div className="select-none group">
             <span className="flex justify-between items-start">
               <span className="flex justify-between items-start">
-                {queryState === 'scraping' || queryState === 'processing' ? spinner : null}
+                {queryState === 'scraping' || queryState === 'processing' ? <LoadingSpin /> : null}
                 <p className="item-title">{item.Title}</p>
               </span>
               <button

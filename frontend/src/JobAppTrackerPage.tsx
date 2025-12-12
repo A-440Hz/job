@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom';
 import Item from './Item';
+import LoadingSpin from './LoadingSpin';
 import { createTrackerItem, deleteTrackerItem, updateTrackerItem, updateTracker } from './api/tracker'
 import { formatDate, dateToInputString, inputStringToDate, adjustTimezoneOffset, convertToBackendTime } from './api/datetime'
 import { useTrackerData } from './JobAppTrackerDataContext';
@@ -42,7 +43,10 @@ function JobAppTrackerPage() {
   }, [user?.ID]);
 
   if (error) return <div>Error loading backend: {error}</div>;
-  if (!user || !tracker) return <div className='text-center justify-self-center'>I'm on the free version</div>;
+  if (!user || !tracker) return (<>
+    <div className='text-center justify-self-center'>I'm on the free version</div>
+    <div className="absolute z-100 left-1/2 top-1/2"> <LoadingSpin /> </div>
+  </>);
 
   return (
     <div className="grid mx-auto px-8 pt-4 min-w-8/10 max-w-10/10 justify-self-center mt-3">
@@ -56,7 +60,6 @@ function JobAppTrackerPage() {
             :
           'Job App Tracker'}
       </h1>
-
       <div className={`${isDesktop?'':'w-[90vw] relative left-1/2 right-1/2 -mx-[45vw]'} `}>
         <TrackerBar />
       </div>
