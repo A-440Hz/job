@@ -90,7 +90,7 @@ func (h *Handler) HandleLoginRequest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset, Set-Cookie")
 	uf, err := getUserUpdateFields(r)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -134,7 +134,7 @@ func (h *Handler) HandleLogoutRequest(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset, Set-Cookie")
 	sID := h.UserService.GetSessionIDFromCookie(r, w)
 	h.UserService.ClearSessionCookie(w)
 	if sID != "" {

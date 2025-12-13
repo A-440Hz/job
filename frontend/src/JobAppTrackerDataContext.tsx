@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchTrackerData } from './api/tracker';
+import { queryClient } from './queryClient';
 
 type TrackerDataContextType = {
     user: any;
@@ -8,6 +10,8 @@ type TrackerDataContextType = {
     error: string | null;
     refreshData: () => void;
     setTracker: (d: any) => void;
+    modelName: string;
+    setModelName: (m: string) => void;
 };
 
 const TrackerDataContext = createContext<TrackerDataContextType>({
@@ -17,6 +21,8 @@ const TrackerDataContext = createContext<TrackerDataContextType>({
     error: null,
     refreshData: () => {},
     setTracker: () => {},
+    modelName: "",
+    setModelName: () => {},
 });
 
 export function useTrackerData() {
@@ -24,25 +30,45 @@ export function useTrackerData() {
 }
 
 export function TrackerDataProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<any>(null);
-    const [tracker, setTracker] = useState<any>(null);
-    const [serverDay, setServerDay] = useState<Date>();
-    const [error, setError] = useState<string | null>(null);
+    // Load model preference from localStorage, or use default
+    const [modelName, setModelName] = useState<string>(() => {
+        const savedModel = localStorage.getItem('selectedModel');
+        return savedModel || "tngtech/deepseek-r1t2-chimera:free";
+    });
 
-    const fetchData = () => {
-        fetchTrackerData()
-            .then((data) => {
-                setUser(data.user);
-                setTracker(data.tracker);
-                setServerDay(new Date(data.serverDay));
-            })
-            .catch((err) => setError(err.message));
+    // Save model preference to localStorage whenever it changes
+    useEffect(() => {
+        localStorage.setItem('selectedModel', modelName);
+    }, [modelName]);
+
+    // Use React Query to fetch and cache tracker data
+    const { data, error, refetch } = useQuery({
+        queryKey: ['trackerData'],
+        queryFn: fetchTrackerData,
+    });
+
+    // Function to update tracker in cache without refetching
+    const setTracker = (newTracker: any) => {
+        queryClient.setQueryData(['trackerData'], (oldData: any) => {
+            if (!oldData) return oldData;
+            return {
+                ...oldData,
+                tracker: newTracker,
+            };
+        });
     };
 
-    useEffect(fetchData, []);
-
     return (
-        <TrackerDataContext.Provider value={{ user, tracker, serverDay, error, refreshData: fetchData, setTracker }}>
+        <TrackerDataContext.Provider value={{
+            user: data?.user || null,
+            tracker: data?.tracker || null,
+            serverDay: data?.serverDay ? new Date(data.serverDay) : undefined,
+            error: error?.message || null,
+            refreshData: refetch,
+            setTracker,
+            modelName,
+            setModelName,
+        }}>
             {children}
         </TrackerDataContext.Provider>
     );

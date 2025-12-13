@@ -161,6 +161,14 @@ export function About() {
             <div className="flex mx-auto justify-center aspect-video max-w-[20rem] rounded-2xl border-2 py-18 bg-slate-500">
                 {"...TBD "}
             </div>
+            <h3 className='text-xl text-center my-4'> Click here to view the code and see a quick tutorial: </h3>
+            <div className="flex mx-auto justify-center mb-4">
+                <div className="flex justify-center space-x-4 py-1 px-5 bg-slate-400 rounded-2xl border-2">
+                    <a href="https://github.com/A-440Hz/job" target="_blank" rel="noreferrer noopener">
+                        <img height="32" width="32" src='https://icons.duckduckgo.com/ip3/github.com.ico' alt='view code on GitHub' className="select-none rounded-xl transition hover:scale-105"/>
+                    </a>
+                </div>
+            </div>
             <h3 className='text-xl text-center my-4'>To leave feedback or offer me a job, contact me here:</h3>
             <div className="flex mx-auto justify-center mb-4">
                 <div className="flex justify-center space-x-4 py-1 px-5 bg-slate-400 rounded-2xl border-2">
@@ -172,7 +180,7 @@ export function About() {
             </div>
             <h3 className='text-xl text-center'>If you're interested in my resume, you can download it below:</h3>
             <button
-                className="block mx-auto text-nowrap px-4 py-1.5 m-8 cursor-pointer border-2 rounded-2xl bg-slate-400 hover:opacity-75"
+                className="block mx-auto text-nowrap px-4 py-1.5 m-8 cursor-pointer border-2 rounded-2xl bg-slate-400 hover:opacity-75 hover:scale-95"
                 type="button"
                 onClick={() => setOpenPopup(true)}
             >

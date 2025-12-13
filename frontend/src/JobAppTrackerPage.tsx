@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
+import { NavLink } from 'react-router-dom';
 import Item from './Item';
+import LoadingSpin from './LoadingSpin';
 import { createTrackerItem, deleteTrackerItem, updateTrackerItem, updateTracker } from './api/tracker'
 import { formatDate, dateToInputString, inputStringToDate, adjustTimezoneOffset, convertToBackendTime } from './api/datetime'
 import { useTrackerData } from './JobAppTrackerDataContext';
 import { useScreenSize } from './ScreenSizeProvider';
+import { wakeupScraper } from './api/scraper';
 import flameHot from '/flame-hot-svgrepo-com.svg';
 import flameCold from '/flame-cold-svgrepo-com.svg';
 import gearIcon from '/gear-svgrepo-com.svg';
@@ -26,13 +29,24 @@ function JobAppTrackerPage() {
   // refresh data when user changes (login/logout),
   // trying to avoid refreshData causing a fetch loop.
   useEffect(() => {
-    if (user) {
-      refreshData();
-    }
-  }, [user?.UserID]);
+    refreshData();
+    // send health ping to microservice so it is ready to run
+    wakeupScraper()
+      .then((data) => {
+        if (data && data.status) {
+          console.log("health status from microservice: ", data.status);
+        }
+      })
+      .catch((err) => {
+        console.log("error from microservice: ", err);
+      });
+  }, [user?.ID]);
 
   if (error) return <div>Error loading backend: {error}</div>;
-  if (!user || !tracker) return <div className='text-center justify-self-center'>I'm on the free version</div>;
+  if (!user || !tracker) return (<>
+    <div className='text-center justify-self-center'>I'm on the free version</div>
+    <div className="absolute z-100 left-1/2 top-1/2"> <LoadingSpin /> </div>
+  </>);
 
   return (
     <div className="grid mx-auto px-8 pt-4 min-w-8/10 max-w-10/10 justify-self-center mt-3">
@@ -46,7 +60,6 @@ function JobAppTrackerPage() {
             :
           'Job App Tracker'}
       </h1>
-
       <div className={`${isDesktop?'':'w-[90vw] relative left-1/2 right-1/2 -mx-[45vw]'} `}>
         <TrackerBar />
       </div>
@@ -56,13 +69,19 @@ function JobAppTrackerPage() {
 }
 
 function ProgressBoxes() {
-  const { tracker, error } = useTrackerData();
+  const { tracker, user, error, refreshData } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
 
   const gq = tracker.GoalQuantity;
   const completed = tracker.CurScorableItems % gq;
   const blocks = [];
+  const [hasLootboxes, setHasLootboxes] = useState(user.inventory?.NumLootboxes > 0);
 
+  useEffect(() => {
+    refreshData();
+    setHasLootboxes(user.inventory?.NumLootboxes > 0);
+  }, [completed, user.inventory?.NumLootboxes, tracker.CurBoxesAwarded])
+  
   for (let i = 0; i < gq; i++) {
     blocks.push(
     <li key={i} className={`h-3 min-w-4 flex-1 mx-1 rounded-md transition-all duration-300 ease-in-out ${(i < completed)? "bg-emerald-500 shadow-sm scale-105" : "bg-gray-300 hover:bg-gray-400"}`}> </li>);
@@ -74,9 +93,14 @@ function ProgressBoxes() {
         <span className='w-2 h-2 bg-emerald-500 rounded-full'></span>
         Goal Progress
       </h3>
-      <span className='text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-full'>
-        {tracker.CurBoxesAwarded} earned this deadline
-      </span>
+      {hasLootboxes ? 
+        <NavLink 
+          className='text-xs font-medium text-orange-400 bg-gray-50 px-2 py-1 rounded-full transition hover:scale-95 hover:cursor-pointer' 
+          to="/Lootbox"> {user.inventory.NumLootboxes} lootboxes available to open </NavLink> :
+        <span className='text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-full'>
+          {tracker.CurBoxesAwarded} earned this deadline
+        </span>
+      }
     </div>
     <div className='text-sm text-gray-600 mb-3'>
       Complete <span className='font-semibold text-emerald-600'>{tracker.GoalQuantity}</span> application{tracker.GoalQuantity > 1 && 's'} for a lootbox
@@ -216,7 +240,7 @@ function ProgressTracker( {onSettingsClick}: {onSettingsClick: () => void }) {
 }
 
 function TrackerBar() {
-  const { tracker, user, error, setTracker } = useTrackerData();
+  const { tracker, user, error, setTracker, modelName, setModelName, refreshData } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
   
   const [isEditing, setIsEditing] = useState(false);
@@ -236,6 +260,7 @@ function TrackerBar() {
   const [quantity, setQuantity] = useState(Number(tracker.GoalQuantity));
   const [frequency, setFrequency] = useState(tracker.CycleFrequency);
   const [penalty, setPenalty] = useState(Boolean(tracker.MissedGoalPenalty));
+  const [selectedModel, setSelectedModel] = useState(modelName);
 
   const exitEditing = () => {
     setIsEditing(false);
@@ -255,6 +280,7 @@ function TrackerBar() {
       newDeadline,
       newQuantity,
     );
+    refreshData();
     exitEditing();
   }
 
@@ -265,6 +291,11 @@ function TrackerBar() {
       deadline?: number;
       quantity?: number;
     } = {};
+
+    // also handle the AI Model selection
+    if (selectedModel !== modelName) {
+      setModelName(selectedModel)
+    }
 
     if (frequency && frequency !== tracker.CycleFrequency) {changes.frequency = frequency;}
     // convert microseconds to seconds for backend
@@ -353,7 +384,7 @@ function TrackerBar() {
                 </select>
               </div>
 
-              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+              {/* <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
                 penalty !== tracker.MissedGoalPenalty ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
               }`}>
                 <label className='block text-sm font-medium text-gray-700'>
@@ -369,7 +400,30 @@ function TrackerBar() {
                   />
                   <span className='text-sm text-amber-600'>Enable penalty</span>
                 </label>
-              </div>
+              </div> */}
+
+              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+                  selectedModel !== modelName ? 'border-amber-400 bg-amber-50' :
+                'border-gray-200 bg-gray-50'
+                }`}>
+                  <label className='block text-sm font-medium text-gray-700'>
+                    AI Model
+                  </label>
+                  <p className='text-xs text-gray-500 mb-2'>Model used for
+                summarization</p>
+                  <select
+                    className='w-full text-amber-600 px-3 py-2 border border-gray-300
+                rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                  >
+                    <option value="tngtech/deepseek-r1t2-chimera:free">Deepseek R1T2 Chimera</option>
+                    <option value="nvidia/nemotron-nano-12b-v2-vl:free">NVIDIA Nemotron Nano 2 VL</option>
+                    <option value="kwaipilot/kat-coder-pro:free">KwaiKAT KAT-Coder-Pro V1</option>
+                    <option value="qwen/qwen3-coder:free">Qwen Qwen3-Coder-480B-A35B</option>
+                    <option value="openai/gpt-oss-20b:free">OpenAI gpt-oss-20b</option>
+                  </select>
+                </div>
             </div>
 
             <div className='flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200'>
@@ -407,6 +461,10 @@ function ItemsList() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   if (error) return <div>Error loading backend: {error}</div>;
+
+  useEffect(() => {
+    refreshData()
+  }, [tracker?.UserID])
 
   const blankItem = { Title: "", Body: "", Url: "" };
 

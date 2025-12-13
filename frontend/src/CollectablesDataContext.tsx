@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchCollectablesData } from './api/user';
 import { fetchTrackerData } from './api/tracker';
 import { cacheCollectables } from './utils/cacheCollectables';
@@ -28,49 +29,36 @@ export function useCollectablesData() {
 };
 
 export function CollectablesDataProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<any>(null);
-    const [earned_collectables, setEarnedCollectables] = useState<any[]>([]);
-    const [all_collectables, setAllCollectables] = useState<any[]>([]);
-    const [error, setError] = useState<string | null>(null);
-    
-
-    const fetchData = async () => {
-        setError(null);
+    // Custom query function with retry logic that generates a new session if needed
+    const fetchCollectablesWithRetry = async () => {
         try {
             const data = await fetchCollectablesData();
-            setUser(data.user);
-            setEarnedCollectables(data.earned_collectables);
-            setAllCollectables(data.all_collectables);
-
             // Request service worker to cache collectable images
             await cacheCollectables(data.all_collectables);
+            return data;
         } catch (err) {
-            try {
-                await fetchTrackerData(); // this line attempts to generate a new session in case the current one is invalid
-                const data = await fetchCollectablesData();
-                setUser(data.user);
-                setEarnedCollectables(data.earned_collectables);
-                setAllCollectables(data.all_collectables);
-
-                // Request service worker to cache collectable images
-                await cacheCollectables(data.all_collectables);
-            } catch (finalErr: any) {
-                setError(finalErr.message || "Failed to load collectables.");
-            }
+            // If fetch fails, try to generate a new session and retry
+            await fetchTrackerData();
+            const data = await fetchCollectablesData();
+            await cacheCollectables(data.all_collectables);
+            return data;
         }
     };
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    // Use React Query to fetch and cache collectables data
+    const { data, error, refetch } = useQuery({
+        queryKey: ['collectablesData'],
+        queryFn: fetchCollectablesWithRetry,
+    });
+
     return (
         <CollectablesDataContext.Provider
             value={{
-                user,
-                earned_collectables,
-                all_collectables,
-                error,
-                refreshData: fetchData,
+                user: data?.user || null,
+                earned_collectables: data?.earned_collectables || [],
+                all_collectables: data?.all_collectables || [],
+                error: error?.message || null,
+                refreshData: refetch,
             }}
         >
             {children}

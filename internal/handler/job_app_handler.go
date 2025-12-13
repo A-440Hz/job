@@ -31,7 +31,7 @@ func (h *Handler) ServeMainPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, PATCH, POST, PUT, UPDATE, DELETE, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Timezone-Offset, Set-Cookie")
 	switch r.Method {
 	case http.MethodOptions:
 		w.WriteHeader(http.StatusOK)

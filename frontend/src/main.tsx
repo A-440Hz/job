@@ -6,6 +6,8 @@ import App from './App'
 import { TrackerDataProvider } from './JobAppTrackerDataContext';
 import { CollectablesDataProvider } from './CollectablesDataContext';
 import './index.css'
+import { queryClient } from './queryClient'
+import { QueryClientProvider } from '@tanstack/react-query';
 
 // Register service worker for cacheing
 if ('serviceWorker' in navigator) {
@@ -23,10 +25,12 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <TrackerDataProvider>
-      <CollectablesDataProvider>
-        <App />
-      </CollectablesDataProvider>
-    </TrackerDataProvider>
+    <QueryClientProvider client={queryClient}>
+      <TrackerDataProvider>
+        <CollectablesDataProvider>
+          <App />
+        </CollectablesDataProvider>
+      </TrackerDataProvider>
+    </QueryClientProvider>
   </StrictMode>,
 );
