@@ -1,0 +1,23 @@
+this is so much
+
+ok so definitely i want users to be able to pick up the app and
+create jobapp items without having to create an account
+inspo: WriteFreely https://github.com/writefreely/writefreely 
+
+this means temp_user objects of some kind. maybe a cookie with temp_username
+and temp_password? or a different object? doesnt matter
+
+localStorage: js object storage on user browser instead of server
+pros:
+    - offline job tracking
+    - prevent data loss
+    - maybe save money on hosting?
+cons:
+    - sync
+    - timestamps
+    - sounds like a lot
+
+bottom line the hosting website/db needs to schedule deadlines and handle tracker resets
+
+maybe i make it mandatory to have an online connection to reward/unpack a lootbox
+it sure would be nice to be able to create job app items offline tho

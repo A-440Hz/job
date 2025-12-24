@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Go Backend",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/main.go",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Frontend (npm run dev)",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/frontend"
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full Stack Dev",
+      "configurations": ["Go Backend", "Frontend (npm run dev)"]
+    }
+  ]
+}

@@ -1,0 +1,244 @@
+package scheduler
+
+import (
+	"container/heap"
+	"fmt"
+	"log"
+	"sync"
+	"time"
+)
+
+// startingHeapCapacity scaled to the amount of users I expect
+const startingHeapCapacity = 32
+
+// if there are more than 50 trackers with the same deadline, maybe this channel will break
+// one solution is to have more output channels
+// other is to keep increasing the size
+const outputChannelSize = 50
+
+const deadlineResetCutoffDuration = time.Hour * 24 * 360 // 6 months
+
+// Scheduler always lives in memory and manages when to trigger and reset TrackerGoals
+type Scheduler struct {
+	g        *GoalHeap
+	mutex    sync.Mutex
+	stopCh   chan bool
+	OutputCh chan *TrackerGoal
+	timer    *time.Timer
+}
+
+// GoalHeap implements heap.Interface and sort.Interface
+type GoalHeap struct {
+	heap   []*TrackerGoal
+	idxMap map[string]int
+}
+
+type TrackerGoal struct {
+	TrackerID      string
+	CycleDeadline  time.Time
+	CycleFrequency Frequency
+	index          int
+	TrackerType    string
+}
+
+func (tg *TrackerGoal) resetDeadline() *TrackerGoal {
+	// the default time value 0001-01-01 and very early time values causes looping behavior with my scheduler algorithm.
+	// users will have to make do with a hard reset and the hope that I have enough safety checks to avoid such a scenario.
+	n := time.Now()
+	tDist := n.Sub(tg.CycleDeadline)
+	if tg.CycleDeadline.IsZero() || (tDist > time.Microsecond && tDist > deadlineResetCutoffDuration) || (tDist < time.Microsecond && tDist < -1*deadlineResetCutoffDuration) {
+		tg.CycleDeadline = n
+	}
+	return AdjustNewDeadline(*tg, *tg)
+}
+
+/*
+AdjustNewDeadline returns an adjusted TrackerGoal with CycleDeadline set to the nearest upcoming multiple, newTg.CycleFrequency.NumDays() away from oldTg's deadline.
+I prefer not have to do a check for nil db values every time this function is run:
+
+	nilTime := time.Time{}
+	if newTg.CycleDeadline != nilTime {
+		oldTg.CycleDeadline = newTg.CycleDeadline
+	}
+
+... so oldTg.CycleDeadline will have to first be overwritten outside of this function, for the user to set a new deadline value
+oldTg.CycleDeadline is the actual time.Time value that will be calculated/truncated against
+*/
+func AdjustNewDeadline(oldTg, newTg TrackerGoal) *TrackerGoal {
+	now := time.Now()
+
+	// persist the old deadline if it hasn't passed AND we are not shortening the cycle frequency
+	if now.Before(oldTg.CycleDeadline) && (oldTg.CycleFrequency.NumDays() <= newTg.CycleFrequency.NumDays()) {
+		newTg.CycleDeadline = oldTg.CycleDeadline
+		return &newTg
+	}
+
+	// numDaysBetween is the integer number of days between now and the old deadline
+	// why was I rounding to the hour? It seems fine to just use the now.Sub duration
+	// ...because if I round by time.Hour and time.Now() is less than 30min ahead of oldTG.CycleDeadline, numDaysBetween will be 0
+	// ...and if numDaysBetween is 0, the deadline isn't moved even though it is before time.Now()
+	// numDaysBetween := int(now.Sub(oldTg.CycleDeadline).Round(time.Hour) / (time.Hour * 24))
+	numDaysBetween := int(now.Sub(oldTg.CycleDeadline) / (time.Hour * 24))
+	log.Printf("numDaysBetween: %d, now: %v, prev: %v", numDaysBetween, now, oldTg.CycleDeadline)
+	//	 If numDaysBetween is negative (the current deadline is in the the future), then we just set the next deadline to be NumDays() away from the current deadline
+	numDaysToNextDeadline := numDaysBetween
+	if numDaysBetween >= 0 {
+		// sets numDaysBetween to the smallest multiple of newTg.CycleFrequency.NumDays() that is greater than numDaysBetween
+		// e.g. if numDaysBetween is 8 and newTg.CycleFrequency.NumDays() is 7, then numDaysToNextDeadline becomes 14
+		// e.g. if numDaysBetween is 15 and newTg.CycleFrequency.NumDays() is 7, then numDaysToNextDeadline becomes 21
+		numDaysToNextDeadline = (numDaysBetween/newTg.CycleFrequency.NumDays() + 1) * newTg.CycleFrequency.NumDays()
+	}
+
+	// TODO: define behavior for negative numDaysBetween in test. As is i think it sets next deadline to be now, which counts as a failed cycle and resets on the next tick
+	// log.Printf("math test: %v, %v", numDaysToNextDeadline, (numDaysBetween + newTg.CycleFrequency.NumDays()))
+	newTg.CycleDeadline = oldTg.CycleDeadline.AddDate(0, 0, numDaysToNextDeadline)
+	return &newTg
+}
+
+func NewScheduler() *Scheduler {
+	g := &GoalHeap{
+		heap:   make([]*TrackerGoal, 0, startingHeapCapacity),
+		idxMap: make(map[string]int),
+	}
+	heap.Init(g)
+	s := &Scheduler{
+		g:        g,
+		OutputCh: make(chan *TrackerGoal, outputChannelSize),
+		stopCh:   make(chan bool, 1),
+		timer:    time.NewTimer(time.Hour * 24 * 365), // set it 1 year in the future
+	}
+	return s
+}
+
+func (g GoalHeap) Len() int           { return len(g.heap) }
+func (g GoalHeap) Less(i, j int) bool { return g.heap[i].CycleDeadline.Before(g.heap[j].CycleDeadline) }
+func (g GoalHeap) Swap(i, j int) {
+	g.heap[i], g.heap[j] = g.heap[j], g.heap[i]
+	g.heap[i].index, g.heap[j].index = i, j
+	g.idxMap[g.heap[i].TrackerID], g.idxMap[g.heap[j].TrackerID] = i, j
+}
+
+// add x as element Len()
+func (g *GoalHeap) Push(x any) {
+	n := (*g).Len()
+	item := x.(*TrackerGoal)
+	item.index = n
+	(*g).idxMap[item.TrackerID] = n
+	(*g).heap = append((*g).heap, item)
+}
+
+// remove and return element Len() - 1
+func (g *GoalHeap) Pop() any {
+	old := (*g).heap
+	n := len(old)
+	item := old[n-1]
+	old[n-1] = nil
+	item.index = -1
+	delete(g.idxMap, item.TrackerID)
+	(*g).heap = old[0 : n-1]
+	return item
+}
+
+// findByID returns the index or error if not found.
+// I originally wanted to break abstraction and have this be a binary search,
+// but keeping a tracker:idx map helps me validate the existence of trackerIds,
+// which I need to do anyway, which justifies this method over the cooler binary search
+func (g *GoalHeap) findByID(id string) (int, error) {
+	if i, exists := g.idxMap[id]; exists {
+		return i, nil
+	}
+	log.Printf("attempt to find tracker %q unsuccessful", id)
+	return 0, fmt.Errorf("attempt to find tracker %q unsuccessful", id)
+}
+
+// peek breaks abstraction and returns item 0 in the heap. Be careful not to modify it
+func (g *GoalHeap) peek() *TrackerGoal {
+	if g.Len() <= 0 {
+		return nil
+	}
+	return g.heap[0]
+}
+
+func (s *Scheduler) updateTimer() {
+	log.Printf("updateTimer triggered. heap top is %v", s.g.peek())
+	if d := s.g.peek(); d != nil {
+		log.Print("reset timer to ", d.CycleDeadline)
+		s.timer.Reset(time.Until(d.CycleDeadline))
+	} else {
+		log.Print("updateTimer -> nil; heap is nil")
+	}
+
+}
+
+// AddTrackerGoal adds a TrackerGoal into the scheduler
+func (s *Scheduler) AddTrackerGoal(tg *TrackerGoal) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	heap.Push(s.g, tg)
+	s.updateTimer()
+	return nil
+}
+
+// ReplaceTrackerGoal swaps oldTg with newTg in the scheduler. If newTg is nil, it removes oldTg.
+func (s *Scheduler) ReplaceTrackerGoal(oldTg, newTg *TrackerGoal) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	idx, err := s.g.findByID(oldTg.TrackerID)
+	if err != nil {
+		log.Print("Could not find old TrackerGoal in heap, pushing new one to finish replace process")
+		heap.Push(s.g, newTg)
+		s.updateTimer()
+		return nil
+	}
+	// remove oldTg if replacing with nil
+	if newTg == nil {
+		heap.Remove(s.g, idx)
+		return nil
+	}
+	// update in place if we only need to change CycleFrequency
+	if oldTg.CycleDeadline.Equal(newTg.CycleDeadline) {
+		s.g.heap[idx].CycleFrequency = newTg.CycleFrequency
+		return nil
+	}
+	// otherwise pop and replace old TrackerGoal
+	heap.Remove(s.g, idx)
+	heap.Push(s.g, newTg)
+	s.updateTimer()
+	return nil
+}
+
+// Start needs to be called as a goroutine
+func (s *Scheduler) Start() {
+	for {
+		select {
+		case <-s.stopCh:
+			// gracefully shut down
+			// accept errors and close to prevent deadlocks? idk how i want to implement this
+			// maybe have super errors that send me an email when the scheduler breaks
+			// close(s.nextTick)
+			s.timer.Stop()
+			close(s.stopCh)
+			close(s.OutputCh)
+			log.Print("Scheduler stopped")
+			// TODO: this loop doesnt print
+			for _, tg := range s.g.heap {
+				log.Print("heap: ", tg.CycleDeadline, tg.CycleFrequency)
+			}
+			return
+		case t := <-s.timer.C:
+			s.mutex.Lock()
+			log.Printf("timer tick at %v", t)
+			tg := heap.Pop(s.g).(*TrackerGoal)
+			log.Printf("popped %v", tg.CycleDeadline)
+			newTg := tg.resetDeadline()
+			s.OutputCh <- newTg
+			heap.Push(s.g, newTg)
+			s.updateTimer()
+			s.mutex.Unlock()
+		}
+	}
+}
+
+func (s *Scheduler) Stop() {
+	s.stopCh <- true
+}

@@ -1,0 +1,36 @@
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './queryClient';
+import JobAppTrackerPage from './JobAppTrackerPage';
+import Topbar from './Topbar';
+import { ScreenSizeProvider } from './ScreenSizeProvider';
+import UserPage from './UserPage';
+import LoginPage from './LoginPage';
+import LootboxPage from './Lootbox';
+import CollectablesPage from './CollectablesPage';
+import { About } from './About';
+
+// const About = () => <h2 className='justify-self-center text-4xl'>About Page</h2>;
+
+function App() {
+
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+      <ScreenSizeProvider>
+        <Topbar />
+        <Routes>
+          <Route path="/" element={<JobAppTrackerPage />} />
+          <Route path="/Profile" element={<UserPage />} />
+          <Route path="/About" element={<About />} />
+          <Route path="/Login" element={<LoginPage />} />
+          <Route path="/Lootbox" element={<LootboxPage />} />
+          <Route path="/Collection" element={<CollectablesPage />} />
+        </Routes>
+      </ScreenSizeProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+}
+export default App;
