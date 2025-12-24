@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -74,5 +75,26 @@ func initGormDB(dbURL string) (*gorm.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to open DB connection with %q: %w", dbURL, err)
 	}
+
+	// Configure connection pool to handle idle connections
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get underlying sql.DB: %w", err)
+	}
+
+	// SetMaxIdleConns sets the maximum number of connections in the idle connection pool
+	sqlDB.SetMaxIdleConns(10)
+
+	// SetMaxOpenConns sets the maximum number of open connections to the database
+	sqlDB.SetMaxOpenConns(100)
+
+	// SetConnMaxLifetime sets the maximum amount of time a connection may be reused
+	// This ensures connections are recycled before they go stale (Railway sleeps after ~5min)
+	sqlDB.SetConnMaxLifetime(time.Minute * 3)
+
+	// SetConnMaxIdleTime sets the maximum amount of time a connection may be idle
+	// Close idle connections before Railway puts DB to sleep
+	sqlDB.SetConnMaxIdleTime(time.Minute * 3)
+
 	return db, nil
 }

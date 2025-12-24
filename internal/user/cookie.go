@@ -2,6 +2,7 @@ package user
 
 import (
 	"errors"
+	my_db "job/internal/db"
 	"net/http"
 	"time"
 
@@ -52,13 +53,20 @@ func SetCookieDomain(allowOrigin string) {
 }
 
 func (s *Service) getUserIDFromSession(sID string, w http.ResponseWriter) (string, error) {
-	sn, err := s.repo.lookupSession(sID)
-	if err == gorm.ErrRecordNotFound {
+	var sn *Session
+	var err error
+
+	// Retry the session lookup to handle transient connection errors
+	retryErr := my_db.WithRetry(func() error {
+		sn, err = s.repo.lookupSession(sID)
+		return err
+	})
+	if retryErr == gorm.ErrRecordNotFound {
 		s.ClearSessionCookie(w)
 		return "", errors.New("session expired -- please try logging in again")
-	} else if err != nil {
+	} else if retryErr != nil {
 		s.ClearSessionCookie(w)
-		return "", err
+		return "", retryErr
 	}
 
 	// Only refresh cookie when close to expiring
