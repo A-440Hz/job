@@ -4,6 +4,7 @@ import (
 	"errors"
 	my_db "job/internal/db"
 	"net/http"
+	"strings"
 	"time"
 
 	"gorm.io/gorm"
@@ -45,11 +46,12 @@ func (s *Service) GetSessionIDFromCookie(r *http.Request, w http.ResponseWriter)
 func SetCookieDomain(allowOrigin string) {
 	// Extract domain from URL (e.g., "https://app.railway.app" -> ".railway.app")
 	// For localhost, leave empty to default to exact host match
-	if allowOrigin == "" || allowOrigin == "http://localhost:5173" {
+	if allowOrigin == "" || allowOrigin == "localhost:5173" {
 		cookieDomain = ""
 		return
 	}
-	cookieDomain = allowOrigin
+	ao, _ := strings.CutPrefix("https://", allowOrigin)
+	cookieDomain = ao
 }
 
 func (s *Service) getUserIDFromSession(sID string, w http.ResponseWriter) (string, error) {

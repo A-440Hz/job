@@ -11,8 +11,8 @@ import (
 
 const (
 	maxRetries   = 3
-	retryDelay   = 100 * time.Millisecond
-	retryBackoff = 2.0
+	retryDelay   = 300 * time.Millisecond
+	retryBackoff = 3.0
 )
 
 // WithRetry wraps a GORM operation with automatic retry logic for connection errors
