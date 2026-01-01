@@ -4,6 +4,22 @@ import { formatDate } from './api/datetime';
 import { fetchScraperData, summarizeScrapedData } from './api/scraper';
 import { useTrackerData } from './JobAppTrackerDataContext';
 
+/**
+ * A memoized React component representing a single item in the job application tracker.
+ * It supports editing, deleting, and AI-assisted summarization of job descriptions.
+ * 
+ * @component
+ * @param {Object} props - The properties passed to the Item component.
+ * @param {Object} props.item - The job application item data.
+ * @param {boolean} props.isEditing - Flag indicating if the item is in editing mode.
+ * @param {boolean} props.isNewItem - Flag indicating if the item is newly created.
+ * @param {Function} props.setIsNewItem - Function to set the new item state.
+ * @param {Function} props.setEditingId - Function to set the currently editing item ID.
+ * @param {Function} props.handleEdit - Function to handle editing an existing item.
+ * @param {Function} props.handleDelete - Function to handle deleting an item.
+ * @param {Function} props.handleNew - Function to handle creating a new item.
+ * @returns {JSX.Element} The rendered Item component.
+ */
 const Item = React.memo(function Item({
   item,
   isEditing,

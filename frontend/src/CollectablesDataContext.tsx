@@ -8,6 +8,15 @@ import { cacheCollectables } from './utils/cacheCollectables';
 // specifically handles collectables-related data and caching.
 // To this end, it contains a no-cache header on fetches to ensure fresh data retrieval.
 
+/**
+ * Type definition for the Collectables Data Context
+ * @typedef {Object} CollectablesDataContextType
+ * @property {any} user - json representation of the user object
+ * @property {Array} earned_collectables - List of earned collectables
+ * @property {Array} all_collectables - List of all collectables
+ * @property {string|null} error - Error message, if any
+ * @property {function} refreshData - Function to refresh the collectables data
+ */
 type CollectablesDataContextType = {
     user: any;
     earned_collectables: any[];
@@ -28,6 +37,11 @@ export function useCollectablesData() {
     return useContext(CollectablesDataContext);
 };
 
+/**
+ * Provides the Collectables Data Context to child components.
+ * @param {React.ReactNode} children - The children to render within the context provider.
+ * @returns {JSX.Element} The context provider component.
+ */
 export function CollectablesDataProvider({ children }: { children: React.ReactNode }) {
     // Custom query function with retry logic that generates a new session if needed
     const fetchCollectablesWithRetry = async () => {
@@ -66,6 +80,12 @@ export function CollectablesDataProvider({ children }: { children: React.ReactNo
     );
 };
 
+/**
+ * determines whether an element is in view using the Intersection Observer API
+ * @param options - IntersectionObserver options
+ * @example const [containerRef, inView] = useInView({ threshold: 0.1 })
+ * @returns [React.RefObject<HTMLDivElement | null>, boolean]
+ */
 export function useInView(options?: IntersectionObserverInit): [React.RefObject<HTMLDivElement | null>, boolean] {
     const ref = useRef<HTMLDivElement>(null);
     const [inView, setInView] = useState(false);

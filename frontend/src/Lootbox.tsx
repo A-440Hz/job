@@ -35,6 +35,10 @@ import { getImageURL, filenameToTitle } from "./api/collectable";
 //    - You can conditionally fetch data based on specific user actions or conditions that make a fetch specifically necessary.
 // By combining these strategies, you can effectively keep your frontend state fresh without compromising performance or user experience. Would you like to dive deeper into any of these solutions?
 
+/**
+ * @component
+ * @returns {JSX.Element} A React component for displaying the view for opening new lootboxes
+ */
 function LootboxPage() {
     const { user, error, refreshData} = useCollectablesData();
     // const isDesktop = useScreenSize();
@@ -134,6 +138,12 @@ function LootboxPage() {
     )
 }
 
+/**
+ * @component
+ * @param {JSON} result - JSON representation of the opened lootbox
+ * @param {Function} onComplete - function for managing the page state after viewing the new collectable 
+ * @returns {JSX.Element} A React component for displaying the opening animation for a single lootbox
+ */
 function OpeningAnimationView({ result, onComplete }: { result: any, onComplete: () => void }) {
     const [animationState, setAnimationState] = useState('waiting'); // 'waiting' | 'animating' | 'complete'
     const [showMagnified, setShowMagnified] = useState(false);
@@ -237,6 +247,11 @@ function OpeningAnimationView({ result, onComplete }: { result: any, onComplete:
     );    
 }
 
+/**
+ * @param {JSON} result - JSON representation of the list of opened lootboxes
+ * @param {Function} onComplete - function for managing the page state after viewing the new collectable 
+ * @returns {JSX.Element} A React component for displaying the opening animation for ten lootboxes
+ */
 function OpeningTenAnimationView({ result, onComplete }: { result: any, onComplete: () => void }) {
     const [animationState, setAnimationState] = useState('waiting'); // 'waiting' | 'animating' | 'complete'
     const [showMagnified, setShowMagnified] = useState(false);

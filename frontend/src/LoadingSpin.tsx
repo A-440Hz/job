@@ -1,3 +1,7 @@
+/**
+ * @component
+ * @returns a React component for displaying a loading spinner
+ */
 function LoadingSpin() {  
     return (
         <img 

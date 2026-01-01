@@ -6,6 +6,12 @@ import { NavLink } from 'react-router-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useScreenSize } from './ScreenSizeProvider';
 
+/**
+ * A React component for displaying the site glyph/logo.
+ * Changes image on hover and navigates to home on click.
+ * @component
+ * @returns {JSX.Element} The glyph/logo component.
+ */
 function Glyph() {
   const [source, setSource] = useState("/sb1rb.png");
   const handleMouseAway: React.MouseEventHandler<HTMLImageElement> = (event) => {
@@ -28,7 +34,13 @@ function Glyph() {
   /> 
 }
 
-
+/**
+ * returns a horizontal navigation bar component or a hamburger menu for mobile
+ * @component
+ * @param {JSON} user - json representation of the user object
+ * @param {function} onLogout - function to call on user logout
+ * @returns {JSX.Element} A React component for displaying the navigation bar
+ */
 export function Navbar({ user, onLogout }: { user: any, onLogout?: () => void }) {
   const isDesktop = useScreenSize();
   const [open, setOpen] = useState(false);
@@ -158,6 +170,12 @@ export function Navbar({ user, onLogout }: { user: any, onLogout?: () => void })
   );
 }
 
+/**
+ * @component
+ * @param {JSON} user - json representation of the user object
+ * @param {function} onLogout - function to call on user logout
+ * @returns {JSX.Element} a login/register button or logout button
+ */
 export function Login({ user, onLogout }: { user: any; onLogout?: () => void }) {
   if (!user) return <div></div>;
   const loc = useLocation();
@@ -176,6 +194,11 @@ export function Login({ user, onLogout }: { user: any; onLogout?: () => void }) 
   }
 }
 
+/**
+ * the Topbar component that is present across all major views
+ * @component
+ * @returns {JSX.Element} A React component for displaying the website topbar
+ */
 export default function Topbar() {
   // const isDesktop = useScreenSize();
   const {user, error, refreshData} = useCollectablesData();

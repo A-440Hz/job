@@ -3,6 +3,16 @@ import CQ from "./CircleQueue";
 import EmailObfuscator from "./EmailObfuscator";
 import { endpoint } from "./api/endpoint";
 
+/**
+ * Component for displaying a captcha square
+ * @component
+ * @param {string} id - a numeric id to identify the captcha square
+ * @param {string} src - the source URL of the captcha image
+ * @param {boolean} isActive - whether the captcha square is active (selected)
+ * @param {function} onClick - function to handle clicking on the captcha square
+ * @param {number} opacity - the opacity of the captcha image
+ * @returns {JSX.Element} A React component for displaying a captcha square
+ */
 function CapchaSquare({ id, src, isActive, onClick, opacity }: {
     id: string;
     src: string;
@@ -22,6 +32,11 @@ function CapchaSquare({ id, src, isActive, onClick, opacity }: {
     );
 }
 
+/**
+ * describes the view of the About page
+ * @component
+ * @returns {JSX.Element} A React component for displaying the About page
+ */
 export function About() {
     const [openPopup, setOpenPopup] = useState(false);
     const [activeImages, setActiveImages] = useState<Set<string>>(new Set());
