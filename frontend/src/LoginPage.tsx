@@ -4,6 +4,10 @@ import { registerUser, loginUser } from './api/user';
 import './App.css';
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * @component
+ * @returns {JSX.Element} A React component for displaying the login and registration page
+ */
 function LoginPage() {
 	const [username, setUsername] = useState('');
 	const [password, setPassword] = useState('');

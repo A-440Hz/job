@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type JSX } from 'react'
 import { NavLink } from 'react-router-dom';
 import Item from './Item';
 import LoadingSpin from './LoadingSpin';
@@ -13,6 +13,11 @@ import gearIcon from '/gear-svgrepo-com.svg';
 
 import './App.css'
 
+/** 
+ * converts minutes to a string in the format "Xd Yh Zm"
+ * @param {number} minLeft - number of minutes
+ * @returns {string} formatted string
+ */
 function formatMinutes(minLeft:number) {
   if (minLeft < 0) {return -1}
   let d = Math.floor(minLeft/60/24)
@@ -22,6 +27,13 @@ function formatMinutes(minLeft:number) {
   return ((d > 0)? d.toString() + "d ": "") + ((h > 0)? h.toString() + "h ": "") + ((m > 0)? m.toString() + "m ": "");
 }
 
+/**
+ * Job Application Tracker Page.
+ * Displays a list of job applications and their statuses.
+ *
+ * @component
+ * @returns {JSX.Element} The rendered component.
+ */
 function JobAppTrackerPage() {
   const { user, tracker, error, refreshData } = useTrackerData();
   const isDesktop = useScreenSize();
@@ -116,6 +128,12 @@ function ProgressBoxes() {
   );
 }
 
+/**
+ * Returns a component detailing the amount of time left before the deadline resets.
+ * @component
+ * @param {Date} date - the current date from new Date()
+ * @returns {JSX.Element} A React component displaying the deadline bar.
+ */ 
 function DeadlineBar({date}: {date: Date}) {
   const { tracker, error } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
@@ -153,6 +171,12 @@ function DeadlineBar({date}: {date: Date}) {
   </div>)
 }
 
+/**
+ * Returns a component detailing the amount of time left before the daily streak resets.
+ * @component
+ * @param {Date} date - the current date from new Date()
+ * @returns {JSX.Element} A React component displaying the daily streak bar.
+ */
 function DailyStreak({date}: {date: Date}) {
   const { tracker, serverDay, error } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
@@ -202,6 +226,12 @@ function DailyStreak({date}: {date: Date}) {
   </div>)
 }
 
+/**
+ * parent component containing all the dynamic tracker graphics and visual components
+ * @component
+ * @param {function} onSettingsClick - function to call when settings button is clicked 
+ * @returns {JSX.Element} A React component displaying the progress tracker.
+ */
 function ProgressTracker( {onSettingsClick}: {onSettingsClick: () => void }) {
   const isDesktop = useScreenSize()
   // local timer:
@@ -239,6 +269,11 @@ function ProgressTracker( {onSettingsClick}: {onSettingsClick: () => void }) {
   );
 }
 
+/**
+ * a parent component contianing the ProgressTracker and the tracker edit menu 
+ * @component
+ * @returns {JSX.Element} a React component containing the TrackerBar
+ */
 function TrackerBar() {
   const { tracker, user, error, setTracker, modelName, setModelName, refreshData } = useTrackerData();
   if (error) return <div>Error loading backend: {error}</div>;
@@ -454,6 +489,11 @@ function TrackerBar() {
   )
 }
 
+/**
+ * a parent component containing the list of job application items
+ * @component
+ * @returns {JSX.Element} a React component containing the list of items
+ */
 function ItemsList() {
   const isDesktop = useScreenSize();
   const { tracker, error, refreshData, setTracker } = useTrackerData();
@@ -552,7 +592,5 @@ function ItemsList() {
     </div>
   );
 }
-
-
 
 export default JobAppTrackerPage

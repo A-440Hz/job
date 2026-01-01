@@ -5,6 +5,11 @@ import {useSearchParams} from "react-router-dom";
 import { filenameToTitle } from "./api/collectable";
 import { MagnifiedMediaModal, CollectableMedia, valueToRarity, viewAllCollectables, valueToColor } from "./Collectables";
 
+/**
+ * A React component for displaying the collectables view.
+ * @component
+ * @returns {JSX.Element} A React component for the collectables page.
+ */
 export default function CollectablesPage() {
     const { user, earned_collectables, all_collectables, error, refreshData } = useCollectablesData();
     // const isDesktop = useScreenSize();

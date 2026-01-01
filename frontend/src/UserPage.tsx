@@ -6,6 +6,16 @@ interface StatRowProps {
     value: string | number;
 }
 
+/**
+ * Represents a row in the statistics section.
+ * Displays a label and its corresponding value.
+ *
+ * @component
+ * @param {Object} props - The properties for the StatRow component.
+ * @param {string} props.label - The label for the statistic.
+ * @param {string|number} props.value - The value of the statistic.
+ * @returns {JSX.Element} A row displaying the label and value.
+ */
 function StatRow({ label, value }: StatRowProps) {
     return (
         <div className="flex justify-between items-center py-3 border-b border-gray-100 last:border-b-0">
@@ -15,19 +25,32 @@ function StatRow({ label, value }: StatRowProps) {
     );
 }
 
+/**
+ * The UserPage component displays user account information, streaks, and activity statistics.
+ * It fetches data from the tracker and user context and provides a detailed view of the user's progress.
+ *
+ * @component
+ * @returns {JSX.Element} The rendered UserPage component.
+ */
 function UserPage() {
-    const {tracker, user, error, refreshData } = useTrackerData();
+    const { tracker, user, error, refreshData } = useTrackerData();
     if (error) return <div>Error loading backend: {error}</div>;
-    if ( !user || !tracker ) return <div className='text-center justify-self-center'>I'm on the free version</div>;
+    if (!user || !tracker) return <div className='text-center justify-self-center'>I'm on the free version</div>;
 
     const [showBanner, setShowBanner] = useState(true);
 
     useEffect(() => {
         if (user) {
-        refreshData();
+            refreshData();
         }
     }, [user?.UserID]);
 
+    /**
+     * Formats a date string into a human-readable format.
+     *
+     * @param {string} dateString - The date string to format.
+     * @returns {string} The formatted date string, or an empty string if the date is invalid.
+     */
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
         if (date.valueOf() === 0) {

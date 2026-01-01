@@ -3,6 +3,18 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchTrackerData } from './api/tracker';
 import { queryClient } from './queryClient';
 
+/**
+ * Type definition for the Tracker Data Context
+ * @typedef {Object} TrackerDataContextType
+ * @property {Object} user - The current user data
+ * @property {Object} tracker - The job application tracker data
+ * @property {Date} serverDay - The current server date
+ * @property {string|null} error - Any error message from data fetching
+ * @property {Function} refreshData - Function to refresh the tracker data
+ * @property {Function} setTracker - Function to update the tracker data in cache
+ * @property {string} modelName - The name of the selected LLM model
+ * @property {Function} setModelName - Function to update the selected LLM model name
+ */
 type TrackerDataContextType = {
     user: any;
     tracker: any;
@@ -29,6 +41,11 @@ export function useTrackerData() {
     return useContext(TrackerDataContext);
 }
 
+/**
+ * Provides the Job Application Tracker Data Context to child components.
+ * @param {React.ReactNode} children - The children to render within the context provider.
+ * @returns The context provider component.
+ */
 export function TrackerDataProvider({ children }: { children: React.ReactNode }) {
     // Load model preference from localStorage, or use default
     const [modelName, setModelName] = useState<string>(() => {

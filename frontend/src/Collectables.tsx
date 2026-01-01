@@ -21,6 +21,14 @@ export function valueToColor(v: string): string {
     return rarityMap.get(v)?.[1] || "Unknown";
 }
 
+/**
+ * generic component to display a collectable's media (image or video)
+ * @component
+ * @param {collectable} collectable - the collectable to display
+ * @param {function} onClick - function to handle clicking on the collectable
+ * @param {boolean} lootboxView - whether the collectable is being viewed in a lootbox context 
+ * @returns {JSX.Element|null} A React component for displaying a collectable's media (image or video), or null if the collectable is null
+ */
 export function CollectableMedia({ collectable, onClick, lootboxView }: { collectable: any, onClick?: (e: React.MouseEvent) => void, lootboxView?: boolean }) {
     const [containerRef, inView] = useInView({ threshold: 0.1 });
     const [isPlaying, setIsPlaying] = useState(false);
@@ -70,9 +78,16 @@ export function CollectableMedia({ collectable, onClick, lootboxView }: { collec
             ) : null}
         </div>
     );
-        
-    }
-    
+}
+
+/**
+ * component for displaying a larger collectable image when the user clicks on a collectable
+ * @component
+ * @param {boolean} showMagnified - whether to show the magnified modal
+ * @param {function} setShowMagnified - function to set the showMagnified state
+ * @param {collectable} collectable - the collectable to display in magnified view
+ * @returns {JSX.Element|null} A React component for displaying a magnified media modal, or null if the collectable param is null 
+ */
 export const MagnifiedMediaModal = ( {showMagnified, setShowMagnified, collectable}: {showMagnified: boolean, setShowMagnified: (show: boolean) => void, collectable: any} ) => {
     const [mediaUrl, setMediaUrl] = useState<string | undefined>(undefined);
 
@@ -120,6 +135,10 @@ export const MagnifiedMediaModal = ( {showMagnified, setShowMagnified, collectab
     );
 };
 
+/**
+ * @component
+ * @returns {JSX.Element} A React component for displaying an unearned collectable
+ */
 export function unearnedCollectable() {
     // return a blank card with a question mark
     return (
@@ -130,6 +149,14 @@ export function unearnedCollectable() {
 
 }
 
+/**
+ * component to view all collectables, earned and unearned
+ * @component
+ * @param {[]collectable} earned_collectables - json list of collectables earned by the user 
+ * @param {[]collectable} all_collectables - json list of all earnable collectables
+ * @param {function} handleCollectableClick - function to handle clicking on a collectable
+ * @returns 
+ */
 export function viewAllCollectables({earned_collectables, all_collectables, handleCollectableClick}:
         {earned_collectables: any[], all_collectables: any[], handleCollectableClick: (collectable: any) => void}) {
     const earnedIds = new Set(earned_collectables.map(ec => ec.Collectable.ID));
