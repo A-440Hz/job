@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useInView } from "./CollectablesDataContext";
 import { getImageURL, filenameToTitle } from "./api/collectable";
 import ReactPlayer from "react-player";
@@ -157,36 +157,36 @@ export function unearnedCollectable() {
  * @param {function} handleCollectableClick - function to handle clicking on a collectable
  * @returns 
  */
-export function viewAllCollectables({earned_collectables, all_collectables, handleCollectableClick}:
-        {earned_collectables: any[], all_collectables: any[], handleCollectableClick: (collectable: any) => void}) {
+export function viewAllCollectables({earned_collectables, normalized_collectables, handleCollectableClick, sortByFN}:
+        {earned_collectables: any[], normalized_collectables: any[], handleCollectableClick: (collectable: any) => void, sortByFN: (a: any, b: any) => number}) {
     const earnedIds = new Set(earned_collectables.map(ec => ec.Collectable.ID));
+
+    
 
     return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 p-4">
-                {all_collectables.sort((a, b) => {
-                            return (a.ID || 0) - (b.ID || 0);
-                    }).map((ac) => {
-                    let earned = earnedIds.has(ac.ID)? earned_collectables.find(ec => ec.Collectable.ID === ac.ID) : null;
+                {normalized_collectables.sort(sortByFN).map((nc) => {
+                    let earned = earnedIds.has(nc.CollectableID)? earned_collectables.find(ec => ec.Collectable.ID === nc.CollectableID) : null;
                     // console.log(earned)
                     return earned !== null ? (
-                        <div key={ac.ID} className="relative">
+                        <div key={nc.CollectableID} className="relative">
                         <CollectableMedia
                                 collectable={earned?.Collectable}
                                 onClick={() => handleCollectableClick(earned.Collectable)}
                                 lootboxView={false}
                             />
                             <div className="text-center mt-2">
-                                <p className={`text-xs font-medium ${valueToColor(ac.Value)} truncate max-w-full`}>
-                                    <strong>{filenameToTitle(ac.Name) || 'Unknown'}</strong>
+                                <p className={`text-xs font-medium ${valueToColor(nc.Collectable.Value)} truncate max-w-full`}>
+                                    <strong>{filenameToTitle(nc.Collectable.Name) || 'Unknown'}</strong>
                                 </p>
-                                <p className={`text-xs text-gray-300 mt-0.75`}>{valueToRarity(ac.Value)}</p>
+                                <p className={`text-xs text-gray-300 mt-0.75`}>{valueToRarity(nc.Collectable.Value)}</p>
                                 <p className="text-xs text-gray-300 mt-0.5">
                                     Quantity: {earned?.Quantity}
                                 </p>
                             </div>
                         </div>
                     ) : (
-                        <div key={ac.ID} className="relative">
+                        <div key={nc.ID} className="relative">
                             {unearnedCollectable()}
                             <div className="text-center mt-2">
                                 <p className="text-xs font-medium truncate max-w-full text-gray-400">
