@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useInView } from "./CollectablesDataContext";
 import { getImageURL, filenameToTitle } from "./api/collectable";
 import ReactPlayer from "react-player";

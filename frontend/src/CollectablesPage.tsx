@@ -1,13 +1,11 @@
 import { useMemo, useEffect, useState, useRef } from "react";
 import { useCollectablesData } from "./CollectablesDataContext";
 import {useSearchParams} from "react-router-dom";
-// import { useScreenSize } from "./ScreenSizeProvider";
 import { filenameToTitle } from "./api/collectable";
 import { MagnifiedMediaModal, CollectableMedia, valueToRarity, viewAllCollectables, valueToColor } from "./Collectables";
 import { formatDate } from "./api/datetime";
 import ascendingOrderIcon from "/sort-ascending-svgrepo-com.svg";
 import descendingOrderIcon from "/sort-descending-svgrepo-com.svg";
-import { useScreenSize } from "./ScreenSizeProvider";
 
 
 const sortByFunctions: Map<string, (a: any, b: any) => number> = new Map([
@@ -41,7 +39,6 @@ function sortByEarnedAt_DESC(a: any, b: any): number {
  */
 export default function CollectablesPage() {
     const { user, earned_collectables, all_collectables, error, refreshData } = useCollectablesData();
-    const isDesktop = useScreenSize();
 
     const [showMagnified, setShowMagnified] = useState(false);
     const [selectedCollectable, setSelectedCollectable] = useState(null);

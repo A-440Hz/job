@@ -1,4 +1,4 @@
-import { useState, useEffect, type JSX } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom';
 import Item from './Item';
 import LoadingSpin from './LoadingSpin';
