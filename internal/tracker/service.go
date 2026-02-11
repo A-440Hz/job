@@ -285,6 +285,36 @@ func (s *Service) DeleteJobAppItem(uuid string, itemID string) error {
 	return s.repo.deleteJobAppTrackerItem(&JobAppItem{ID: itemID})
 }
 
+// RestoreJobAppItem restores a soft-deleted item and updates tracker counts
+func (s *Service) RestoreJobAppItem(userID string, itemID string) (*JobAppTracker, error) {
+	// Validate tracker
+	t, err := s.repo.lookupJobAppTrackerFromUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Restore the item
+	item, err := s.repo.restoreJobAppTrackerItem(itemID, t.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Increment scorable items if needed
+	if item.IsScorable() {
+		if err = s.addOneScorableItem(t); err != nil {
+			return nil, err
+		}
+	}
+
+	// Return updated tracker
+	t, err = s.repo.getJobAppTrackerWithItemsFromUserID(userID)
+	if err != nil {
+		return nil, err
+	}
+	t.CheckIfLit()
+	return t, nil
+}
+
 // Tracker scoring-related methods:
 
 // updateTrackerState checks for overflow of CurScorableItems and goalQuantity and adjusts

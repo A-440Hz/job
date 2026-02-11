@@ -199,6 +199,33 @@ func (r *Repository) deleteJobAppTrackerItem(i *JobAppItem) error {
 	return nil
 }
 
+// restoreJobAppTrackerItem undeletes a soft-deleted item by unsetting deleted_at
+func (r *Repository) restoreJobAppTrackerItem(itemID string, trackerID string) (*JobAppItem, error) {
+	item := &JobAppItem{ID: itemID}
+	// Unscoped() allows querying soft-deleted records
+	res := r.db.Unscoped().Where("id = ?", itemID).First(item)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+
+	// Check if actually deleted
+	if !item.DeletedAt.Valid {
+		return nil, errors.New("item is not deleted")
+	}
+
+	// Verify item belongs to this tracker
+	if item.TrackerID != trackerID {
+		return nil, errors.New("item does not belong to this tracker")
+	}
+
+	// Restore by setting deleted_at to NULL
+	res = r.db.Unscoped().Model(item).Update("deleted_at", nil)
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	return item, nil
+}
+
 // getAllUnderlyingTrackers runs on startup, retrieving repo trackers of every type and feeding them into the scheduler
 func (r *Repository) getAllUnderlyingTrackers() ([]UnderlyingTracker, error) {
 	allUnderlying := []UnderlyingTracker{}

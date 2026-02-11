@@ -193,3 +193,24 @@ func (h *Handler) DeleteJobAppItem(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(itemID)
 }
+
+func (h *Handler) RestoreJobAppItem(w http.ResponseWriter, r *http.Request) {
+	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	itemID := r.URL.Query().Get("id")
+	t, err := h.TrackerService.RestoreJobAppItem(uuid, itemID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]any{
+		"tracker": t,
+	})
+}

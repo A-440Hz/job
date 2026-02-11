@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gorm.io/gorm"
 )
 
 func init() {
@@ -584,4 +585,426 @@ func Test_JobAppTrackerItemScoring(t *testing.T) {
 	assert.Equal(t, 2, t2.CurBoxesAwarded)
 
 	db.CleanDB(*dBase, &JobAppTracker{}, &JobAppItem{}, &user.User{}, &collection.UserInventory{})
+}
+
+func Test_RestoreJobAppTrackerItem_Repository(t *testing.T) {
+	db.SetEnvForTesting()
+	dBase, err := db.InitGormTestDB()
+	require.NoError(t, err)
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{}, user.User{}, collection.UserInventory{})
+	repo := NewRepository(dBase)
+	cs := collection.NewService(collection.NewRepository(dBase))
+	svc := NewService(repo, scheduler.NewScheduler(), cs)
+	uSvc := user.NewService(user.NewRepository(dBase), cs)
+
+	// Create a user and tracker
+	dummyUser, err := uSvc.CreateNewUser(nil)
+	require.NoError(t, err)
+	tracker, err := svc.CreateNewJobAppTracker(dummyUser)
+	require.NoError(t, err)
+
+	statusComplete := StatusComplete
+
+	// Create an item
+	tracker, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("Test Item"),
+		Body:         strPtr("Test Body"),
+		Status:       &statusComplete,
+		IsAttributed: boolPtr(false),
+	})
+	require.NoError(t, err)
+	require.Len(t, tracker.Items, 1)
+	itemID := tracker.Items[0].ID
+
+	t.Run("restore-item-that-is-not-deleted", func(t *testing.T) {
+		// Attempt to restore an item that is not deleted
+		_, err := repo.restoreJobAppTrackerItem(itemID, tracker.GetID())
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "item is not deleted")
+	})
+
+	// Delete the item
+	err = svc.DeleteJobAppItem(dummyUser.GetID(), itemID)
+	require.NoError(t, err)
+
+	// Verify item is soft-deleted
+	var deletedItem JobAppItem
+	err = dBase.Unscoped().Where("id = ?", itemID).First(&deletedItem).Error
+	require.NoError(t, err)
+	assert.True(t, deletedItem.DeletedAt.Valid, "Item should be soft-deleted")
+
+	t.Run("restore-deleted-item-successfully", func(t *testing.T) {
+		// Restore the deleted item
+		restoredItem, err := repo.restoreJobAppTrackerItem(itemID, tracker.GetID())
+		require.NoError(t, err)
+		require.NotNil(t, restoredItem)
+		assert.Equal(t, itemID, restoredItem.ID)
+		assert.False(t, restoredItem.DeletedAt.Valid, "Item should no longer be deleted")
+
+		// Verify item is now visible in normal queries
+		var activeItem JobAppItem
+		err = dBase.Where("id = ?", itemID).First(&activeItem).Error
+		require.NoError(t, err)
+		assert.Equal(t, itemID, activeItem.ID)
+	})
+
+	// Delete the item again for next test
+	err = repo.deleteJobAppTrackerItem(&JobAppItem{ID: itemID})
+	require.NoError(t, err)
+
+	t.Run("restore-nonexistent-item", func(t *testing.T) {
+		// Attempt to restore an item that doesn't exist
+		_, err := repo.restoreJobAppTrackerItem("item_nonexistent", tracker.GetID())
+		assert.Error(t, err)
+		assert.Equal(t, gorm.ErrRecordNotFound, err)
+	})
+
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{}, user.User{}, collection.UserInventory{})
+}
+
+func Test_RestoreJobAppItem_Service(t *testing.T) {
+	db.SetEnvForTesting()
+	dBase, err := db.InitGormTestDB()
+	require.NoError(t, err)
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{}, user.User{}, collection.UserInventory{})
+	repo := NewRepository(dBase)
+	cs := collection.NewService(collection.NewRepository(dBase))
+	svc := NewService(repo, scheduler.NewScheduler(), cs)
+	uSvc := user.NewService(user.NewRepository(dBase), cs)
+
+	// Create two users and trackers
+	user1, err := uSvc.CreateNewUser(nil)
+	require.NoError(t, err)
+	tracker1, err := svc.CreateNewJobAppTracker(user1)
+	require.NoError(t, err)
+
+	user2, err := uSvc.CreateNewUser(nil)
+	require.NoError(t, err)
+	tracker2, err := svc.CreateNewJobAppTracker(user2)
+	require.NoError(t, err)
+
+	statusComplete := StatusComplete
+
+	// Create item for user1
+	tracker1, err = svc.CreateJobAppItem(user1.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("User1 Item"),
+		Body:         strPtr("Body1"),
+		Status:       &statusComplete,
+		IsAttributed: boolPtr(false),
+	})
+	require.NoError(t, err)
+	require.Len(t, tracker1.Items, 1)
+	item1ID := tracker1.Items[0].ID
+
+	// Create item for user2
+	tracker2, err = svc.CreateJobAppItem(user2.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("User2 Item"),
+		Body:         strPtr("Body2"),
+		Status:       &statusComplete,
+		IsAttributed: boolPtr(false),
+	})
+	require.NoError(t, err)
+	require.Len(t, tracker2.Items, 1)
+	// item2ID := tracker2.Items[0].ID
+
+	t.Run("restore-item-belonging-to-different-tracker", func(t *testing.T) {
+		// Delete item1
+		err := svc.DeleteJobAppItem(user1.GetID(), item1ID)
+		require.NoError(t, err)
+
+		// Attempt to restore item1 using user2's tracker
+		_, err = svc.RestoreJobAppItem(user2.GetID(), item1ID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "item does not belong to this tracker")
+
+		// Restore using correct user
+		restoredTracker, err := svc.RestoreJobAppItem(user1.GetID(), item1ID)
+		require.NoError(t, err)
+		require.NotNil(t, restoredTracker)
+		assert.Len(t, restoredTracker.Items, 1)
+		assert.Equal(t, item1ID, restoredTracker.Items[0].ID)
+	})
+
+	t.Run("restore-updates-scorable-items-count", func(t *testing.T) {
+		// Set goal quantity to 3 to prevent auto-scoring
+		tracker1, err := svc.UpdateJobAppTrackerFields(user1.GetID(), &JobAppTrackerUpdateFields{
+			UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+				GoalQuantity: intPtr(3),
+			},
+		})
+		require.NoError(t, err)
+		require.Equal(t, 1, tracker1.CurScorableItems)
+
+		// Create another item
+		tracker1, err = svc.CreateJobAppItem(user1.GetID(), &JobAppItemUpdateFields{
+			Title:        strPtr("Second Item"),
+			Body:         strPtr("Body"),
+			Status:       &statusComplete,
+			IsAttributed: boolPtr(false),
+		})
+		require.NoError(t, err)
+		require.Equal(t, 2, tracker1.CurScorableItems)
+		anItemID := tracker1.Items[0].ID
+
+		// Delete the second item
+		err = svc.DeleteJobAppItem(user1.GetID(), anItemID)
+		require.NoError(t, err)
+
+		// Check that CurScorableItems decremented
+		tracker1, err = svc.GetJobAppTrackerWithItemsFromUserID(user1.GetID())
+		require.NoError(t, err)
+		assert.Equal(t, 1, tracker1.CurScorableItems)
+
+		// Restore the item
+		tracker1, err = svc.RestoreJobAppItem(user1.GetID(), anItemID)
+		require.NoError(t, err)
+		assert.Equal(t, 2, tracker1.CurScorableItems, "CurScorableItems should increment on restore")
+		assert.Len(t, tracker1.Items, 2)
+
+		// Verify the restored item is visible
+		var restoredItem *JobAppItem
+		for i := range tracker1.Items {
+			if tracker1.Items[i].ID == anItemID {
+				restoredItem = &tracker1.Items[i]
+				break
+			}
+		}
+		require.NotNil(t, restoredItem, "Restored item should be in tracker items")
+		assert.Equal(t, "Second Item", restoredItem.Title)
+	})
+
+	t.Run("restore-non-scorable-item", func(t *testing.T) {
+		statusInProgress := StatusInProgress
+
+		// Create an in-progress (non-scorable) item
+		tracker2, err := svc.CreateJobAppItem(user2.GetID(), &JobAppItemUpdateFields{
+			Title:        strPtr("In Progress Item"),
+			Body:         strPtr("Body"),
+			Status:       &statusInProgress,
+			IsAttributed: boolPtr(false),
+		})
+		require.NoError(t, err)
+		inProgressItemID := tracker2.Items[0].ID
+		initialScorableCount := tracker2.CurScorableItems
+
+		// Delete the in-progress item
+		err = svc.DeleteJobAppItem(user2.GetID(), inProgressItemID)
+		require.NoError(t, err)
+
+		// Verify scorable count didn't change (item wasn't scorable)
+		tracker2, err = svc.GetJobAppTrackerWithItemsFromUserID(user2.GetID())
+		require.NoError(t, err)
+		assert.Equal(t, initialScorableCount, tracker2.CurScorableItems)
+
+		// Restore the item
+		tracker2, err = svc.RestoreJobAppItem(user2.GetID(), inProgressItemID)
+		require.NoError(t, err)
+		assert.Equal(t, initialScorableCount, tracker2.CurScorableItems, "Non-scorable item restore should not change count")
+	})
+
+	t.Run("restore-attributed-item", func(t *testing.T) {
+		// Set goal quantity to 1 so all items get attributed
+		tracker1, err := svc.UpdateJobAppTrackerFields(user1.GetID(), &JobAppTrackerUpdateFields{
+			UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+				GoalQuantity: intPtr(1),
+			},
+		})
+		require.NoError(t, err)
+
+		// Current scorable count should be 0
+		assert.Equal(t, 0, tracker1.CurScorableItems)
+
+		// Create item - should be auto-attributed since we already have enough items
+		tracker1, err = svc.CreateJobAppItem(user1.GetID(), &JobAppItemUpdateFields{
+			Title:        strPtr("Auto Attributed Item"),
+			Body:         strPtr("Body"),
+			Status:       &statusComplete,
+			IsAttributed: boolPtr(false),
+		})
+		require.NoError(t, err)
+
+		// Find the attributed item
+		var attributedItem *JobAppItem
+		for _, item := range tracker1.Items {
+			if item.Title == "Auto Attributed Item" {
+				attributedItem = &item
+				break
+			}
+		}
+		require.NotNil(t, attributedItem)
+		assert.True(t, attributedItem.IsAttributed)
+
+		// Delete the attributed item
+		err = svc.DeleteJobAppItem(user1.GetID(), attributedItem.ID)
+		require.NoError(t, err)
+
+		// Restore it after incrementing goal quantity - should not increment CurScorableItems since it's attributed
+		tracker1, err = svc.UpdateJobAppTrackerFields(user1.GetID(), &JobAppTrackerUpdateFields{
+			UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+				GoalQuantity: intPtr(2),
+			},
+		})
+		require.NoError(t, err)
+		tracker1, err = svc.RestoreJobAppItem(user1.GetID(), attributedItem.ID)
+		require.NoError(t, err)
+		assert.Equal(t, 0, tracker1.CurScorableItems, "Attributed item restore should not change scorable count")
+	})
+
+	t.Run("restore-item-that-doesnt-exist", func(t *testing.T) {
+		_, err := svc.RestoreJobAppItem(user1.GetID(), "item_nonexistent")
+		assert.Error(t, err)
+	})
+
+	t.Run("restore-item-with-invalid-user", func(t *testing.T) {
+		_, err := svc.RestoreJobAppItem("usr_invalid", item1ID)
+		assert.Error(t, err)
+	})
+
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{}, user.User{}, collection.UserInventory{})
+}
+
+func Test_RestoreJobAppItem_MultipleRestores(t *testing.T) {
+	db.SetEnvForTesting()
+	dBase, err := db.InitGormTestDB()
+	require.NoError(t, err)
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{}, user.User{}, collection.UserInventory{})
+	repo := NewRepository(dBase)
+	cs := collection.NewService(collection.NewRepository(dBase))
+	svc := NewService(repo, scheduler.NewScheduler(), cs)
+	uSvc := user.NewService(user.NewRepository(dBase), cs)
+
+	dummyUser, err := uSvc.CreateNewUser(nil)
+	require.NoError(t, err)
+	tracker, err := svc.CreateNewJobAppTracker(dummyUser)
+	require.NoError(t, err)
+
+	// Set goal quantity high to prevent auto-scoring
+	tracker, err = svc.UpdateJobAppTrackerFields(dummyUser.GetID(), &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+			GoalQuantity: intPtr(10),
+		},
+	})
+	require.NoError(t, err)
+
+	statusComplete := StatusComplete
+	itemIDs := []string{}
+
+	// Create multiple items
+	for i := 0; i < 3; i++ {
+		tracker, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+			Title:        strPtr("Item " + string(rune('A'+i))),
+			Body:         strPtr("Body"),
+			Status:       &statusComplete,
+			IsAttributed: boolPtr(false),
+		})
+		require.NoError(t, err)
+		itemIDs = append(itemIDs, tracker.Items[0].ID)
+	}
+
+	// Verify initial state
+	assert.Equal(t, 3, tracker.CurScorableItems)
+	assert.Len(t, tracker.Items, 3)
+
+	// Delete all items
+	for _, itemID := range itemIDs {
+		err = svc.DeleteJobAppItem(dummyUser.GetID(), itemID)
+		require.NoError(t, err)
+	}
+
+	// Verify all items are deleted
+	tracker, err = svc.GetJobAppTrackerWithItemsFromUserID(dummyUser.GetID())
+	require.NoError(t, err)
+	assert.Equal(t, 0, tracker.CurScorableItems)
+	assert.Len(t, tracker.Items, 0)
+
+	// Restore all items one by one
+	for i, itemID := range itemIDs {
+		tracker, err = svc.RestoreJobAppItem(dummyUser.GetID(), itemID)
+		require.NoError(t, err)
+		assert.Equal(t, i+1, tracker.CurScorableItems, "CurScorableItems should increment with each restore")
+		assert.Len(t, tracker.Items, i+1, "Items list should grow with each restore")
+	}
+
+	// Verify final state
+	assert.Equal(t, 3, tracker.CurScorableItems)
+	assert.Len(t, tracker.Items, 3)
+
+	// Try to restore an already restored item
+	_, err = svc.RestoreJobAppItem(dummyUser.GetID(), itemIDs[0])
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "item is not deleted")
+
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{}, user.User{}, collection.UserInventory{})
+}
+
+func Test_RestoreJobAppItem_WithScoring(t *testing.T) {
+	db.SetEnvForTesting()
+	dBase, err := db.InitGormTestDB()
+	require.NoError(t, err)
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{}, user.User{}, collection.UserInventory{})
+	repo := NewRepository(dBase)
+	cs := collection.NewService(collection.NewRepository(dBase))
+	svc := NewService(repo, scheduler.NewScheduler(), cs)
+	uSvc := user.NewService(user.NewRepository(dBase), cs)
+
+	dummyUser, err := uSvc.CreateNewUser(nil)
+	require.NoError(t, err)
+	tracker, err := svc.CreateNewJobAppTracker(dummyUser)
+	require.NoError(t, err)
+
+	// Set goal quantity to 2
+	tracker, err = svc.UpdateJobAppTrackerFields(dummyUser.GetID(), &JobAppTrackerUpdateFields{
+		UnderlyingTrackerUpdateFields: UnderlyingTrackerUpdateFields{
+			GoalQuantity: intPtr(2),
+		},
+	})
+	require.NoError(t, err)
+
+	statusComplete := StatusComplete
+
+	// Create 2 items to hit the goal
+	tracker, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("Item 1"),
+		Body:         strPtr("Body 1"),
+		Status:       &statusComplete,
+		IsAttributed: boolPtr(false),
+	})
+	require.NoError(t, err)
+	item1ID := tracker.Items[0].ID
+
+	tracker, err = svc.CreateJobAppItem(dummyUser.GetID(), &JobAppItemUpdateFields{
+		Title:        strPtr("Item 2"),
+		Body:         strPtr("Body 2"),
+		Status:       &statusComplete,
+		IsAttributed: boolPtr(false),
+	})
+	require.NoError(t, err)
+
+	// Verify scoring happened
+	assert.Equal(t, 0, tracker.CurScorableItems, "Items should be scored")
+	assert.Equal(t, 1, tracker.CurBoxesAwarded, "Should have awarded 1 box")
+
+	// Both items should be attributed
+	for _, item := range tracker.Items {
+		assert.True(t, item.IsAttributed, "Items should be attributed after scoring")
+	}
+
+	// Delete item 1 (which is attributed)
+	err = svc.DeleteJobAppItem(dummyUser.GetID(), item1ID)
+	require.NoError(t, err)
+
+	tracker, err = svc.GetJobAppTrackerWithItemsFromUserID(dummyUser.GetID())
+	require.NoError(t, err)
+	assert.Equal(t, 0, tracker.CurScorableItems)
+	assert.Equal(t, 1, tracker.CurBoxesAwarded)
+
+	// Restore item 1
+	tracker, err = svc.RestoreJobAppItem(dummyUser.GetID(), item1ID)
+	require.NoError(t, err)
+
+	// Scorable items should not increment because item is attributed
+	assert.Equal(t, 0, tracker.CurScorableItems, "Attributed item should not increment scorable count")
+	assert.Equal(t, 1, tracker.CurBoxesAwarded, "Box count should remain the same")
+
+	db.CleanDB(*dBase, JobAppTracker{}, JobAppItem{}, user.User{}, collection.UserInventory{})
 }
