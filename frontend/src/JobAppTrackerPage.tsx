@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { NavLink } from 'react-router-dom';
-import Item from './Item';
+import ItemsList from './ItemsList';
 import LoadingSpin from './LoadingSpin';
-import { createTrackerItem, deleteTrackerItem, updateTrackerItem, updateTracker } from './api/tracker'
+import { updateTracker } from './api/tracker'
 import { formatDate, dateToInputString, inputStringToDate, adjustTimezoneOffset, convertToBackendTime } from './api/datetime'
 import { useTrackerData } from './JobAppTrackerDataContext';
 import { useScreenSize } from './ScreenSizeProvider';
@@ -359,236 +359,130 @@ function TrackerBar() {
   }
   
   return (      
-      <div className="min-h-[79px] bg-slate-600 border-x-violet-300 border-4 w-full mx-auto px-4">
-        <div className='flex justify-between px-1.5 mb-1 text-center'>
-          <ProgressTracker onSettingsClick={onSettingsClick}/>
-          {/* <p className='text-sm p-1'>Current lootboxes earned {(tracker.CycleFrequency === "weekly")? 'this week' : 'today'}: {tracker.CurBoxesAwarded}</p> */}
-        </div>
-        {isEditing && (
-          <div className='bg-white rounded-xl mt-4 p-6 shadow-lg border border-gray-200'>
-            <h3 className='text-lg font-semibold text-gray-800 mb-4'>Tracker Settings</h3>
+    <div className="min-h-[79px] bg-slate-600 border-x-violet-300 border-4 w-full mx-auto px-4">
+      <div className='flex justify-between px-1.5 mb-1 text-center'>
+        <ProgressTracker onSettingsClick={onSettingsClick}/>
+        {/* <p className='text-sm p-1'>Current lootboxes earned {(tracker.CycleFrequency === "weekly")? 'this week' : 'today'}: {tracker.CurBoxesAwarded}</p> */}
+      </div>
+      {isEditing && (
+        <div className='bg-white rounded-xl mt-4 p-6 shadow-lg border border-gray-200'>
+          <h3 className='text-lg font-semibold text-gray-800 mb-4'>Tracker Settings</h3>
 
-            <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
-              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
-                quantity !== tracker.GoalQuantity ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+            <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+              quantity !== tracker.GoalQuantity ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
+            }`}>
+              <label className='block text-sm font-medium text-gray-700'>
+                Lootbox Goal
+              </label>
+              <p className='text-xs text-gray-500 mb-2'>Applications needed to earn a lootbox</p>
+              <input
+                className='w-20 text-emerald-600 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500'
+                type="number"
+                value={quantity}
+                min={1}
+                onChange={(e) => setQuantity(e.target.valueAsNumber)}
+              />
+            </div>
+
+            <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+              deadline !== localizedDeadline ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
+            }`}>
+              <label htmlFor="select-date" className='block text-sm font-medium text-gray-700'>
+                Goal Deadline
+              </label>
+              <p className='text-xs text-gray-500 mb-2'>Deadline to meet Lootbox Goal before it resets</p>
+              <input
+                className='w-full text-amber-600  px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
+                id='select-date'
+                type='datetime-local'
+                value={deadline}
+                min={dateToInputString(now)}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
+            </div>
+
+            <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+              frequency !== tracker.CycleFrequency ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
+            }`}>
+              <label className='block text-sm font-medium text-gray-700'>
+                Reset Frequency
+              </label>
+              <p className='text-xs text-gray-500 mb-2'>How often the deadline resets</p>
+              <select
+                className='w-full text-amber-600 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
+                value={frequency}
+                onChange={(e) => setFrequency(e.target.value)}
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </div>
+
+            {/* <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+              penalty !== tracker.MissedGoalPenalty ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
+            }`}>
+              <label className='block text-sm font-medium text-gray-700'>
+                Goal Failure Penalty
+              </label>
+              <p className='text-xs text-gray-500 mb-2'>Apply penalties for missed goals</p>
+              <label className='flex items-center space-x-2 cursor-pointer'>
+                <input
+                  className='w-4 h-4 text-slate-600 bg-gray-100 border-gray-300 rounded focus:ring-slate-500'
+                  type="checkbox"
+                  checked={penalty}
+                  onChange={() => setPenalty(!penalty)}
+                />
+                <span className='text-sm text-amber-600'>Enable penalty</span>
+              </label>
+            </div> */}
+
+            <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
+                selectedModel !== modelName ? 'border-amber-400 bg-amber-50' :
+              'border-gray-200 bg-gray-50'
               }`}>
                 <label className='block text-sm font-medium text-gray-700'>
-                  Lootbox Goal
+                  AI Model
                 </label>
-                <p className='text-xs text-gray-500 mb-2'>Applications needed to earn a lootbox</p>
-                <input
-                  className='w-20 text-emerald-600 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500'
-                  type="number"
-                  value={quantity}
-                  min={1}
-                  onChange={(e) => setQuantity(e.target.valueAsNumber)}
-                />
-              </div>
-
-              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
-                deadline !== localizedDeadline ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
-              }`}>
-                <label htmlFor="select-date" className='block text-sm font-medium text-gray-700'>
-                  Goal Deadline
-                </label>
-                <p className='text-xs text-gray-500 mb-2'>Deadline to meet Lootbox Goal before it resets</p>
-                <input
-                  className='w-full text-amber-600  px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
-                  id='select-date'
-                  type='datetime-local'
-                  value={deadline}
-                  min={dateToInputString(now)}
-                  onChange={(e) => setDeadline(e.target.value)}
-                />
-              </div>
-
-              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
-                frequency !== tracker.CycleFrequency ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
-              }`}>
-                <label className='block text-sm font-medium text-gray-700'>
-                  Reset Frequency
-                </label>
-                <p className='text-xs text-gray-500 mb-2'>How often the deadline resets</p>
+                <p className='text-xs text-gray-500 mb-2'>Model used for
+              summarization</p>
                 <select
-                  className='w-full text-amber-600 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
-                  value={frequency}
-                  onChange={(e) => setFrequency(e.target.value)}
+                  className='w-full text-amber-600 px-3 py-2 border border-gray-300
+              rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
+                  value={selectedModel}
+                  onChange={(e) => setSelectedModel(e.target.value)}
                 >
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
+                  <option value="tngtech/deepseek-r1t2-chimera:free">Deepseek R1T2 Chimera</option>
+                  <option value="nvidia/nemotron-nano-12b-v2-vl:free">NVIDIA Nemotron Nano 2 VL</option>
+                  <option value="kwaipilot/kat-coder-pro:free">KwaiKAT KAT-Coder-Pro V1</option>
+                  <option value="qwen/qwen3-coder:free">Qwen Qwen3-Coder-480B-A35B</option>
+                  <option value="openai/gpt-oss-20b:free">OpenAI gpt-oss-20b</option>
                 </select>
               </div>
-
-              {/* <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
-                penalty !== tracker.MissedGoalPenalty ? 'border-amber-400 bg-amber-50' : 'border-gray-200 bg-gray-50'
-              }`}>
-                <label className='block text-sm font-medium text-gray-700'>
-                  Goal Failure Penalty
-                </label>
-                <p className='text-xs text-gray-500 mb-2'>Apply penalties for missed goals</p>
-                <label className='flex items-center space-x-2 cursor-pointer'>
-                  <input
-                    className='w-4 h-4 text-slate-600 bg-gray-100 border-gray-300 rounded focus:ring-slate-500'
-                    type="checkbox"
-                    checked={penalty}
-                    onChange={() => setPenalty(!penalty)}
-                  />
-                  <span className='text-sm text-amber-600'>Enable penalty</span>
-                </label>
-              </div> */}
-
-              <div className={`space-y-2 p-4 rounded-lg border-2 transition-colors ${
-                  selectedModel !== modelName ? 'border-amber-400 bg-amber-50' :
-                'border-gray-200 bg-gray-50'
-                }`}>
-                  <label className='block text-sm font-medium text-gray-700'>
-                    AI Model
-                  </label>
-                  <p className='text-xs text-gray-500 mb-2'>Model used for
-                summarization</p>
-                  <select
-                    className='w-full text-amber-600 px-3 py-2 border border-gray-300
-                rounded-md focus:ring-2 focus:ring-amber-500 focus:border-amber-500'
-                    value={selectedModel}
-                    onChange={(e) => setSelectedModel(e.target.value)}
-                  >
-                    <option value="tngtech/deepseek-r1t2-chimera:free">Deepseek R1T2 Chimera</option>
-                    <option value="nvidia/nemotron-nano-12b-v2-vl:free">NVIDIA Nemotron Nano 2 VL</option>
-                    <option value="kwaipilot/kat-coder-pro:free">KwaiKAT KAT-Coder-Pro V1</option>
-                    <option value="qwen/qwen3-coder:free">Qwen Qwen3-Coder-480B-A35B</option>
-                    <option value="openai/gpt-oss-20b:free">OpenAI gpt-oss-20b</option>
-                  </select>
-                </div>
-            </div>
-
-            <div className='flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200'>
-              <button
-                className='px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsEditing(false);
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                className='px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  submitChanges();
-                }}
-              >
-                Save Changes
-              </button>
-            </div>
           </div>
-        )}
-      </div>
 
-    
-  )
-}
-
-/**
- * a parent component containing the list of job application items
- * @component
- * @returns {JSX.Element} a React component containing the list of items
- */
-function ItemsList() {
-  const isDesktop = useScreenSize();
-  const { tracker, error, refreshData, setTracker } = useTrackerData();
-  const [isNewItem, setIsNewItem] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  if (error) return <div>Error loading backend: {error}</div>;
-
-  useEffect(() => {
-    refreshData()
-  }, [tracker?.UserID])
-
-  const blankItem = { Title: "", Body: "", Url: "" };
-
-  const handleNew = async (newTitle: string, newBody: string, newUrl: string) : Promise<boolean> => {
-    try {
-      const newData = await createTrackerItem(newTitle, newBody, newUrl);
-      if (newData.tracker) {
-        setTracker(newData.tracker);
-        return true;
-      } else {
-        console.error("Error finding data from Backend");
-      }
-    } catch (error: any) {
-      console.error(error.message);
-    }
-    return false;
-  };
-
-  const handleEdit = async (item: any, newTitle: string, newBody: string, newUrl: string) : Promise<boolean> => {
-    if (item.Title === newTitle && item.Body === newBody && item.Url === newUrl) return false;
-    try {
-      const newData = await updateTrackerItem(item.ID, newBody, newTitle, newUrl);
-      if (newData.tracker) {
-        setTracker(newData.tracker);
-        return true;
-      } else {
-        console.error("Error finding data from Backend");
-      }
-    } catch (error: any) {
-      console.error(error.message);
-    }
-    return false;
-  };
-
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteTrackerItem(id);
-    } catch (error: any) {
-      console.error(error.message);
-    }
-    refreshData();
-  };
-
-  return (
-    <div className='justify-self-center border-2 w-full max-w-170'>
-      {isNewItem ? (
-        <Item
-          item={blankItem}
-          isEditing={editingId === "new"}
-          isNewItem={true}
-          setIsNewItem={setIsNewItem}
-          setEditingId={setEditingId}
-          handleEdit={handleEdit}
-          handleDelete={handleDelete}
-          handleNew={handleNew}
-        />
-      ) : (
-        <div className='flex justify-center'>
-        <button
-          className="rounded-4xl select-none mt-2 mb-1 py-1 px-3 border-2 bg-slate-500 justify-self-center text-md hover:bg-slate-600"
-          onClick={() => {
-            setIsNewItem(true);
-            setEditingId("new");
-          }}
-        >
-          {isDesktop ? "new application" : "+"}
-        </button>
+          <div className='flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-200'>
+            <button
+              className='px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors'
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsEditing(false);
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className='px-4 py-2 text-sm font-medium text-white bg-emerald-600 border border-transparent rounded-md hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors'
+              onClick={(e) => {
+                e.stopPropagation();
+                submitChanges();
+              }}
+            >
+              Save Changes
+            </button>
+          </div>
         </div>
       )}
-      <ul className="space-y-2">
-        {tracker?.Items?.map((item: any) => (
-          <Item
-            key={item.ID}
-            item={item}
-            isEditing={editingId === item.ID}
-            isNewItem={false}
-            setIsNewItem={setIsNewItem}
-            setEditingId={setEditingId}
-            handleEdit={handleEdit}
-            handleDelete={handleDelete}
-            handleNew={handleNew}
-          />
-        ))}
-      </ul>
     </div>
   );
 }
