@@ -214,6 +214,7 @@ export default function Topbar() {
     } finally {
       // Clear user preferences from localStorage
       localStorage.removeItem('selectedModel');
+      localStorage.removeItem('deletedItems');
 
       // refresh client state and navigate home
       try {

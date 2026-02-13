@@ -1,6 +1,7 @@
 import { endpoint } from "./endpoint";
 
 const trackerEndpoint = endpoint+'/careers';
+const restoreEndpoint = trackerEndpoint+'/restore';
 
 const timezoneOffset = new Date().getTimezoneOffset();
 
@@ -92,3 +93,13 @@ export async function deleteTrackerItem(id: string): Promise<any> {
     return await res.json();
 }
 
+export async function restoreTrackerItem(id: string): Promise<any> {
+    const res = await fetch(restoreEndpoint + '?id=' + id, {
+        method: 'POST',
+        credentials: 'include',
+    });
+    if (!res.ok) {
+        throw new Error(`Failed to restore tracker item: ${res.statusText}`);
+    }
+    return await res.json();
+}

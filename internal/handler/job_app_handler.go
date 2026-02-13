@@ -194,6 +194,21 @@ func (h *Handler) DeleteJobAppItem(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(itemID)
 }
 
+func (h *Handler) HandleRestoreRequest(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", allowOrigin)
+	w.Header().Set("Access-Control-Allow-Credentials", "true")
+	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	switch r.Method {
+	case http.MethodOptions:
+		w.WriteHeader(http.StatusOK)
+	case http.MethodPost:
+		h.RestoreJobAppItem(w, r)
+	default:
+		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+	}
+}
+
 func (h *Handler) RestoreJobAppItem(w http.ResponseWriter, r *http.Request) {
 	uuid, err := h.UserService.GetUserIDFromCookie(r, w)
 	if err != nil {

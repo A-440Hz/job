@@ -99,6 +99,7 @@ func main() {
 	h.UserService.StartCleanupCron()
 
 	http.HandleFunc("/careers", h.ServeMainPage)
+	http.HandleFunc("/careers/restore", h.HandleRestoreRequest)
 	http.HandleFunc("/careers/test", h.SelectEverything)
 	http.HandleFunc("/careers/profile", h.ServeUserMainPage)
 	http.HandleFunc("/careers/profile/open", h.HandleAwardCollectableRequest)
