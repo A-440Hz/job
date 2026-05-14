@@ -452,11 +452,9 @@ function TrackerBar() {
                   value={selectedModel}
                   onChange={(e) => setSelectedModel(e.target.value)}
                 >
-                  <option value="tngtech/deepseek-r1t2-chimera:free">Deepseek R1T2 Chimera</option>
+                  <option value="openrouter/free">OpenRouter Free Models</option>
                   <option value="nvidia/nemotron-nano-12b-v2-vl:free">NVIDIA Nemotron Nano 2 VL</option>
-                  <option value="kwaipilot/kat-coder-pro:free">KwaiKAT KAT-Coder-Pro V1</option>
-                  <option value="qwen/qwen3-coder:free">Qwen Qwen3-Coder-480B-A35B</option>
-                  <option value="openai/gpt-oss-20b:free">OpenAI gpt-oss-20b</option>
+                  <option value="inclusionai/ring-2.6-1t:free">InclusionAI RING 2.6 1T</option>
                 </select>
               </div>
           </div>

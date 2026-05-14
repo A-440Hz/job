@@ -47,10 +47,12 @@ export function useTrackerData() {
  * @returns The context provider component.
  */
 export function TrackerDataProvider({ children }: { children: React.ReactNode }) {
+    const DEFAULT_MODEL = "openrouter/free";
+
     // Load model preference from localStorage, or use default
     const [modelName, setModelName] = useState<string>(() => {
         const savedModel = localStorage.getItem('selectedModel');
-        return savedModel || "tngtech/deepseek-r1t2-chimera:free";
+        return savedModel || DEFAULT_MODEL;
     });
 
     // Save model preference to localStorage whenever it changes
